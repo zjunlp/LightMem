@@ -232,7 +232,8 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"❌ Error processing trajectory: {e}")
 
-    print("The evaluation is completed successfully 😀.")
+    if len(results) == len(dataset):
+        print("The evaluation is completed successfully 😀.")
 
     total_time = 0.0 
     avg_time_per_add_session = 0.0 
