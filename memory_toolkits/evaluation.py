@@ -98,7 +98,6 @@ def memory_construction(
         for session in trajectory:
             # TODO: take the case that the message is a question-answe pair into the consideration 
             for message in session:
-                print({"role": message.role, "content": message.content})
                 start_time = datetime.now() 
                 layer.add_message(
                     {"role": message.role, "content": message.content}, 
