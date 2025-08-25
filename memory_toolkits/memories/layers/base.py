@@ -4,7 +4,12 @@ from typing import (
     Dict, 
     List, 
     Union, 
+    Optional,
 )
+
+# Note: This base interface will evolve as additional memory systems are integrated.
+# As new methods and capabilities are standardized across implementations, this class
+# may be updated to ensure a consistent API across different memory backends.
 
 class BaseMemoryLayer(ABC):
     """
@@ -123,15 +128,10 @@ class BaseMemoryLayer(ABC):
         pass
 
     @abstractmethod
-    def save_memory(self, dirname: str) -> None:
+    def save_memory(self) -> None:
         """
-        Save the memory state to a directory.
-
-        Parameters
-        ----------
-        dirname : str
-            The directory path where the memory state should be saved. This typically
-            includes configuration files and serialized memory data.
+        Save the memory state to the implementation-configured storage location.
+        Implementations may persist both configuration and serialized memory data.
 
         Returns
         -------
@@ -141,19 +141,19 @@ class BaseMemoryLayer(ABC):
         pass
 
     @abstractmethod
-    def load_memory(self, user_id: str) -> None:
+    def load_memory(self, user_id: Optional[str] = None) -> bool:
         """
         Load the memory state for a specific user.
 
         Parameters
         ----------
-        user_id : str
-            The identifier of the user whose memory state should be loaded.
+        user_id : str, optional, default None
+            The identifier of the user whose memory state should be loaded. If not
+            provided, the implementation may use an internal default.
 
         Returns
         -------
-        None
-            This method doesn't return a value but loads the user's memory state
-            into the current memory system instance.
+        success : bool
+            True if the user's memory state was successfully loaded, False otherwise.
         """
         pass
