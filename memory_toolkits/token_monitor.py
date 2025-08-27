@@ -136,7 +136,7 @@ class CostStateManager:
 
     This class cannot be instantiated. Use classmethods only.
     """
-    _states: Dict[str, CostState] = {}
+    _states: Dict[str, CostState | Dict[str, CostState]] = {}
     _tokenizers: Dict[str, SelectTokenizerResponse] = {}
     _lock: Lock = Lock()
 
@@ -147,7 +147,7 @@ class CostStateManager:
     def register(
         cls,
         model: str,
-        state: Optional[CostState] = None,
+        state: Optional[CostState | Dict[str, CostState]] = None,
         tokenizer: Optional[SelectTokenizerResponse] = None,
         exist_ok: bool = False,
     ) -> None:
@@ -155,6 +155,8 @@ class CostStateManager:
         with cls._lock:
             if model in cls._states and not exist_ok:
                 raise ValueError(f"Model {model} already registered. Please pick another name.")
+            # In the process of initialization, we can register a single model with a single `CostState`. 
+            # However, in the process of runtime, the number of `CostState` may be more than one. 
             cls._states[model] = state or CostState()
             if tokenizer is not None:
                 if not isinstance(tokenizer, SelectTokenizerResponse):
@@ -184,7 +186,7 @@ class CostStateManager:
                     )
 
     @classmethod
-    def get(cls, model: str) -> CostState:
+    def get(cls, model: str) -> CostState | Dict[str, CostState]:
         """Get the CostState for a model."""
         with cls._lock:
             if model not in cls._states:
@@ -199,12 +201,6 @@ class CostStateManager:
         **kwargs
     ) -> None:
         """Update model's cost state by computing tokens via LiteLLM and appending history."""
-        with cls._lock: 
-            cost_state = cls._states.get(model, None)
-            if cost_state is None:
-                raise KeyError(f"Model {model} is not registered. Please register it first.")
-            tokenizer = cls._tokenizers.get(model)
-
         if "input" not in input_output_pair or "output" not in input_output_pair:
             raise ValueError("`input_output_pair` must contain 'input' and 'output'.")
         if "elapsed" not in input_output_pair or not isinstance(input_output_pair["elapsed"], (int, float)):
@@ -213,6 +209,36 @@ class CostStateManager:
         input_dict, output_dict = input_output_pair["input"], input_output_pair["output"]
         if "messages" not in input_dict or "messages" not in output_dict:
             raise ValueError("'input' and 'output' must contain 'messages'.")
+        
+        has_operation_type = "metadata" in input_dict and "op_type" in input_dict["metadata"]
+        with cls._lock:
+            cost_state = cls._states.get(model, None)
+            if cost_state is None:
+                raise KeyError(f"Model {model} is not registered. Please register it first.")
+            tokenizer = cls._tokenizers.get(model)
+            if has_operation_type:
+                op_type = input_dict["metadata"]["op_type"]
+                if isinstance(cost_state, CostState):
+                    if len(cost_state.to_dict()["histories"]) > 0:
+                        raise ValueError(
+                            "Previous update operations do not contain an operation type. "
+                            "However, the current update operation contains an operation type. "
+                            "This is not allowed. Please make sure the `input_output_pair` is consistent "
+                            "with the previous update operations."
+                        )
+                    else:
+                        cls._states[model] = {}
+                        cost_state = cls._states[model]
+                if op_type not in cost_state:
+                    cost_state[op_type] = CostState()
+                cost_state = cost_state[op_type]
+            elif isinstance(cost_state, dict):
+                raise ValueError(
+                    "Previous update operations contain different operation types. "
+                    "However, the current update operation doesn't contain an operation type. "
+                    "This is not allowed. Please make sure the `input_output_pair` is consistent "
+                    "with the previous update operations."
+                )
 
         inp = input_dict["messages"]
         out = output_dict["messages"]
@@ -233,6 +259,7 @@ class CostStateManager:
                 text=inp,
                 **kwargs
             )
+        input_dict["input_tokens"] = input_tokens
         if isinstance(out, list):
             output_tokens = litellm_token_counter(
                 model=model, 
@@ -247,7 +274,8 @@ class CostStateManager:
                 text=out,
                 **kwargs
             )
-
+        output_dict["output_tokens"] = output_tokens
+        
         # Update the corresponding cost state
         cost_state.update(
             input_tokens=input_tokens,
@@ -267,9 +295,12 @@ class CostStateManager:
     def save_to_json_file(cls, filename: str) -> None:
         """Save all cost states to a JSON file."""
         with cls._lock:
-            output_dict = {
-                model: state.to_dict() for model, state in cls._states.items()
-            }
+            output_dict = {} 
+            for model, state in cls._states.items():
+                if isinstance(state, CostState):
+                    output_dict[model] = state.to_dict()
+                else:
+                    output_dict[model] = {op: cs.to_dict() for op, cs in state.items()}
             with open(f"{filename}.json", 'w') as f:
                 json.dump(
                     output_dict, 

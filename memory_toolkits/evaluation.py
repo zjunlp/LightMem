@@ -58,6 +58,7 @@ def memory_construction(
     }
 
     with _LOCK:
+        # It includes I/O operations. 
         if not rerun and layer.load_memory(user_id):
             print(f"🔄 The memory for user {user_id} is loaded successfully 😄.")
             return output
@@ -82,7 +83,14 @@ def memory_construction(
                             "role": "user",
                             "content": kwargs.get("prompt", args[0])
                         }
-                    ]
+                    ],
+                    "metadata": {
+                        "op_type": (
+                            "generation"
+                            if kwargs.get("prompt", args[0]).startswith("Generate a structured analysis") 
+                            else "update"
+                        )
+                    }
                 },
                 extract_output_dict=lambda result: {
                     "messages": result
@@ -108,8 +116,10 @@ def memory_construction(
                 time.sleep(0.2)
     
     if layer_type == "A-MEM":
+        # It includes I/O operations (loading a sentence embedding model).
         with _LOCK:
             layer.consolidate_memories()
+    # It includes I/O operations. 
     with _LOCK:
         layer.save_memory() 
 
