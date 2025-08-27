@@ -234,7 +234,8 @@ class CostStateManager:
                 cost_state = cost_state[op_type]
             elif isinstance(cost_state, dict):
                 raise ValueError(
-                    "Previous update operations contain different operation types. "
+                    "Previous update operations contain different operation types "
+                    "or the type of update operation has been inferred during registration. "
                     "However, the current update operation doesn't contain an operation type. "
                     "This is not allowed. Please make sure the `input_output_pair` is consistent "
                     "with the previous update operations."
@@ -275,7 +276,7 @@ class CostStateManager:
                 **kwargs
             )
         output_dict["output_tokens"] = output_tokens
-        
+
         # Update the corresponding cost state
         cost_state.update(
             input_tokens=input_tokens,
