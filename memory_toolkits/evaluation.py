@@ -15,7 +15,7 @@ from monkey_patch import (
     make_attr_patch, 
 )
 from memories.datasets.base import Trajectory
-
+from memories.layers.memzero import MemZeroConfig, MemZeroLayer
 from typing import (
     Dict, 
     Any, 
@@ -30,6 +30,10 @@ MEMORY_MAPPING = {
     "A-MEM": {
         "layer": AMEMLayer,
         "config": AMEMConfig,
+    },
+    "MemZero": {
+        "layer": MemZeroLayer,
+        "config": MemZeroConfig,
     },
 }
 
@@ -98,6 +102,28 @@ def memory_construction(
             ),
         )
         specs = [spec] 
+    elif layer_type == "MemZero":
+        getter, setter = make_attr_patch(layer.mem0.llms.openai.OpenAILLM, "generate_response")
+        spec = PatchSpec(
+            name = f"{layer.mem0.llms.openai.OpenAILLM.__class__.__name__}.generate_response",
+            getter = getter,
+            setter = setter,
+            wrapper = token_monitor(
+                extract_model_name = lambda *args, **kwargs: (config.llm_model, {}),
+                extract_input_dict = lambda *args, **kwargs: {
+                    "messages": kwargs.get("messages", args[0]),
+                    "metadata": {
+                        "op_type": (
+                            "generation" if kwargs.get("messages", args[0])[0]["content"].startswith("You are a Personal Information Organizer") else "update"
+                        )
+                    }
+                },
+                extract_output_dict = lambda response: {
+                    "messages": response.choices[0].message.content
+                },
+            )
+        )
+        specs = [spec]
     else:
         raise ValueError(f"Unsupported memory type: {layer_type}.")
 
