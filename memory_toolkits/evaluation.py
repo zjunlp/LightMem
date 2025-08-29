@@ -103,9 +103,9 @@ def memory_construction(
         )
         specs = [spec] 
     elif layer_type == "MemZero":
-        getter, setter = make_attr_patch(layer.mem0.llms.openai.OpenAILLM, "generate_response")
+        getter, setter = make_attr_patch(layer.memory_layer.llm, "generate_response")
         spec = PatchSpec(
-            name = f"{layer.mem0.llms.openai.OpenAILLM.__class__.__name__}.generate_response",
+            name = f"{layer.memory_layer.llm.__class__.__name__}.generate_response",
             getter = getter,
             setter = setter,
             wrapper = token_monitor(
