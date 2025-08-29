@@ -68,7 +68,7 @@ class MemZeroConfig(BaseModel):
         )
         
     temperature: float = Field(
-        default = 0.0,
+        default = 0.1,
         description = "The temperature to use for the LLM.",
     )
 
