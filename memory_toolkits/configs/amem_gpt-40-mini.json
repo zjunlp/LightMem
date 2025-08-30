@@ -1,0 +1,9 @@
+{
+    "llm_model": "gpt-4o-mini",
+    "user_id": "default_user",
+    "save_dir": "A-MEM/default_user",
+    "retriever_name_or_path": "/disk/disk_4T_2/jiangziyan1/model/all-MiniLM-L6-v2",
+    "api_key": "sk-96TZyg8iXZGGBWUp8osOpf0YhNJ9t3ag0HY4Gk5V6uRD9IwQ",
+    "llm_backend": "openai",
+    "evo_threshold": 100
+} 
