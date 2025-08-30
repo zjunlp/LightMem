@@ -27,7 +27,7 @@ class OpenAIController(BaseLLMController):
         except ImportError:
             raise ImportError("OpenAI package not found. Install it with: pip install openai")
     
-    def get_completion(self, prompt: str, response_format: dict, temperature: float = 0.1) -> str:
+    def get_completion(self, prompt: str, response_format: dict, temperature: float = 0.7) -> str:
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
