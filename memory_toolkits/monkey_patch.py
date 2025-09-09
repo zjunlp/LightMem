@@ -61,6 +61,7 @@ Notes:
 
 from __future__ import annotations
 from dataclasses import dataclass
+from pydantic import BaseModel
 from typing import (
     Callable, 
     Any, 
@@ -135,6 +136,10 @@ def make_attr_patch(obj: Any, attr: str) -> Tuple[Callable[[], Callable[..., Any
     """
     def getter() -> Callable[..., Any]:
         return getattr(obj, attr)
-    def setter(fn: Callable[..., Any]) -> None:
-        setattr(obj, attr, fn)
+    if isinstance(obj, BaseModel):
+        def setter(fn: Callable[..., Any]) -> None:
+            object.__setattr__(obj, attr, fn)
+    else:
+        def setter(fn: Callable[..., Any]) -> None:
+            setattr(obj, attr, fn)
     return getter, setter

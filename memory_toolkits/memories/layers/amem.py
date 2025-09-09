@@ -5,7 +5,10 @@ from pydantic import (
     Field, 
     model_validator,
 )
-from .agentic_memory.memory_system import AgenticMemorySystem, MemoryNote 
+from .baselines.agentic_memory.memory_system import (
+    AgenticMemorySystem, 
+    MemoryNote, 
+) 
 import pickle 
 import os
 import json
@@ -63,7 +66,7 @@ class AMEMLayer(BaseMemoryLayer):
 
     layer_type: str = "amem"
 
-    def __init__(self, config: AMEMConfig) -> AMEMLayer:
+    def __init__(self, config: AMEMConfig) -> None:
         """Create an interface of A-MEM. The implemenation is based on the 
         [official implementation](https://github.com/WujiangXu/A-mem-sys)."""
         self.memory_layer = AgenticMemorySystem(
@@ -74,8 +77,6 @@ class AMEMLayer(BaseMemoryLayer):
             api_key=config.api_key,
             user_id=config.user_id, 
         )
-
-        # Load predefined memories if provided
         self.config = config 
     
     def load_memory(self, user_id: Optional[str] = None) -> bool:
@@ -89,6 +90,11 @@ class AMEMLayer(BaseMemoryLayer):
         
         with open(config_path, 'r', encoding="utf-8") as f:
             config_dict = json.load(f)
+        if user_id != config_dict["user_id"]:
+            raise ValueError(
+                f"The user id in the config file ({config_dict['user_id']}) "
+                f"does not match the user id ({user_id}) in the function call."
+            )
         self.config = AMEMConfig(**config_dict)
         self.memory_layer = AgenticMemorySystem(
             model_name=self.config.retriever_name_or_path,
@@ -130,9 +136,6 @@ class AMEMLayer(BaseMemoryLayer):
             ids=ids,
             embeddings=embeddings,
         )
-
-        # Set the config's user id 
-        self.config.user_id = user_id 
 
         return True 
     

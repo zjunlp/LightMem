@@ -261,19 +261,20 @@ class CostStateManager:
                 **kwargs
             )
         input_dict["input_tokens"] = input_tokens
+        # NOTE: when we compute the output tokens, we don't consider 
+        # `tools`, `tool_choice`, `use_default_image_token_count`, and `default_token_count`
+        # as they are taken into account when we compute the input tokens.
         if isinstance(out, list):
             output_tokens = litellm_token_counter(
                 model=model, 
                 custom_tokenizer=tokenizer, 
                 messages=out,
-                **kwargs
             )
         else:
             output_tokens = litellm_token_counter(
                 model=model, 
                 custom_tokenizer=tokenizer, 
                 text=out,
-                **kwargs
             )
         output_dict["output_tokens"] = output_tokens
 

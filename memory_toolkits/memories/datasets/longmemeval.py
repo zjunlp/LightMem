@@ -67,6 +67,9 @@ class LongMemEval(MemoryDataset):
             trajectories.append(
                 Trajectory(
                     sessions=trajectory,
+                    metadata={
+                        "id": f"longmemeval_{sample['question_id']}",
+                    }
                 )
             )
             question_answer_pair_lists.append([question_answer_pair])

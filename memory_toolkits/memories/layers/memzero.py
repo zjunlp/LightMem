@@ -13,7 +13,7 @@ from typing import (
     Optional, 
 )
 import os
-from mem0 import Memory
+from baselines.mem0 import Memory
 
 class MemZeroConfig(BaseModel):
     """The default configuration for MemZero"""
