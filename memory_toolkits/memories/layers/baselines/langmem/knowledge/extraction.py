@@ -375,7 +375,7 @@ class MemoryManager(Runnable[MemoryState, list[ExtractedMemory]]):
                     enable_updates=self.enable_updates,
                     enable_deletes=self.enable_deletes,
                     existing_schema_policy=False,
-                )
+                )           
             response = extractor.invoke(payload, config=config)
             is_done = False
             step_results: dict[str, BaseModel] = {}

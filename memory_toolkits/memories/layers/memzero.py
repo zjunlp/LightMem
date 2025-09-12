@@ -90,35 +90,33 @@ class MemZeroLayer(BaseMemoryLayer):
         """Create an interface of MemZero. The implemenation is based on the 
         [official implementation](https://github.com/mem0ai/mem0)."""
         self.memory_config = {
-            {
-                "llm": {
-                    "provider": config.llm_backend,
-                    "config":{
-                        "model": config.llm_model,
-                        "temperature": config.temperature,
-                        "max_tokens": config.max_tokens,
-                        "api_key": config.api_key,
-                        "base_url": config.base_url,
-                    }
-                },
-                "vector_store": {
-                    "provider": "qdrant",
-                    "config": {
-                        "collection_name": config.collection_name,
-                        "embedding_model_dims": config.embedding_model_dims,
-                        "path": config.save_dir,
-                        "on_disk": True,
-                    }
-                },
-                "embedder": {
-                    "provider": "huggingface",
-                    "config": {
-                        "model": config.retriever_name_or_path,
-                        "embedding_dims": config.embedding_model_dims,
-                        "model_kwargs": {"device": config.use_gpu},
-                    },
+            "llm": {
+                "provider": config.llm_backend,
+                "config":{
+                    "model": config.llm_model,
+                    "temperature": config.temperature,
+                    "max_tokens": config.max_tokens,
+                    "api_key": config.api_key,
+                    "base_url": config.base_url,
                 }
             },
+            "vector_store": {
+                "provider": "qdrant",
+                "config": {
+                    "collection_name": config.collection_name,
+                    "embedding_model_dims": config.embedding_model_dims,
+                    "path": config.save_dir,
+                    "on_disk": True,
+                }
+            },
+            "embedder": {
+                "provider": "huggingface",
+                "config": {
+                    "model": config.retriever_name_or_path,
+                    "embedding_dims": config.embedding_model_dims,
+                    "model_kwargs": {"device": config.use_gpu},
+                },
+            }
         }
         self.config = config
         self.memory_layer = Memory.from_config(self.memory_config)
@@ -147,9 +145,9 @@ class MemZeroLayer(BaseMemoryLayer):
             user_id = self.config.user_id
         )
 
-    def retrive(self, query: str, k:int = 10, **kwargs) -> Dict[str, List[Dict[str, Any]]]:
-        """Retrieve the memories"""
-        related_memories = self.memory_layer.search(query, limit = k)
+    def retrieve(self, query: str, k: int = 10, **kwargs) -> List[Dict[str, str | Dict[str, Any]]]:
+        """Retrieve the memories."""
+        related_memories = self.memory_layer.search(query, limit=k)
         outputs = []
         for mem in related_memories.get("results", []):
             outputs.append(
@@ -160,12 +158,28 @@ class MemZeroLayer(BaseMemoryLayer):
             )
         return outputs
 
-    def delete(self, memory_id: str) -> None:
+    def delete(self, memory_id: str) -> bool:
         """Delete a memory from the memory layer."""
-        self.memory_layer.delete(memory_id)
+        try:
+            self.memory_layer.delete(memory_id)
+            return True
+        except Exception as e:
+            print(f"Error in delete method in MemZeroLayer: \n\t{e.__class__.__name__}: {e}")
+            return False
     
-    def update(self, memory_id: str, data: str) -> None:
+    def update(self, memory_id: str, **kwargs) -> bool:
         """Update a memory in the memory layer."""
-        self.memory_layer.update(memory_id, data)
+        try:
+            data = kwargs.get("data", "")
+            self.memory_layer.update(memory_id, data)
+            return True
+        except Exception as e:
+            print(f"Error in update method in MemZeroLayer: \n\t{e.__class__.__name__}: {e}")
+            return False
+    
+    def save_memory(self) -> None:
+        """Save the memory state to storage."""
+        # MemZero uses persistent storage (Qdrant), so no explicit save is needed
+        pass
 
 

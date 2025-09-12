@@ -3,6 +3,7 @@ from pydantic import (
     BaseModel, 
     Field, 
     model_validator,
+    field_serializer,
     ConfigDict,
 )
 from abc import ABC, abstractmethod
@@ -19,6 +20,30 @@ from typing import (
     Dict, 
     Optional, 
 )
+
+TIMESTAMP_FORMAT = "%Y-%m-%d (%a) %H:%M"
+
+def _parse_timestamp_input(value: Any) -> datetime:
+    """Coerce incoming value to datetime.
+
+    Accepts datetime, or string in either `TIMESTAMP_FORMAT` or ISO 8601.
+    """
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        # Try custom format first
+        try:
+            return datetime.strptime(value, TIMESTAMP_FORMAT)
+        except Exception:
+            pass
+        # Fallback: ISO 8601
+        try:
+            return datetime.fromisoformat(value)
+        except Exception:
+            pass
+    raise TypeError(
+        f"timestamp must be datetime or str; got {type(value).__name__}"
+    )
 
 def _deep_freeze(value: Any) -> Any:
     """Recursively convert containers to immutable variants.
@@ -58,7 +83,7 @@ class _TimestampOrderingMixin:
         return self._timestamp_for_ordering() < other._timestamp_for_ordering()
     
     def get_string_timestamp(self) -> str:
-        return self.timestamp.strftime("%Y-%m-%d (%a) %H:%M")
+        return self.timestamp.strftime(TIMESTAMP_FORMAT)
 
 @total_ordering
 class Message(_TimestampOrderingMixin, BaseModel):
@@ -74,6 +99,20 @@ class Message(_TimestampOrderingMixin, BaseModel):
         if self.metadata is not None:
             object.__setattr__(self, "metadata", _deep_freeze(self.metadata))
         return self
+
+    @model_validator(mode="before")
+    def _coerce_timestamp_before(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if "timestamp" in values:
+            values["timestamp"] = _parse_timestamp_input(values["timestamp"])
+        return values
+
+    @field_serializer("metadata")
+    def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
+        return dict(v)
+
+    @field_serializer("timestamp")
+    def _serialize_timestamp(self, v: datetime) -> str:
+        return v.strftime(TIMESTAMP_FORMAT)
 
     def _timestamp_for_ordering(self) -> datetime:
         return self.timestamp
@@ -94,6 +133,20 @@ class QuestionAnswerPair(_TimestampOrderingMixin, BaseModel):
         if self.metadata is not None:
             object.__setattr__(self, "metadata", _deep_freeze(self.metadata))
         return self
+
+    @model_validator(mode="before")
+    def _coerce_timestamp_before(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if "timestamp" in values:
+            values["timestamp"] = _parse_timestamp_input(values["timestamp"])
+        return values
+
+    @field_serializer("metadata")
+    def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
+        return dict(v)
+
+    @field_serializer("timestamp")
+    def _serialize_timestamp(self, v: datetime) -> str:
+        return v.strftime(TIMESTAMP_FORMAT)
 
     def _timestamp_for_ordering(self) -> datetime:
         return self.timestamp
@@ -118,6 +171,20 @@ class Session(_TimestampOrderingMixin, BaseModel):
         if self.metadata is not None:
             object.__setattr__(self, "metadata", _deep_freeze(self.metadata))
         return self
+
+    @model_validator(mode="before")
+    def _coerce_timestamp_before(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if "timestamp" in values:
+            values["timestamp"] = _parse_timestamp_input(values["timestamp"])
+        return values
+
+    @field_serializer("metadata")
+    def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
+        return dict(v)
+
+    @field_serializer("timestamp")
+    def _serialize_timestamp(self, v: datetime) -> str:
+        return v.strftime(TIMESTAMP_FORMAT)
 
     def __len__(self) -> int:
         return len(self.messages)
@@ -149,6 +216,10 @@ class Trajectory(BaseModel):
         if self.metadata is not None:
             object.__setattr__(self, "metadata", _deep_freeze(self.metadata))
         return self
+
+    @field_serializer("metadata")
+    def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
+        return dict(v)
 
     def __len__(self) -> int:
         return len(self.sessions)

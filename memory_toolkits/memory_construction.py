@@ -6,15 +6,24 @@ from tqdm import tqdm
 import time 
 import threading
 from importlib.util import find_spec 
-from importlib import import_module
+import os
 
-from token_monitor import CostStateManager, token_monitor
+from token_monitor import (
+    CostStateManager, 
+    token_monitor, 
+    CostState, 
+)
 from monkey_patch import (
     PatchSpec, 
     MonkeyPatcher, 
     make_attr_patch, 
 )
 
+from memories import (
+    CONFIG_MAPPING,
+    MEMORY_LAYERS_MAPPING,
+    DATASET_MAPPING,
+)
 from memories.datasets.base import Trajectory
 from typing import (
     Dict, 
@@ -24,37 +33,7 @@ from typing import (
     List, 
 )
 
-DATASET_MAPPING = {
-    "LongMemEval": {
-        "module": "memories.datasets.longmemeval",
-        "class": "LongMemEval",
-    },
-}
-
-MEMORY_MAPPING = {
-    "A-MEM": {
-        "module": "memories.layers.amem",
-        "layer": "AMEMLayer",
-        "config": "AMEMConfig",
-    },
-    "LangMem": {
-        "module": "memories.layers.langmem",
-        "layer": "LangMemLayer",
-        "config": "LangMemConfig",
-    },
-    "MemZero": {
-        "module": "memories.layers.memzero",
-        "layer": "MemZeroLayer",
-        "config": "MemZeroConfig",
-    },
-}
-
-_LOCK = threading.Lock() 
-
-def _load_class(module_path: str, class_name: str):
-    """Dynamically import and return a class by name from a module."""
-    module = import_module(module_path)
-    return getattr(module, class_name)
+_LOCK = threading.Lock()
 
 def _check_langchain_core_imports() -> None: 
     """Check if `langchain_core` is installed."""
@@ -179,12 +158,12 @@ def memory_construction(
     config["user_id"] = user_id 
     # Each user has a distinct config directory. 
     config["save_dir"] = f"{layer_type}/{user_id}" 
-    _mem_spec = MEMORY_MAPPING[layer_type]
-    _config_cls = _load_class(_mem_spec["module"], _mem_spec["config"])
-    config = _config_cls(**config)
+    # Use lazy mapping to load config and layer classes
+    config_cls = CONFIG_MAPPING[layer_type]
+    config = config_cls(**config)
     with _LOCK:
-        _layer_cls = _load_class(_mem_spec["module"], _mem_spec["layer"]) 
-        layer = _layer_cls(config)
+        layer_cls = MEMORY_LAYERS_MAPPING[layer_type]
+        layer = layer_cls(config)
 
     output = {
         "total_add_time": 0.0,
@@ -315,7 +294,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--memory-type", 
-        choices=list(MEMORY_MAPPING.keys()), 
+        choices=list(MEMORY_LAYERS_MAPPING.keys()), 
         type=str, 
         required=True, 
         help="The type of the memory layer to be evaluated."
@@ -368,11 +347,22 @@ if __name__ == "__main__":
         default="token_cost", 
         help="Path to save the statistics related to the token consumption."
     )
+    parser.add_argument(
+        "--start-idx", 
+        type=int, 
+        default=None, 
+        help="The starting index of the trajectories to be processed."
+    )
+    parser.add_argument(
+        "--end-idx", 
+        type=int, 
+        default=None, 
+        help="The ending index of the trajectories to be processed."
+    )
     args = parser.parse_args()
 
-    # Prepare the dataset
-    _ds_spec = DATASET_MAPPING[args.dataset_type]
-    ds_cls = _load_class(_ds_spec["module"], _ds_spec["class"])
+    # Prepare the dataset using lazy mapping
+    ds_cls = DATASET_MAPPING[args.dataset_type]
     dataset = ds_cls.read_raw_data(args.dataset_path) 
     if args.sample_size is not None:
         dataset = dataset.sample(size=args.sample_size, seed=args.seed)
@@ -387,14 +377,28 @@ if __name__ == "__main__":
             config = json.load(f)
 
     # Get a dummy configuration to infer the corresponding LLM being used 
-    _mem_spec = MEMORY_MAPPING[args.memory_type]
-    _config_cls = _load_class(_mem_spec["module"], _mem_spec["config"]) 
+    # Use lazy mapping to load config class
+    config_cls = CONFIG_MAPPING[args.memory_type]
     if config is None:
         dummy_user_id = "guest" 
-        dummy_config = _config_cls(user_id=dummy_user_id)
+        dummy_config = config_cls(user_id=dummy_user_id)
     else:
-        dummy_config = _config_cls(**config) 
-
+        dummy_config = config_cls(**config) 
+    
+    # If token cost file exists, we load it. 
+    if os.path.exists(args.token_cost_save_filename + ".json"):
+        with open(args.token_cost_save_filename + ".json", 'r') as f:
+            token_cost = json.load(f)
+        for model, state in token_cost.items():
+            if isinstance(state, CostState):
+                token_cost[model] = CostState.from_dict(state)
+            else:
+                token_cost[model] = {
+                    op: CostState.from_dict(cs) for op, cs in state.items()
+                }
+    else: 
+        token_cost = {} 
+    
     # Before run the expriment, we should register the base model being used. 
     # Please ensure all types of config classes have a `llm_model` attribute. 
     # The tokenizer is inferred from the model name automatically. 
@@ -404,16 +408,36 @@ if __name__ == "__main__":
         if dummy_config.query_model is not None:
             query_model = dummy_config.query_model.split(':', 1)[1]
             if query_model != llm_model:
-                CostStateManager.register(query_model)
-    CostStateManager.register(llm_model)
+                state = token_cost.get(query_model)
+                if state is not None: 
+                    print(
+                        f"There is a saved checkpoint for monitoring the token consumption of {query_model}. "
+                        "It will be loaded into `CostStateManager`."
+                    )
+                CostStateManager.register(query_model, state=state)
+    state = token_cost.get(llm_model)
+    if state is not None: 
+        print(
+            f"There is a saved checkpoint for monitoring the token consumption of {llm_model}. "
+            "It will be loaded into `CostStateManager`."
+        )
+    CostStateManager.register(llm_model, state=state)
     del dummy_config 
     print(f"The LLM model 🤖 being used is {llm_model}. It has been registered in `CostStateManager`.")
     print()
 
+    if args.start_idx is None:
+        args.start_idx = 0 
+    if args.end_idx is None:
+        args.end_idx = len(dataset)
+    args.start_idx, args.end_idx = max(0, args.start_idx), min(args.end_idx, len(dataset))
+    if args.start_idx >= args.end_idx:
+        raise ValueError("The starting index must be less than the ending index.")
+
     results = [] 
     with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
         futures = []
-        for trajectory, _ in dataset:
+        for trajectory, _ in zip(*dataset[args.start_idx: args.end_idx]):
             # Note that this code is for academic purpose, the embedding model will be loaded multiple times. 
             user_id = f"user_{dataset.__class__.__name__}_{trajectory.metadata['id']}"
             future = executor.submit(
@@ -434,7 +458,7 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"❌ Error processing trajectory: {e}")
 
-    if len(results) == len(dataset):
+    if len(results) == args.end_idx - args.start_idx:
         print("The evaluation is completed successfully 😀.")
 
     total_time = 0.0 
@@ -446,8 +470,8 @@ if __name__ == "__main__":
             total_time += result["total_add_time"]
             avg_time_per_add_session += result["avg_add_time"]
             num_vaild_trajectories += 1 
-    avg_time = total_time / num_vaild_trajectories
-    avg_time_per_add_session = avg_time_per_add_session / num_vaild_trajectories
+    avg_time = total_time / max(num_vaild_trajectories, 1)
+    avg_time_per_add_session = avg_time_per_add_session / max(num_vaild_trajectories, 1)
     print(
         f"For {args.memory_type}, the average time per trajectory "
         f"({num_vaild_trajectories} in {len(results)}) is {avg_time:.2f} seconds."
