@@ -126,11 +126,11 @@ def evaluate_answers(
         accuracy = np.mean(
             [correctness_flags[global_idx] for global_idx in idx_list]
         ).item()
-        print(f"The accuracy for {qtype} (prompt name: {prompt_name}) is {accuracy:.2f}.")
+        print(f"The accuracy for {qtype} (prompt name: {prompt_name}) is {accuracy:.4f}.")
     
     # Print the overall accuracy
     accuracy = np.mean(correctness_flags).item()
-    print(f"The overall accuracy is {accuracy:.2f}.")
+    print(f"The overall accuracy is {accuracy:.4f}.")
 
     finalized = []
     for i in range(len(retrievals)):
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     # Prepare interface kwargs
     interface_kwargs: Dict[str, Any] = {}
     if args.api_config_path is not None:
-        with open(args.api_config_path, "r") as f:
+        with open(args.api_config_path, 'r') as f:
             api_config = json.load(f)
         interface_kwargs["api_keys"] = api_config["api_keys"]
         interface_kwargs["base_urls"] = api_config["base_urls"]
