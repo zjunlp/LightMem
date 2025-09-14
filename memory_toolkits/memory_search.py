@@ -3,6 +3,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 import threading
+from copy import deepcopy
 from memories import (
     CONFIG_MAPPING,
     MEMORY_LAYERS_MAPPING,
@@ -181,7 +182,7 @@ if __name__ == "__main__":
                 args.memory_type,
                 user_id,
                 qa_pairs,
-                config=config,
+                config=deepcopy(config),
                 top_k=args.top_k,
                 strict=args.strict,
             )

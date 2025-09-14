@@ -5,7 +5,8 @@ from datetime import datetime
 from tqdm import tqdm
 import time 
 import threading
-from importlib.util import find_spec 
+from importlib.util import find_spec
+from copy import deepcopy 
 import os
 
 from token_monitor import (
@@ -445,7 +446,7 @@ if __name__ == "__main__":
                 args.memory_type, 
                 user_id, 
                 trajectory, 
-                config=config, 
+                config=deepcopy(config), 
                 rerun=args.rerun 
             )
             futures.append(future)

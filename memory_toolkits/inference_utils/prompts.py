@@ -39,7 +39,7 @@ _INCOMPLETE_PROMPT_COLLECTIONS = {
         "Does the model correctly identify the question as unanswerable? Answer yes or no only."
     ), 
     "question-answering": (
-        "Question: $question\nPlease answer the question based on the following memories: $context"
+        "Question: $question\nPlease answer the question based on the following memories:\n$context"
     ), 
     # https://arxiv.org/abs/2305.12421
     "exact-match": (

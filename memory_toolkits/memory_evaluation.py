@@ -24,7 +24,7 @@ def _build_context_text(retrieved_memories: List[Dict[str, Any]]) -> str:
         if not content:
             raise AssertionError("The content is empty for the current memory unit.")
         contents.append(f"### Memory {i + 1}:\n{content}")
-    return '\n'.join(contents)
+    return "\n\n".join(contents)
 
 def answer_questions(
     retrievals: List[Dict[str, Any]],
