@@ -18,7 +18,7 @@ class BaseMemoryLayer(ABC):
     that should be implemented by concrete memory layer classes.
     
     The interface is designed to be compatible with popular memory frameworks like Mem0, 
-    MemOS, A-MEM, Zep, and other memory systems, providing a consistent API for memory 
+    A-MEM, LangMem, and other memory systems, providing a consistent API for memory 
     operations across different implementations.
     """
 

@@ -11,6 +11,7 @@ from pydantic import (
     model_validator,
     field_validator,
 )
+from copy import deepcopy 
 import pickle 
 import os
 import json
@@ -143,9 +144,14 @@ class LangMemLayer(BaseMemoryLayer):
 
     def add_message(self, message: Dict[str, str], **kwargs) -> None:
         """Add a message to the memory layer."""
+        if "timestamp" not in kwargs: 
+            raise KeyError("timestamp is required in `kwargs`")
+        timestamp = kwargs["timestamp"] 
+        message_copy = deepcopy(message)
+        message_copy["content"] = f"{message_copy['content']}\nTimestamp: {timestamp}"
         # See https://langchain-ai.github.io/langmem/background_quickstart/
-        # `kwargs` can include some optional parameters, e.g., `max_steps`. 
-        final_puts = self.memory_layer.invoke({"messages": [message]}, **kwargs)
+        # `kwargs` can include some optional parameters, e.g., `max_steps`.
+        final_puts = self.memory_layer.invoke({"messages": [message_copy]}, **kwargs)
         # Some operations update contents of previous memory units. 
         for final_put in final_puts: 
             self._memory_ids[final_put["key"]] = final_put["value"]
@@ -179,7 +185,8 @@ class LangMemLayer(BaseMemoryLayer):
                     "metadata": {
                         key: value
                         for key, value in memory_dict.items() if key != "value"
-                    }
+                    }, 
+                    "used_content": memory_dict["value"]["content"]
                 }
             )
         return outputs  

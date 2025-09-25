@@ -18,11 +18,11 @@ from typing import (
 def _build_context_text(retrieved_memories: List[Dict[str, Any]]) -> str:
     contents = []
     for i, mem in enumerate(retrieved_memories):
-        content = mem.get("content", '')
+        content = mem.get("used_content", '')
         if not isinstance(content, str):
-            raise AssertionError("The content is not a string for the current memory unit.")
+            raise AssertionError("The used_content is not a string for the current memory unit.")
         if not content:
-            raise AssertionError("The content is empty for the current memory unit.")
+            raise AssertionError("The used_content is empty for the current memory unit.")
         contents.append(f"### Memory {i + 1}:\n{content}")
     return "\n\n".join(contents)
 
@@ -30,6 +30,7 @@ def answer_questions(
     retrievals: List[Dict[str, Any]],
     qa_model: str,
     qa_batch_size: int = 4,
+    add_question_timestamp: bool = True, 
     interface_kwargs: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     interface_kwargs = interface_kwargs or {}
@@ -37,7 +38,12 @@ def answer_questions(
     contexts: List[str] = []
     for item in retrievals:
         qa_pair: QuestionAnswerPair = item["qa_pair"]
-        questions.append(qa_pair.question)
+        if add_question_timestamp:
+            questions.append(
+                f"{qa_pair.question}\nQuestion Timestamp: {qa_pair.get_string_timestamp()}"
+            )
+        else:
+            questions.append(qa_pair.question)
         contexts.append(_build_context_text(item["retrieved_memories"]))
 
     qa_operator = QuestionAnsweringOperator(
@@ -51,6 +57,7 @@ def answer_questions(
         contexts,
         batch_size=qa_batch_size,
         aggregate=False,
+        temperature=0.0,
     )
     return responses
 
@@ -113,6 +120,7 @@ def evaluate_answers(
             batched_predictions,
             batch_size=judge_batch_size,
             aggregate=False,
+            temperature=0.0, 
         )
         for local_pos, global_idx in enumerate(idx_list):
             out = results[local_pos]

@@ -13,6 +13,7 @@ from token_monitor import (
     CostStateManager, 
     token_monitor, 
     CostState, 
+    get_tokenizer_for_model,
 )
 from monkey_patch import (
     PatchSpec, 
@@ -159,7 +160,7 @@ def memory_construction(
     config["user_id"] = user_id 
     # Each user has a distinct config directory. 
     config["save_dir"] = f"{layer_type}/{user_id}" 
-    # Use lazy mapping to load config and layer classes
+    # Use lazy mapping to load config and layer classes.
     config_cls = CONFIG_MAPPING[layer_type]
     config = config_cls(**config)
     with _LOCK:
@@ -360,6 +361,12 @@ if __name__ == "__main__":
         default=None, 
         help="The ending index of the trajectories to be processed."
     )
+    parser.add_argument(
+        "--tokenizer-path", 
+        type=str, 
+        default=None, 
+        help="The path to the tokenizer (only for backbone model)."
+    )
     args = parser.parse_args()
 
     # Prepare the dataset using lazy mapping
@@ -391,7 +398,8 @@ if __name__ == "__main__":
         with open(args.token_cost_save_filename + ".json", 'r') as f:
             token_cost = json.load(f)
         for model, state in token_cost.items():
-            if isinstance(state, CostState):
+            is_dict = all(isinstance(value, dict) for value in state.values())
+            if not is_dict:
                 token_cost[model] = CostState.from_dict(state)
             else:
                 token_cost[model] = {
@@ -422,7 +430,11 @@ if __name__ == "__main__":
             f"There is a saved checkpoint for monitoring the token consumption of {llm_model}. "
             "It will be loaded into `CostStateManager`."
         )
-    CostStateManager.register(llm_model, state=state)
+    if args.tokenizer_path is not None:
+        tokenizer = get_tokenizer_for_model(args.tokenizer_path)
+    else:
+        tokenizer = None 
+    CostStateManager.register(llm_model, state=state, tokenizer=tokenizer)
     del dummy_config 
     print(f"The LLM model 🤖 being used is {llm_model}. It has been registered in `CostStateManager`.")
     print()
@@ -460,7 +472,7 @@ if __name__ == "__main__":
                 print(f"❌ Error processing trajectory: {e}")
 
     if len(results) == args.end_idx - args.start_idx:
-        print("The evaluation is completed successfully 😀.")
+        print("The memory construction process is completed successfully 😀.")
 
     total_time = 0.0 
     avg_time_per_add_session = 0.0 

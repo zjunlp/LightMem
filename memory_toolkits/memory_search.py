@@ -54,7 +54,9 @@ def memory_search(
                 return [
                     {
                         "retrieved_memories": [
-                            {"content": "[NO RETRIEVED MEMORIES]"}
+                            {
+                                "used_content": "[NO RETRIEVED MEMORIES]"
+                            }
                         ],
                         "qa_pair": qa_pair,
                     }

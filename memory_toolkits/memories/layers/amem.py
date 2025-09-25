@@ -163,13 +163,24 @@ class AMEMLayer(BaseMemoryLayer):
         memories = self.memory_layer.search_agentic(query, k=k)
         outputs = [] 
         for memory in memories:
+            used_content = {
+                "memory content": memory["content"], 
+                "memory context": memory["context"],
+                "memory keywords": str(memory["keywords"]),
+                "memory tags": str(memory["tags"]),
+                "talk start time": memory["timestamp"],
+            }
             outputs.append(
                 {
                     "content": memory["content"], 
                     "metadata": {
                         key: value
                         for key, value in memory.items() if key != "content"
-                    }
+                    },
+                    # See https://github.com/WujiangXu/A-mem/blob/main/memory_layer.py#L690. 
+                    "used_content": '\n'.join(
+                        [f"{key}: {value}" for key, value in used_content.items()]
+                    )
                 }
             )
         return outputs 

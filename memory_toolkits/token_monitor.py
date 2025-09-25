@@ -6,7 +6,8 @@ from threading import RLock, Lock
 from litellm import token_counter as litellm_token_counter
 from litellm.types.utils import SelectTokenizerResponse
 from litellm import encoding
-from transformers import AutoTokenizer
+import tiktoken 
+from tokenizers import Tokenizer
 from datetime import datetime
 import inspect
 from typing import (
@@ -17,6 +18,36 @@ from typing import (
     Optional, 
     Tuple,
 )
+
+def get_tokenizer_for_model(model: str) -> SelectTokenizerResponse:
+    """Get the tokenizer for a model."""
+    try: 
+        tokenizer = Tokenizer.from_pretrained(model)
+        return SelectTokenizerResponse(
+            type="huggingface_tokenizer", 
+            tokenizer=tokenizer,
+        ) 
+    except:
+        print(
+            f"Cannot load native huggingface tokenizer for {model}, "
+            "using tiktoken tokenizer instead."
+        )
+        # See https://github.com/BerriAI/litellm/blob/main/litellm/litellm_core_utils/token_counter.py#L504.
+        try:
+            if "gpt-4o" in model:
+                tokenizer = tiktoken.get_encoding("o200k_base")
+            else:
+                tokenizer = tiktoken.encoding_for_model(model)
+        except KeyError:
+            print(
+                f"Cannot load tiktoken tokenizer for {model}, " 
+                "using litellm's default tokenizer instead."
+            )
+            tokenizer = encoding
+        return SelectTokenizerResponse(
+            type="openai_tokenizer",
+            tokenizer=tokenizer,
+        )
 
 class CostState: 
     """Cost state for a specific LLM model."""
@@ -159,31 +190,9 @@ class CostStateManager:
             # However, in the process of runtime, the number of `CostState` may be more than one. 
             cls._states[model] = state or CostState()
             if tokenizer is not None:
-                if not isinstance(tokenizer, SelectTokenizerResponse):
-                    raise ValueError(
-                        f"Invalid tokenizer type for {model}. Expected `SelectTokenizerResponse`, got {type(tokenizer)}. "
-                        "Please use `litellm.create_pretrained_tokenizer`."
-                    )
                 cls._tokenizers[model] = tokenizer
             else:
-                try: 
-                    tokenizer = AutoTokenizer.from_pretrained(model)
-                    # It is a little hacky. 
-                    # In fact, `token_counter` uses any tokenizer which has an `encode` (str -> list[int]) method. 
-                    # So we can directly initialize the tokenizer from `AutoTokenizer` in transformers. 
-                    cls._tokenizers[model] = SelectTokenizerResponse(
-                        type="huggingface_tokenizer", 
-                        tokenizer=tokenizer,
-                    ) 
-                except:
-                    print(
-                        f"Cannot load native huggingface tokenizer for {model}, "
-                        "using litellm's default tokenizer instead."
-                    )
-                    cls._tokenizers[model] = SelectTokenizerResponse(
-                        type="openai_tokenizer",
-                        tokenizer=encoding,
-                    )
+                cls._tokenizers[model] = get_tokenizer_for_model(model)
 
     @classmethod
     def get(cls, model: str) -> CostState | Dict[str, CostState]:
@@ -449,7 +458,9 @@ def token_monitor(
                         },
                         **metadata,
                     )
-                    return result
+                # When the function is not successful, it will throw an error.
+                # This behavior is expected as the memory will not be saved due to the error.
+                return result
             return wrapper
         
     return decorator
