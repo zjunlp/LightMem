@@ -35,7 +35,7 @@ base_urls=(
 
 [ ! -d "$log_dir" ] && mkdir -p "$log_dir"
 
-for i in {0..4}; do
+for ((i=0; i<${#ranges[@]}; i++)); do
     read start_idx end_idx <<< "${ranges[$i]}"
     export OPENAI_API_KEY="${api_keys[$i]}" 
     export OPENAI_API_BASE="${base_urls[$i]}"
