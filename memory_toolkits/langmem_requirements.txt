@@ -1,0 +1,4 @@
+langmem==0.0.29
+litellm==1.75.9
+langchain-huggingface==0.3.1
+sentence-transformers==5.1.0
