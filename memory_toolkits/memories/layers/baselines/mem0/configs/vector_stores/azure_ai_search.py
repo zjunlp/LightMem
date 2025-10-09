@@ -1,13 +1,13 @@
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class AzureAISearchConfig(BaseModel):
     collection_name: str = Field("mem0", description="Name of the collection")
     service_name: str = Field(None, description="Azure AI Search service name")
     api_key: str = Field(None, description="API key for the Azure AI Search service")
-    embedding_model_dims: int = Field(None, description="Dimension of the embedding vector")
+    embedding_model_dims: int = Field(1536, description="Dimension of the embedding vector")
     compression_type: Optional[str] = Field(
         None, description="Type of vector compression to use. Options: 'scalar', 'binary', or None"
     )
@@ -54,6 +54,4 @@ class AzureAISearchConfig(BaseModel):
 
         return values
 
-    model_config = {
-        "arbitrary_types_allowed": True,
-    }
+    model_config = ConfigDict(arbitrary_types_allowed=True)

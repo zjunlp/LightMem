@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class PineconeConfig(BaseModel):
@@ -18,6 +18,7 @@ class PineconeConfig(BaseModel):
     metric: str = Field("cosine", description="Distance metric for vector similarity")
     batch_size: int = Field(100, description="Batch size for operations")
     extra_params: Optional[Dict[str, Any]] = Field(None, description="Additional parameters for Pinecone client")
+    namespace: Optional[str] = Field(None, description="Namespace for the collection")
 
     @model_validator(mode="before")
     @classmethod
@@ -51,6 +52,4 @@ class PineconeConfig(BaseModel):
             )
         return values
 
-    model_config = {
-        "arbitrary_types_allowed": True,
-    }
+    model_config = ConfigDict(arbitrary_types_allowed=True)

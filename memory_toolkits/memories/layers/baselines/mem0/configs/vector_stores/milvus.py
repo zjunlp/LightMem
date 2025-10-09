@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Dict
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class MetricType(str, Enum):
@@ -25,6 +25,7 @@ class MilvusDBConfig(BaseModel):
     collection_name: str = Field("mem0", description="Name of the collection")
     embedding_model_dims: int = Field(1536, description="Dimensions of the embedding model")
     metric_type: str = Field("L2", description="Metric type for similarity search")
+    db_name: str = Field("", description="Name of the database")
 
     @model_validator(mode="before")
     @classmethod
@@ -38,6 +39,4 @@ class MilvusDBConfig(BaseModel):
             )
         return values
 
-    model_config = {
-        "arbitrary_types_allowed": True,
-    }
+    model_config = ConfigDict(arbitrary_types_allowed=True)

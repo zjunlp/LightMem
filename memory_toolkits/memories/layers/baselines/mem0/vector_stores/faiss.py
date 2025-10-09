@@ -8,7 +8,16 @@ from typing import Dict, List, Optional
 import numpy as np
 from pydantic import BaseModel
 
+import warnings
+
 try:
+    # Suppress SWIG deprecation warnings from FAISS
+    warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPy.*")
+    warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*swigvarlink.*")
+    
+    logging.getLogger("faiss").setLevel(logging.WARNING)
+    logging.getLogger("faiss.loader").setLevel(logging.WARNING)
+
     import faiss
 except ImportError:
     raise ImportError(
@@ -462,3 +471,9 @@ class FAISS(VectorStoreBase):
                 break
 
         return [results]
+
+    def reset(self):
+        """Reset the index by deleting and recreating it."""
+        logger.warning(f"Resetting index {self.collection_name}...")
+        self.delete_col()
+        self.create_col(self.collection_name)

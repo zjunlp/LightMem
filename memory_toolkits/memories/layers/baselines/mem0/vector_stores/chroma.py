@@ -28,6 +28,8 @@ class ChromaDB(VectorStoreBase):
         host: Optional[str] = None,
         port: Optional[int] = None,
         path: Optional[str] = None,
+        api_key: Optional[str] = None,
+        tenant: Optional[str] = None,
     ):
         """
         Initialize the Chromadb vector store.
@@ -38,10 +40,21 @@ class ChromaDB(VectorStoreBase):
             host (str, optional): Host address for chromadb server. Defaults to None.
             port (int, optional): Port for chromadb server. Defaults to None.
             path (str, optional): Path for local chromadb database. Defaults to None.
+            api_key (str, optional): ChromaDB Cloud API key. Defaults to None.
+            tenant (str, optional): ChromaDB Cloud tenant ID. Defaults to None.
         """
         if client:
             self.client = client
+        elif api_key and tenant:
+            # Initialize ChromaDB Cloud client
+            logger.info("Initializing ChromaDB Cloud client")
+            self.client = chromadb.CloudClient(
+                api_key=api_key,
+                tenant=tenant,
+                database="mem0"  # Use fixed database name for cloud
+            )
         else:
+            # Initialize local or server client
             self.settings = Settings(anonymized_telemetry=False)
 
             if host and port:
@@ -142,7 +155,8 @@ class ChromaDB(VectorStoreBase):
         Returns:
             List[OutputData]: Search results.
         """
-        results = self.collection.query(query_embeddings=vectors, where=filters, n_results=limit)
+        where_clause = self._generate_where_clause(filters) if filters else None
+        results = self.collection.query(query_embeddings=vectors, where=where_clause, n_results=limit)
         final_results = self._parse_output(results)
         return final_results
 
@@ -219,5 +233,35 @@ class ChromaDB(VectorStoreBase):
         Returns:
             List[OutputData]: List of vectors.
         """
-        results = self.collection.get(where=filters, limit=limit)
+        where_clause = self._generate_where_clause(filters) if filters else None
+        results = self.collection.get(where=where_clause, limit=limit)
         return [self._parse_output(results)]
+
+    def reset(self):
+        """Reset the index by deleting and recreating it."""
+        logger.warning(f"Resetting index {self.collection_name}...")
+        self.delete_col()
+        self.collection = self.create_col(self.collection_name)
+
+    @staticmethod
+    def _generate_where_clause(where: dict[str, any]) -> dict[str, any]:
+        """
+        Generate a properly formatted where clause for ChromaDB.
+        
+        Args:
+            where (dict[str, any]): The filter conditions.
+            
+        Returns:
+            dict[str, any]: Properly formatted where clause for ChromaDB.
+        """
+        # If only one filter is supplied, return it as is
+        # (no need to wrap in $and based on chroma docs)
+        if where is None:
+            return {}
+        if len(where.keys()) <= 1:
+            return where
+        where_filters = []
+        for k, v in where.items():
+            if isinstance(v, str):
+                where_filters.append({k: v})
+        return {"$and": where_filters}
