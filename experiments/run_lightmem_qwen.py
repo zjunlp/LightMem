@@ -85,7 +85,7 @@ def load_lightmem(collection_name):
             "model_name": "llmlingua-2",
             "configs": {
                 "llmlingua_config": {
-                    "model_name": "",
+                    "model_name": "/models/llmlingua-2-bert-base-multilingual-cased-meetingbank",
                     "device_map": "cuda",
                     "use_llmlingua2": True,
                 },
@@ -102,7 +102,7 @@ def load_lightmem(collection_name):
         "memory_manager": {
             "model_name": "openai",
             "configs": {
-                "model": "gpt-4o-mini",
+                "model": "qwen3-30b-a3b-instruct-2507",
                 "api_key": "",
                 "max_tokens": 16000,
                 "openai_base_url": ""
@@ -113,7 +113,7 @@ def load_lightmem(collection_name):
         "text_embedder": {
             "model_name": "huggingface",
             "configs": {
-                "model": "all-MiniLM-L6-v2",
+                "model": "/models/all-MiniLM-L6-v2",
                 "embedding_dims": 384,
                 "model_kwargs": {"device": "cuda"},
             },
@@ -134,9 +134,9 @@ def load_lightmem(collection_name):
 
 llm_judge = LLMModel("gpt-4o-mini", "", "")
 
-llm = LLMModel("gpt-4o-mini", "", "")
+llm = LLMModel("qwen3-30b-a3b-instruct-2507", "", "")
 
-data = json.load(open("longmemeval/longmemeval_s.json", "r"))
+data = json.load(open("/longmemeval/longmemeval_s.json", "r"))
 
 INIT_RESULT = {
     "add_input_prompt": [],
@@ -208,6 +208,6 @@ for item in tqdm(data):
         "correct": correct,
     }
 
-    filename = f"lightmem/results/result_{item['question_id']}.json"
+    filename = f"/lightmem/results/result_{item['question_id']}.json"
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(save_data, f, ensure_ascii=False, indent=4)
