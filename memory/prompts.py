@@ -10,7 +10,7 @@ where the dialogue is organized into topic segments separated by markers like:
 3.user: <message>
 ...
 
-⚠️ Important Instructions:
+Important Instructions:
 0. You MUST process messages **strictly in ascending sequence_number order** (lowest → highest). For each message, stop and **carefully** evaluate its content before moving to the next. Do NOT reorder, batch-skip, or skip ahead — treat messages one-by-one.
 1. You MUST process every user message in order, one by one. 
    For each message, decide whether it contains any factual information.
