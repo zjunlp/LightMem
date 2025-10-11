@@ -27,7 +27,7 @@ class MemoryManagerFactory:
         
         if model_name not in cls._MODEL_MAPPING:
             raise ValueError(
-                f"Unsupported compressor model: {model_name}. "
+                f"Unsupported manager model: {model_name}. "
                 f"Supported models are: {list(cls._MODEL_MAPPING.keys())}"
             )
 
@@ -36,15 +36,15 @@ class MemoryManagerFactory:
         try:
             module_path, class_name = class_path.rsplit('.', 1)
             module = import_module(module_path)
-            compressor_class = getattr(module, class_name)
+            manager_class = getattr(module, class_name)
             if config.configs is None:
-                return compressor_class()
+                return manager_class()
             else:
-                return compressor_class(config=config.configs)
+                return manager_class(config=config.configs)
             
         except ImportError as e:
             raise ImportError(
-                f"Could not import compressor class '{class_path}': {str(e)}"
+                f"Could not import manager'{class_path}': {str(e)}"
             ) from e
         except AttributeError:
             raise ImportError(
@@ -52,5 +52,5 @@ class MemoryManagerFactory:
             )
         except Exception as e:
             raise ValueError(
-                f"Failed to instantiate {model_name} compressor: {str(e)}"
+                f"Failed to instantiate {model_name} manager: {str(e)}"
             ) from e
