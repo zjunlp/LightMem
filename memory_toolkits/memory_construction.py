@@ -248,16 +248,16 @@ def memory_construction(
             wrapper = token_monitor(
                 extract_model_name = lambda *args, **kwargs: (config.llm_model, {}),
                 extract_input_dict = lambda *args, **kwargs: {
-                    "messages": kwargs.get("messages", args[0]),
+                    # keyword arguments
+                    "messages": kwargs["messages"],
                     "metadata": {
                         "op_type": (
-                            "generation" if kwargs.get("messages", args[0])[0]["content"].startswith("You are a Personal Information Organizer") else "update"
+                            "generation" if kwargs["messages"][0]["content"].startswith("You are a Personal Information Organizer") else "update"
                         )
                     }
                 },
-                extract_output_dict = lambda response: {
-                    "messages": response.choices[0].message.content
-                },
+                # generate_response has parsed the output
+                extract_output_dict = lambda response: {"messages": response.get("content", "")} if isinstance(response, dict) else {"messages": response}
             )
         )
         specs = [spec]
