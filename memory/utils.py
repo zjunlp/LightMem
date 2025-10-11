@@ -12,6 +12,7 @@ from typing import List, Dict, Optional, Any, Union
 class MemoryEntry:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     time_stamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    float_time_stamp: float = 0
     weekday: str = ""
     category: str = ""
     subcategory: str = ""
