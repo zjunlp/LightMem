@@ -57,7 +57,7 @@ class BaseMemoryConfigs(BaseModel):
         default=0.5,
     )
     index_strategy: Optional[Literal["embedding", "context", "hybrid"]] = Field(
-        default="embedding",
+        default=None,
         description="Indexing strategy to use. Choices: "
                 "embedding|text|hybrid"
     )
