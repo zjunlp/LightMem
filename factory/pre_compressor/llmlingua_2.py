@@ -38,7 +38,7 @@ class LlmLingua2Compressor:
         messages: List[Dict[str, str]],
         tokenizer: None
     ):
-        # TODO : 考虑直接在消息中多加个字段，compressed_content，然后压缩后的内容放进这个字段，content保持原值
+        # TODO : Consider adding an extra field in the message, compressed_content, and put the compressed content in this field while keeping content unchanged.
         for mes in messages:
             compress_config = {
                 'context': [mes['content']],
