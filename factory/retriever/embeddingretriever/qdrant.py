@@ -114,8 +114,10 @@ class Qdrant:
         """
         conditions = []
         for key, value in filters.items():
-            if isinstance(value, dict) and "gte" in value and "lte" in value:
-                conditions.append(FieldCondition(key=key, range=Range(gte=value["gte"], lte=value["lte"])))
+            if isinstance(value, dict):
+                gte = value.get("gte", None)
+                lte = value.get("lte", None)
+                conditions.append(FieldCondition(key=key, range=Range(gte=gte, lte=lte)))
             else:
                 conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
         return Filter(must=conditions) if conditions else None
