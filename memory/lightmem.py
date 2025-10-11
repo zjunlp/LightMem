@@ -262,11 +262,14 @@ class LightMemory:
                 sequence_n = entry.get("source_id")
                 try:
                     time_stamp = timestamps_list[sequence_n]
+                    if not isinstance(time_stamp, float):
+                        float_time_stamp = datetime.fromisoformat(time_stamp).timestamp()
                     weekday = weekday_list[sequence_n]
                 except (IndexError, TypeError):
                     time_stamp = None
                 mem_obj = MemoryEntry(
                     time_stamp=time_stamp,
+                    float_time_stamp=float_time_stamp,
                     weekday=weekday,
                     memory=entry.get("fact", ""),
                     # original_memory=entry.get("original_fact", ""),  # TODO
@@ -298,6 +301,7 @@ class LightMemory:
                     mem_obj.id = ids
                 payload = {
                     "time_stamp": mem_obj.time_stamp,
+                    "float_time_stamp": mem_obj.float_time_stamp,
                     "weekday": mem_obj.weekday,
                     "category": mem_obj.category,
                     "subcategory": mem_obj.subcategory,
@@ -340,8 +344,8 @@ class LightMemory:
             eid = entry["id"]
             payload = entry["payload"]
             vec = entry.get("vector")
-            ts = payload.get("time_stamp", None)
-
+            ts = payload.get("float_time_stamp", None)
+            
             if vec is None or ts is None:
                 return
 
