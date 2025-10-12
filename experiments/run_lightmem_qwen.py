@@ -8,7 +8,7 @@ from lightmem.memory.lightmem import LightMemory
 
 # ============ API Configuration ============
 API_KEY='your_api_key_here'
-API_BASE_URL='https://api.gpts.vin/v1'
+API_BASE_URL=''
 LLM_MODEL='qwen3-30b-a3b-instruct-2507'
 JUDGE_MODEL='gpt-4o-mini'
 
