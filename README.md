@@ -254,6 +254,12 @@ for session in conversation_sessions:
         )
 ```
 
+### Offline Update
+```python
+lightmem.construct_update_queue_all_entries()
+lightmem.offline_update_all_entries(score_threshold=0.8)
+``` 
+
 ### Retrieve Memory
 ```python
 related_memories = lightmem.retrieve(item["question"], limit=20)
