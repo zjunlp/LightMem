@@ -43,7 +43,7 @@
 
 ## 📢 News
 
-- **[2025-10-12]**: 🎉 LightMem project officially launched!
+- **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
 
 <span id='todo'/>
 
