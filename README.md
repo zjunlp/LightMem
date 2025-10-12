@@ -168,12 +168,96 @@ The following table lists the backends values currently recognized by each confi
 | `ContextRetrieverConfig`        | `BM25` |
 | `EmbeddingRetrieverConfig`      | `qdrant` |
 
-## 💡 Examples
-```python
+<span id='examples'/>
 
+## 💡 Examples
+
+### Initialize LightMem
+```python
+import os
+from lightmem.memory.lightmem import LightMemory
+from lightmem.configs.base import BaseMemoryConfigs
+API_KEY='YOUR_QWEN_API_KEY'
+LLM_MODEL='qwen3-30b-a3b-instruct-2507'
+EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
+config_dict = {
+    "pre_compress": True,
+    "pre_compressor": {
+        "model_name": "llmlingua-2",
+    },
+    "topic_segment": True,
+    "precomp_topic_shared": True,
+    "messages_use": "user_only",
+    "metadata_generate": True,
+    "text_summary": True,
+    "memory_manager": {
+        "model_name": "openai",
+        "configs": {
+            "model": LLM_MODEL,
+            "api_key": API_KEY,
+            "openai_base_url": "YOUR_API_BASE_URL"
+        }
+    },
+    "index_strategy": "embedding",
+    "text_embedder": {
+        "model_name": "huggingface",
+        "configs": {
+            "model": EMBEDDING_MODEL_PATH,
+            "embedding_dims": 1024,
+        },
+    },
+    "retrieve_strategy": "embedding",
+    "embedding_retriever": {
+        "model_name": "qdrant",
+        "configs": {
+            "collection_name": "my_long_term_chat",
+            "embedding_model_dims": 1024,
+            "path": "./qdrant_data/my_long_term_chat", 
+        }
+    },
+    "update": "offline",
+}
+lightmem = LightMemory.from_config(config_dict)
 ```
 
+### Add Memory
+```python
+conversation_sessions = [
+    {
+        "timestamp": "2025-01-10",
+        "turns": [
+            [{"role": "user", "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex."}, 
+             {"role": "assistant", "content": "Got it. Pistachio is a great choice."}],
+        ]
+    },
+    {
+        "timestamp": "2025-03-15",
+        "turns": [
+            [{"role": "user", "content": "I recently bought a new house near the beach in Malibu."}, 
+             {"role": "assistant", "content": "That sounds wonderful! Malibu is beautiful."}],
+            [{"role": "user", "content": "I also started a new job as a data scientist."}, 
+             {"role": "assistant", "content": "Congratulations on the new job!"}],
+        ]
+    }
+]
 
+for session in conversation_sessions:
+    timestamp = session["timestamp"]
+    for turn_messages in session["turns"]:
+        for msg in turn_messages:
+            msg["time_stamp"] = timestamp
+            
+        store_result = lightmem.add_memory(
+            messages=turn_messages,
+            force_segment=False,
+            force_extract=False
+        )
+```
+
+### Retrieve Memory
+```python
+related_memories = lightmem.retrieve(item["question"], limit=20)
+``` 
 
 
 
