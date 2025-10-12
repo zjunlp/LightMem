@@ -194,7 +194,7 @@ config_dict = {
         "model_name": "qdrant",
         "configs": {
             "collection_name": "my_long_term_chat",
-            "embedding_model_dims": 1024,
+            "embedding_model_dims": 384,
             "path": "./my_long_term_chat", 
         }
     },
@@ -245,7 +245,8 @@ lightmem.offline_update_all_entries(score_threshold=0.8)
 
 ### Retrieve Memory
 ```python
-related_memories = lightmem.retrieve(item["question"], limit=20)
+question = "What is the name of my dog?"
+related_memories = lightmem.retrieve(question, limit=20)
 ``` 
 
 <span id='configuration'/>
