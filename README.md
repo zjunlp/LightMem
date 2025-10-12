@@ -45,12 +45,25 @@
 
 - **[2025-10-12]**: 🎉 LightMem project officially launched!
 
+<span id='todo'/>
+
+## ☑️ Todo List
+LightMem is continuously evolving! Here's what's coming:
+    
+- Offline Pre-computation of KV Cache for Update (Lossless)
+- Online Pre-computation of KV Cache Before Q&A (Lossy)
+- MCP (Memory Control Policy)
+- Integration of Common Models and Feature Enhancement
+- Coordinated Use of Context and Long-Term Memory Storage
+
+
 <span id='contents'/>
 
 ## 📑 Table of Contents
 
 * <a href='#features'>✨ Key Features</a>
 * <a href='#news'>📢 News</a>
+* <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
 * <a href='#quickstart'>⚡ Quick Start</a>
 * <a href='#architecture'>🏗️ Architecture</a>
@@ -88,6 +101,7 @@ cd experiments
 python run_lightmem_qwen.py
 ```
 
+<span id='architecture'/>
 
 ## 🏗️ Architecture
 
