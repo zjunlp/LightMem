@@ -151,8 +151,6 @@ API_BASE_URL=''
 LLM_MODEL=''
 EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
 LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
-QDRANT_DATA_DIR='./qdrant_data'
-
 config_dict = {
     "pre_compress": True,
     "pre_compressor": {
