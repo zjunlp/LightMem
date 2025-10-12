@@ -178,7 +178,7 @@ import os
 from lightmem.memory.lightmem import LightMemory
 from lightmem.configs.base import BaseMemoryConfigs
 API_KEY='YOUR_QWEN_API_KEY'
-LLM_MODEL='qwen3-30b-a3b-instruct-2507'
+LLM_MODEL=''
 EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
 config_dict = {
     "pre_compress": True,
