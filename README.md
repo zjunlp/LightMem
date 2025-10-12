@@ -87,6 +87,7 @@ conda create -n lightmem python=3.10 -y
 conda activate lightmem
 
 # Install dependencies
+unset ALL_PROXY
 pip install -e .
 ```
 
