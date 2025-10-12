@@ -206,36 +206,17 @@ lightmem = LightMemory.from_config(config_dict)
 
 ### Add Memory
 ```python
-conversation_sessions = [
-    {
-        "timestamp": "2025-01-10",
-        "turns": [
-            [{"role": "user", "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex."}, 
-             {"role": "assistant", "content": "Got it. Pistachio is a great choice."}],
-        ]
-    },
-    {
-        "timestamp": "2025-03-15",
-        "turns": [
-            [{"role": "user", "content": "I recently bought a new house near the beach in Malibu."}, 
-             {"role": "assistant", "content": "That sounds wonderful! Malibu is beautiful."}],
-            [{"role": "user", "content": "I also started a new job as a data scientist."}, 
-             {"role": "assistant", "content": "Congratulations on the new job!"}],
-        ]
-    }
+messages = [
+    {"role": "user", "content": "I'm planning to watch a movie tonight. Any recommendations?"},
+    {"role": "assistant", "content": "How about thriller movies? They can be quite engaging."},
+    {"role": "user", "content": "I'm not a big fan of thriller movies but I love sci-fi movies."},
+    {"role": "assistant", "content": "Got it! I'll avoid thriller recommendations and suggest sci-fi movies in the future."}
 ]
-
-for session in conversation_sessions:
-    timestamp = session["timestamp"]
-    for turn_messages in session["turns"]:
-        for msg in turn_messages:
-            msg["time_stamp"] = timestamp
-            
-        store_result = lightmem.add_memory(
-            messages=turn_messages,
-            force_segment=False,
-            force_extract=False
-        )
+result = lightmem.add_memory(
+    messages=messages,
+    force_segment=True,
+    force_extract=True,
+)
 ```
 
 ### Offline Update
