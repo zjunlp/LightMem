@@ -196,9 +196,9 @@ config_dict = {
     "embedding_retriever": {
         "model_name": "qdrant",
         "configs": {
-            "collection_name": collection_name,
-            "embedding_model_dims": 384,
-            "path": f'{QDRANT_DATA_DIR}/{collection_name}',
+            "collection_name": "my_long_term_chat",
+            "embedding_model_dims": 1024,
+            "path": "./my_long_term_chat", 
         }
     },
     "update": "offline",
