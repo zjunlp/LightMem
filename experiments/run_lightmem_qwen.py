@@ -3,7 +3,23 @@ import json
 from tqdm import tqdm
 import datetime
 import time
-from ..memory.lightmem import LightMemory
+import os
+from lightmem.memory.lightmem import LightMemory
+
+# ============ API Configuration ============
+API_KEY='your_api_key_here'
+API_BASE_URL='https://api.gpts.vin/v1'
+LLM_MODEL='qwen3-30b-a3b-instruct-2507'
+JUDGE_MODEL='gpt-4o-mini'
+
+# ============ Model Paths ============
+LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
+EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
+
+# ============ Data Configuration ============
+DATA_PATH='/your/path/to/dataset/longmemeval/longmemeval_s.json'
+RESULTS_DIR='../results'
+QDRANT_DATA_DIR='./qdrant_data'
 
 def get_anscheck_prompt(task, question, answer, response, abstention=False):
     if not abstention:
@@ -85,7 +101,7 @@ def load_lightmem(collection_name):
             "model_name": "llmlingua-2",
             "configs": {
                 "llmlingua_config": {
-                    "model_name": "/models/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+                    "model_name": LLMLINGUA_MODEL_PATH,
                     "device_map": "cuda",
                     "use_llmlingua2": True,
                 },
@@ -102,10 +118,10 @@ def load_lightmem(collection_name):
         "memory_manager": {
             "model_name": "openai",
             "configs": {
-                "model": "qwen3-30b-a3b-instruct-2507",
-                "api_key": "",
+                "model": LLM_MODEL,
+                "api_key": API_KEY,
                 "max_tokens": 16000,
-                "openai_base_url": ""
+                "openai_base_url": API_BASE_URL
             }
         },
         "extract_threshold": 0.1,
@@ -113,7 +129,7 @@ def load_lightmem(collection_name):
         "text_embedder": {
             "model_name": "huggingface",
             "configs": {
-                "model": "/models/all-MiniLM-L6-v2",
+                "model": EMBEDDING_MODEL_PATH,
                 "embedding_dims": 384,
                 "model_kwargs": {"device": "cuda"},
             },
@@ -124,7 +140,7 @@ def load_lightmem(collection_name):
             "configs": {
                 "collection_name": collection_name,
                 "embedding_model_dims": 384,
-                "path": f'/{collection_name}',
+                "path": f'{QDRANT_DATA_DIR}/{collection_name}',
             }
         },
         "update": "offline",
@@ -132,11 +148,11 @@ def load_lightmem(collection_name):
     lightmem = LightMemory.from_config(config)
     return lightmem
 
-llm_judge = LLMModel("gpt-4o-mini", "", "")
+llm_judge = LLMModel(JUDGE_MODEL, API_KEY, API_BASE_URL)
+llm = LLMModel(LLM_MODEL, API_KEY, API_BASE_URL)
 
-llm = LLMModel("qwen3-30b-a3b-instruct-2507", "", "")
-
-data = json.load(open("/longmemeval/longmemeval_s.json", "r"))
+data = json.load(open(DATA_PATH, "r"))
+data = data[:10]
 
 INIT_RESULT = {
     "add_input_prompt": [],
@@ -208,6 +224,7 @@ for item in tqdm(data):
         "correct": correct,
     }
 
-    filename = f"/lightmem/results/result_{item['question_id']}.json"
+    filename = f"../results/result_{item['question_id']}.json"
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(save_data, f, ensure_ascii=False, indent=4)
