@@ -153,7 +153,7 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `graph_mem`           | `False`                                     | True / False. When True, some memories will be organized as a graph (nodes and relationships) to support complex relation queries and reasoning. Requires additional graph processing/storage. |
 | `version`             | `'v1.1'`                                    | str. Configuration/API version. Only change if you know compatibility implications. |
 
-### Supported Backends per Module
+### 🧩 Supported Backends per Module
 
 The following table lists the backends / model_name values currently recognized by each configuration module. Use the `model_name` field (or the corresponding config object) to select one of these backends.
 
