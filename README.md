@@ -107,7 +107,7 @@ python run_lightmem_qwen.py
 
 ## 🏗️ Architecture
 
-### Core Modules Overview
+### 🗺️ Core Modules Overview
 LightMem adopts a modular design, breaking down the memory management process into several pluggable components. The core directory structure exposed to users is outlined below, allowing for easy customization and extension:
 
 ```python
