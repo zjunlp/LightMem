@@ -146,16 +146,30 @@ The following table lists the backends values currently recognized by each confi
 import os
 from lightmem.memory.lightmem import LightMemory
 from lightmem.configs.base import BaseMemoryConfigs
-API_KEY='YOUR_QWEN_API_KEY'
+API_KEY='YOUR_API_KEY'
+API_BASE_URL=''
 LLM_MODEL=''
 EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
+LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
+QDRANT_DATA_DIR='./qdrant_data'
+
 config_dict = {
     "pre_compress": True,
     "pre_compressor": {
         "model_name": "llmlingua-2",
+        "configs": {
+            "llmlingua_config": {
+                "model_name": LLMLINGUA_MODEL_PATH,
+                "device_map": "cuda",
+                "use_llmlingua2": True,
+            },
+        }
     },
     "topic_segment": True,
     "precomp_topic_shared": True,
+    "topic_segmenter": {
+        "model_name": "llmlingua-2",
+    },
     "messages_use": "user_only",
     "metadata_generate": True,
     "text_summary": True,
@@ -164,24 +178,27 @@ config_dict = {
         "configs": {
             "model": LLM_MODEL,
             "api_key": API_KEY,
-            "openai_base_url": "YOUR_API_BASE_URL"
+            "max_tokens": 16000,
+            "openai_base_url": API_BASE_URL
         }
     },
+    "extract_threshold": 0.1,
     "index_strategy": "embedding",
     "text_embedder": {
         "model_name": "huggingface",
         "configs": {
             "model": EMBEDDING_MODEL_PATH,
-            "embedding_dims": 1024,
+            "embedding_dims": 384,
+            "model_kwargs": {"device": "cuda"},
         },
     },
     "retrieve_strategy": "embedding",
     "embedding_retriever": {
         "model_name": "qdrant",
         "configs": {
-            "collection_name": "my_long_term_chat",
-            "embedding_model_dims": 1024,
-            "path": "./qdrant_data/my_long_term_chat", 
+            "collection_name": collection_name,
+            "embedding_model_dims": 384,
+            "path": f'{QDRANT_DATA_DIR}/{collection_name}',
         }
     },
     "update": "offline",
