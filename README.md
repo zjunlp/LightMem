@@ -15,5 +15,5 @@ pip install -e .
 
 # run 
 cd experiments
-python experiments/run_lightmem_qwen.py
+python run_lightmem_qwen.py
 ``` 
