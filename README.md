@@ -306,8 +306,6 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
         <sub><b>HaomingX</b></sub>
       </a>
     </td>
-  </tr>
-  <tr>
     <td align="center" width="120">
       <a href="https://github.com/James-TYQ">
         <img src="https://avatars.githubusercontent.com/James-TYQ?v=4" width="80" style="border-radius:50%" alt="James-TYQ"/>
