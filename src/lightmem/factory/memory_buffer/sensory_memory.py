@@ -48,7 +48,7 @@ class SenMemBufferManager:
         boundaries = segmenter.propose_cut(buffer_texts)
 
         if not boundaries:
-            segments.append(self.buffer)
+            segments.append(self.buffer.copy)
             self.buffer.clear()
             self.token_count = 0
             return segments
