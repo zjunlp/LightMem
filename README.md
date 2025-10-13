@@ -274,6 +274,61 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `graph_mem`           | `False`                                     | True / False. When True, some memories will be organized as a graph (nodes and relationships) to support complex relation queries and reasoning. Requires additional graph processing/storage. |
 | `version`             | `'v1.1'`                                    | str. Configuration/API version. Only change if you know compatibility implications. |
 
+## 🏆 Contributors
 
-## 👥 Contributors
+<table>
+  <tr>
+    <td align="center" width="120">
+      <a href="https://github.com/JizhanFang">
+        <img src="https://avatars.githubusercontent.com/JizhanFang?v=4" width="80" style="border-radius:50%" alt="JizhanFang"/>
+        <br />
+        <sub><b>JizhanFang</b></sub>
+      </a>
+    </td>
+    <td align="center" width="120">
+      <a href="https://github.com/Xinle-Deng">
+        <img src="https://avatars.githubusercontent.com/Xinle-Deng?v=4" width="80" style="border-radius:50%" alt="Xinle-Deng"/>
+        <br />
+        <sub><b>Xinle-Deng</b></sub>
+      </a>
+    </td>
+    <td align="center" width="120">
+      <a href="https://github.com/Xubqpanda">
+        <img src="https://avatars.githubusercontent.com/Xubqpanda?v=4" width="80" style="border-radius:50%" alt="Xubqpanda"/>
+        <br />
+        <sub><b>Xubqpanda</b></sub>
+      </a>
+    </td>
+    <td align="center" width="120">
+      <a href="https://github.com/HaomingX">
+        <img src="https://avatars.githubusercontent.com/HaomingX?v=4" width="80" style="border-radius:50%" alt="HaomingX"/>
+        <br />
+        <sub><b>HaomingX</b></sub>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="120">
+      <a href="https://github.com/James-TYQ">
+        <img src="https://avatars.githubusercontent.com/James-TYQ?v=4" width="80" style="border-radius:50%" alt="James-TYQ"/>
+        <br />
+        <sub><b>James-TYQ</b></sub>
+      </a>
+    </td>
+    <td align="center" width="120">
+      <a href="https://github.com/evy568">
+        <img src="https://avatars.githubusercontent.com/evy568?v=4" width="80" style="border-radius:50%" alt="evy568"/>
+        <br />
+        <sub><b>evy568</b></sub>
+      </a>
+    </td>
+    <td align="center" width="120">
+      <a href="https://github.com/Norah-Feathertail">
+        <img src="https://avatars.githubusercontent.com/Norah-Feathertail?v=4" width="80" style="border-radius:50%" alt="Norah-Feathertail"/>
+        <br />
+        <sub><b>Norah-Feathertail</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
 We welcome contributions from the community! If you'd like to contribute, please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
