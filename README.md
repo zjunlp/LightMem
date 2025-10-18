@@ -199,6 +199,11 @@ config_dict = {
         }
     },
     "update": "offline",
+    "logging": {
+        "level": "DEBUG",
+        "file_enabled": True,
+        "log_dir": "./logs",
+    }
 }
 lightmem = LightMemory.from_config(config_dict)
 ```
@@ -273,6 +278,7 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `kv_cache_path`       | `os.path.join(lightmem_dir, "kv_cache.db")` | str. File path for KV cache storage when `kv_cache=True`. |
 | `graph_mem`           | `False`                                     | True / False. When True, some memories will be organized as a graph (nodes and relationships) to support complex relation queries and reasoning. Requires additional graph processing/storage. |
 | `version`             | `'v1.1'`                                    | str. Configuration/API version. Only change if you know compatibility implications. |
+| `logging`             | `'None'`                                    | dict / object. Configuration for logging enabled. |
 
 ## 🏆 Contributors
 

@@ -9,6 +9,7 @@ from lightmem.configs.text_embedder.base import TextEmbedderConfig
 from lightmem.configs.multimodal_embedder.base import MMEmbedderConfig
 from lightmem.configs.retriever.contextretriever.base import ContextRetrieverConfig
 from lightmem.configs.retriever.embeddingretriever.base import EmbeddingRetrieverConfig
+from lightmem.configs.logging.base import LoggingConfig
 
 lightmem_dir = ""
 
@@ -105,5 +106,9 @@ class BaseMemoryConfigs(BaseModel):
     version: Optional[str] = Field(
         description="The version of the API",
         default="v1.1",
+    )
+    logging: Optional[LoggingConfig] = Field(
+        default=None,
+        description="Logging configuration for the LightMem system."
     )
 
