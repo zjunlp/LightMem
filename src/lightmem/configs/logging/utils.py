@@ -23,22 +23,20 @@ def apply_logging_config(config: 'LoggingConfig') -> None:
     """Apply a LoggingConfig to Python's logging system."""
     root = logging.getLogger()
     root.setLevel(normalize_level(config.level))
-    
-    # Remove existing handlers if requested
-    if config.force_reconfigure and root.handlers:
-        for handler in list(root.handlers):
-            root.removeHandler(handler)
-    
+
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+
     # Create formatter
     formatter = logging.Formatter(config.format, datefmt=config.date_format)
-    
+
     # Console handler
     if config.console_enabled:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(normalize_level(config.console_level))
         console_handler.setFormatter(formatter)
         root.addHandler(console_handler)
-    
+
     # File handler
     if config.file_enabled and config.file_path:
         file_handler = logging.FileHandler(
@@ -49,13 +47,13 @@ def apply_logging_config(config: 'LoggingConfig') -> None:
         file_handler.setLevel(normalize_level(config.file_level))
         file_handler.setFormatter(formatter)
         root.addHandler(file_handler)
-    
+
     # Per-logger level overrides
     if config.logger_levels:
         for logger_name, level in config.logger_levels.items():
             logger = logging.getLogger(logger_name)
             logger.setLevel(normalize_level(level))
-    
+
     # Suppress noisy loggers
     if config.suppress_loggers:
         for logger_name in config.suppress_loggers:
@@ -76,7 +74,7 @@ def init_logging(
     console_level: Union[int, str] = logging.INFO,
     file_level: Union[int, str] = logging.DEBUG,
     file_mode: str = "a",
-    force: bool = False,
+    force: bool = True,
     logger_levels: Optional[Dict[str, Union[int, str]]] = None,
     suppress_loggers: Optional[List[str]] = None
 ) -> 'LoggingConfig':

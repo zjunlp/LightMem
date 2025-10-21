@@ -145,6 +145,10 @@ The following table lists the backends values currently recognized by each confi
 import os
 from lightmem.memory.lightmem import LightMemory
 from lightmem.configs.base import BaseMemoryConfigs
+LOGS_ROOT = "./logs"
+RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
+os.makedirs(RUN_LOG_DIR, exist_ok=True)
 API_KEY='YOUR_API_KEY'
 API_BASE_URL=''
 LLM_MODEL=''
@@ -202,7 +206,7 @@ config_dict = {
     "logging": {
         "level": "DEBUG",
         "file_enabled": True,
-        "log_dir": "./logs",
+        "log_dir": RUN_LOG_DIR,
     }
 }
 lightmem = LightMemory.from_config(config_dict)
