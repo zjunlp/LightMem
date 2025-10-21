@@ -415,21 +415,27 @@ class LightMemory:
             return
         updated_count = 0
         skipped_count = 0
+        nonempty_queue_count = 0
+        empty_queue_count = 0
         lock = threading.Lock()
+        write_lock = threading.Lock()
         def _update_queue_construction(entry):
-            nonlocal updated_count, skipped_count
+            nonlocal updated_count, skipped_count, nonempty_queue_count, empty_queue_count
             eid = entry["id"]
             payload = entry["payload"]
             vec = entry.get("vector")
             ts = payload.get("float_time_stamp", None)
             
             if vec is None or ts is None:
+                self.logger.debug(f"[{call_id}] Skipping entry {eid}: missing vector={vec is None}, float_time_stamp={ts is None} ({ts})")
+                with lock:
+                    skipped_count += 1
                 return
 
             hits = self.embedding_retriever.search(
                 query_vector=vec,
                 limit=top_k,
-                filters={"time_stamp": {"lte": ts}}
+                filters={"float_time_stamp": {"lte": ts}}
             )
 
             candidates = []
@@ -437,7 +443,7 @@ class LightMemory:
                 hid = h["id"]
                 if hid == eid:
                     continue
-                candidates.append({"id": hid, "score": h["score"]})
+                candidates.append({"id": hid, "score": h.get("score")})
 
             candidates.sort(key=lambda x: x["score"], reverse=True)
             update_queue = candidates[:keep_top_n]
@@ -445,14 +451,28 @@ class LightMemory:
             new_payload = dict(payload)
             new_payload["update_queue"] = update_queue
 
-            self.embedding_retriever.update(vector_id=eid, payload=new_payload)
+            if update_queue:
+                with lock:
+                    nonempty_queue_count += 1
+                self.logger.debug(f"[{call_id}] Entry {eid} update_queue length={len(update_queue)} top_candidates=" + str(update_queue[:3]))
+            else:
+                with lock:
+                    empty_queue_count += 1
+                self.logger.debug(f"[{call_id}] Entry {eid} has no candidates after filtering (hits may be only itself)")
+
+            with write_lock:
+                self.embedding_retriever.update(vector_id=eid, vector=vec, payload=new_payload)
+
             with lock:
                 updated_count += 1
         self.logger.info(f"[{call_id}] Starting parallel queue construction with {max_workers} workers")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             executor.map(_update_queue_construction, all_entries)
-        self.logger.info(f"[{call_id}] Queue construction completed: {updated_count} updated, {skipped_count} skipped")
+        self.logger.info(
+            f"[{call_id}] Queue construction completed: {updated_count} updated, {skipped_count} skipped, "
+            f"nonempty_queues={nonempty_queue_count}, empty_queues={empty_queue_count}"
+        )
         self.logger.info(f"========== END {call_id} ==========")
 
     def offline_update_all_entries(self, score_threshold: float = 0.5, max_workers: int = 5):
@@ -478,6 +498,7 @@ class LightMemory:
         deleted_count = 0
         skipped_count = 0
         lock = threading.Lock()
+        write_lock = threading.Lock()
 
         def update_entry(entry):
             nonlocal processed_count, updated_count, deleted_count, skipped_count
@@ -508,14 +529,17 @@ class LightMemory:
 
             action = updated_entry.get("action")
             if action == "delete":
-                self.embedding_retriever.delete(eid)
+                with write_lock:
+                    self.embedding_retriever.delete(eid)
                 with lock:
                     deleted_count += 1
                 self.logger.debug(f"[{call_id}] Deleted entry: {eid}")
             elif action == "update":
                 new_payload = dict(payload)
                 new_payload["memory"] = updated_entry.get("new_memory")
-                self.embedding_retriever.update(vector_id=eid, payload=new_payload)
+                vector = entry.get("vector")
+                with write_lock:
+                    self.embedding_retriever.update(vector_id=eid, vector=vector, payload=new_payload)
                 with lock:
                     updated_count += 1
                 self.logger.debug(f"[{call_id}] Updated entry: {eid}")
