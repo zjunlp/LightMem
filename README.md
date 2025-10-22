@@ -20,6 +20,7 @@
 ---
 
 <div align=center><img src="./figs/motivation.png" width="50%" height="40%" /></div>
+
 **LightMem** is a lightweight and efficient memory management framework designed for Large Language Models and AI Agents. It provides a simple yet powerful memory storage, retrieval, and update mechanism to help you quickly build intelligent applications with long-term memory capabilities.
 
 - **Paper**: https://arxiv.org/abs/2510.18866
