@@ -1,4 +1,4 @@
-<div align=center><img src="./figs/motivation.png" width="50%" height="40%" /></div>
+<div align=center><img src="./figs/lightmem.png" width="60%" height="40%" /></div>
 <h1 align="center"> LightMem </h1>
 
 <p align="center">
