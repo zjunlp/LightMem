@@ -1,7 +1,7 @@
 <h1 align="center"> LightMem </h1>
 
 <p align="center">
-  <a href="https://arxiv.org/abs/xxxxx">
+  <a href="https://arxiv.org/abs/2510.18866">
     <img src="https://img.shields.io/badge/arXiv-Paper-red" alt="arXiv">
   </a>
   <a href="https://github.com/zjunlp/LightMem">
@@ -20,7 +20,7 @@
 
 **LightMem** is a lightweight and efficient memory management framework designed for Large Language Models and AI Agents. It provides a simple yet powerful memory storage, retrieval, and update mechanism to help you quickly build intelligent applications with long-term memory capabilities.
 
-- **Paper**: (coming soon)
+- **Paper**: https://arxiv.org/abs/2510.18866
 - **GitHub**: https://github.com/zjunlp/LightMem
 
 <span id='features'/>
