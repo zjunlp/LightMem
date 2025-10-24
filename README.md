@@ -73,6 +73,7 @@ LightMem is continuously evolving! Here's what's coming:
 * <a href='#examples'>💡 Examples</a>
 * <a href='#configuration'>⚙️ Configuration</a>
 * <a href='#contributors'>👥 Contributors</a>
+* <a href='#related'>🔗 Related Projects</a>
 
 <span id='installation'/>
 
@@ -343,3 +344,49 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
   </tr>
 </table>
 We welcome contributions from the community! If you'd like to contribute, please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
+
+<span id='related'/>
+
+## 🔗 Related Projects
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center" width="150">
+        <a href="https://github.com/mem0ai/mem0">
+          <img src="https://avatars.githubusercontent.com/mem0ai" width="80" style="border-radius:50%" alt="Mem0"/>
+          <br />
+          <sub><b>Mem0</b></sub>
+        </a>
+      </td>
+      <td align="center" width="150">
+        <a href="https://github.com/usememos/memos">
+          <img src="https://avatars.githubusercontent.com/usememos" width="80" style="border-radius:50%" alt="Memos"/>
+          <br />
+          <sub><b>Memos</b></sub>
+        </a>
+      </td>
+      <td align="center" width="150">
+        <a href="https://github.com/getzep/zep">
+          <img src="https://avatars.githubusercontent.com/getzep" width="80" style="border-radius:50%" alt="Zep"/>
+          <br />
+          <sub><b>Zep</b></sub>
+        </a>
+      </td>
+      <td align="center" width="150">
+        <a href="https://github.com/Mirix-AI/MIRIX">
+          <img src="https://avatars.githubusercontent.com/Mirix-AI" width="80" style="border-radius:50%" alt="MIRIX"/>
+          <br />
+          <sub><b>MIRIX</b></sub>
+        </a>
+      </td>
+      <td align="center" width="150">
+        <a href="https://github.com/NevaMind-AI/memU">
+          <img src="https://avatars.githubusercontent.com/NevaMind-AI" width="80" style="border-radius:50%" alt="MemU"/>
+          <br />
+          <sub><b>MemU</b></sub>
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
