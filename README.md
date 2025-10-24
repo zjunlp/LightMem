@@ -387,6 +387,13 @@ We welcome contributions from the community! If you'd like to contribute, please
           <sub><b>MemU</b></sub>
         </a>
       </td>
+      <td align="center" width="150">
+        <a href="https://github.com/memodb-io/memobase">
+          <img src="https://avatars.githubusercontent.com/memodb-io" width="80" style="border-radius:50%" alt="Memobase"/>
+          <br />
+          <sub><b>Memobase</b></sub>
+        </a>
+      </td>
     </tr>
   </table>
 </div>
