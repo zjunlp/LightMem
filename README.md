@@ -255,6 +255,14 @@ related_memories = lightmem.retrieve(question, limit=5)
 print(related_memories)
 ``` 
 
+📁 Experimental Results
+
+For transparency and reproducibility, we have shared the results of our experiments on Google Drive. This includes model outputs, evaluation logs, and predictions used in our study.
+
+🔗 Access the data here: [Google Drive - Experimental Results](https://drive.google.com/drive/folders/1n1YCqq0aDeWiPILhkq-uS3sU3FDmslz9?usp=drive_link)
+
+Please feel free to download, explore, and use these resources for research or reference purposes.
+
 <span id='configuration'/>
 
 ## ⚙️ Configuration
