@@ -146,18 +146,26 @@ The following table lists the backends values currently recognized by each confi
 
 ### Initialize LightMem
 ```python
+"""
+Start at root directory or anywhere
+"""
+
 import os
+import datetime
 from lightmem.memory.lightmem import LightMemory
-from lightmem.configs.base import BaseMemoryConfigs
+
+
 LOGS_ROOT = "./logs"
 RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
 os.makedirs(RUN_LOG_DIR, exist_ok=True)
-API_KEY='YOUR_API_KEY'
-API_BASE_URL=''
-LLM_MODEL=''
+
+API_KEY='your_api_key'
+API_BASE_URL='your_api_base_url'
+LLM_MODEL='your_model_name' # such as 'gpt-4o-mini' or 'deepseek-chat'
 EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
 LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
+
 config_dict = {
     "pre_compress": True,
     "pre_compressor": {
@@ -179,12 +187,12 @@ config_dict = {
     "metadata_generate": True,
     "text_summary": True,
     "memory_manager": {
-        "model_name": "openai",
+        "model_name": 'xxx', # Support 'openai' and 'deepseek'
         "configs": {
             "model": LLM_MODEL,
             "api_key": API_KEY,
             "max_tokens": 16000,
-            "openai_base_url": API_BASE_URL
+            "xxx_base_url": API_BASE_URL # if OpenAI, use 'openai_base_url', if DeepSeek, use 'deepseek_base_url'...
         }
     },
     "extract_threshold": 0.1,
@@ -213,6 +221,7 @@ config_dict = {
         "log_dir": RUN_LOG_DIR,
     }
 }
+
 lightmem = LightMemory.from_config(config_dict)
 ```
 
@@ -259,7 +268,7 @@ print(related_memories)
 
 For transparency and reproducibility, we have shared the results of our experiments on Google Drive. This includes model outputs, evaluation logs, and predictions used in our study.
 
-🔗 Access the data here: [Google Drive - Experimental Results](https://drive.google.com/drive/folders/1n1YCqq0aDeWiPILhkq-uS3sU3FDmslz9?usp=sharing)
+🔗 Access the data here: [Google Drive - Experimental Results](https://drive.google.com/drive/folders/1n1YCqq0aDeWiPILhkq-uS3sU3FDmslz9?usp=drive_link)
 
 Please feel free to download, explore, and use these resources for research or reference purposes.
 

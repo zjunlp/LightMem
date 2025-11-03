@@ -95,25 +95,22 @@ def save_memory_entries(memory_entries, file_path="memory_entries.json"):
 
 
 def resolve_tokenizer(tokenizer_or_name: Union[str, Any]):
-
     if tokenizer_or_name is None:
         raise ValueError("Tokenizer or model_name must be provided.")
-
+    
     if isinstance(tokenizer_or_name, str):
-        model_tokenizer_map = {
-            "gpt-4o-mini": "o200k_base",
-            "gpt-4o": "o200k_base",
-            "gpt-4.1-mini": "o200k_base",
-            "gpt-4.1": "o200k_base",
-            "gpt-3.5-turbo": "cl100k_base",
-            "qwen3-30b-a3b-instruct-2507": "o200k_base"
-        }
-
-        if tokenizer_or_name not in model_tokenizer_map:
-            raise ValueError(f"Unknown model_name '{tokenizer_or_name}', please update mapping.")
-
-        encoding_name = model_tokenizer_map[tokenizer_or_name]
-        print("DEBUG: resolved to encoding", encoding_name)
-        return tiktoken.get_encoding(encoding_name)
-
+        patterns = [
+            (r"^gpt-4[o.]", "o200k_base"),      # gpt-4o* or gpt-4.*
+            (r"^gpt-3\.5", "cl100k_base"),      # gpt-3.5*
+            (r"^qwen3", "o200k_base"),          # qwen3*
+            (r"^deepseek", "cl100k_base"),      # deepseek*
+        ]
+        
+        for pattern, encoding_name in patterns:
+            if re.match(pattern, tokenizer_or_name):
+                print("DEBUG: resolved to encoding", encoding_name)
+                return tiktoken.get_encoding(encoding_name)
+        
+        raise ValueError(f"Unknown model_name '{tokenizer_or_name}'")
+    
     raise TypeError(f"Unsupported tokenizer type: {type(tokenizer_or_name)}")

@@ -5,10 +5,11 @@ from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 
 class DeepseekManager:
     def __init__(self, config: BaseMemoryManagerConfig):
+        self.config = config
         if not self.config.model:
             self.config.model = "deepseek-chat"
         self.api_key = self.config.api_key
-        self.base_url = config.get("deepseek_base_url", "https://api.deepseek.com/v1")
+        self.base_url = (self.config.deepseek_base_url or "https://api.deepseek.com/v1").rstrip("/")
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
     @classmethod
