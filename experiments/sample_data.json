@@ -1,0 +1,66 @@
+[
+    {
+      "question_id": "multi_session_trip_planning_01",
+      "haystack_sessions": [
+        [
+          {"role": "user", "content": "Hi, I'm thinking about a vacation. I love big cities and great food. Any suggestions?"},
+          {"role": "assistant", "content": "Of course! Based on your interests, cities like Tokyo, Paris, or New York could be great choices. Tokyo is famous for its ramen and sushi."}
+        ],
+        [
+          {"role": "user", "content": "That sounds good. Let's focus on Tokyo. I'm thinking of going in the fall. How about October?"},
+          {"role": "assistant", "content": "October is a great time to visit Tokyo, the weather is pleasant. I can help you look for flights if you'd like."}
+        ]
+      ],
+      "haystack_dates": [
+        "2023-05-10",
+        "2023-05-15"
+      ],
+      "question": "What destination did I decide on for my trip and which month was I planning to go?",
+      "question_date": "2023-05-20",
+      "question_type": "multi-session",
+      "answer": "You decided on Tokyo for your trip and were planning to go in October."
+    },
+    {
+      "question_id": "knowledge_update_favorite_color_02",
+      "haystack_sessions": [
+        [
+          {"role": "user", "content": "Could you remember that my favorite color is blue?"},
+          {"role": "assistant", "content": "Got it. Your favorite color is blue."}
+        ],
+        [
+          {"role": "user", "content": "Hey, I've had a change of heart. My favorite color is now green."},
+          {"role": "assistant", "content": "Understood. I've updated my memory. Your new favorite color is green."}
+        ]
+      ],
+      "haystack_dates": [
+        "2023-06-01",
+        "2023-07-01"
+      ],
+      "question": "What is my favorite color?",
+      "question_date": "2023-07-05",
+      "question_type": "knowledge-update",
+      "answer": "Your favorite color is green."
+    },
+    {
+      "question_id": "multi_session_trip_planning_abs_01",
+      "haystack_sessions": [
+        [
+          {"role": "user", "content": "Hi, I'm thinking about a vacation. I love big cities and great food. Any suggestions?"},
+          {"role": "assistant", "content": "Of course! Based on your interests, cities like Tokyo, Paris, or New York could be great choices. Tokyo is famous for its ramen and sushi."}
+        ],
+        [
+          {"role": "user", "content": "That sounds good. Let's focus on Tokyo. I'm thinking of going in the fall. How about October?"},
+          {"role": "assistant", "content": "October is a great time to visit Tokyo, the weather is pleasant. I can help you look for flights if you'd like."}
+        ]
+      ],
+      "haystack_dates": [
+        "2023-05-10",
+        "2023-05-15"
+      ],
+      "question": "What was the name of the hotel I booked in Tokyo?",
+      "question_date": "2023-05-20",
+      "question_type": "multi-session",
+      "answer": "The user never mentioned booking a hotel, so this information is not available in the conversation history."
+    }
+  ]
+  

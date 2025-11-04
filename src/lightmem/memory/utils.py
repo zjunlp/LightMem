@@ -23,6 +23,7 @@ class MemoryEntry:
     hit_time: int = 0
     update_queue: List = field(default_factory=list)
 
+
 def clean_response(response: str) -> List[Dict[str, Any]]:
     """
     Cleans the model response by:
@@ -47,11 +48,12 @@ def clean_response(response: str) -> List[Dict[str, Any]]:
 
     return []
 
+
 def assign_sequence_numbers_with_timestamps(extract_list):
     current_index = 0
     timestamps_list = []
     weekday_list = []
-    
+
     for segments in extract_list:
         for seg in segments:
             for message in seg:
@@ -59,8 +61,9 @@ def assign_sequence_numbers_with_timestamps(extract_list):
                 timestamps_list.append(message["time_stamp"])
                 weekday_list.append(message["weekday"])
                 current_index += 1
-    
+
     return extract_list, timestamps_list, weekday_list
+
 
 # TODO：merge into context retriever
 def save_memory_entries(memory_entries, file_path="memory_entries.json"):
@@ -106,7 +109,7 @@ def resolve_tokenizer(tokenizer_or_name: Union[str, Any]):
             "gpt-4.1-mini": "o200k_base",
             "gpt-4.1": "o200k_base",
             "gpt-3.5-turbo": "cl100k_base",
-            "qwen3-30b-a3b-instruct-2507": "o200k_base"
+            "Qwen/Qwen-chat": "o200k_base",
         }
 
         if tokenizer_or_name not in model_tokenizer_map:

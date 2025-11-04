@@ -6,10 +6,8 @@ import httpx
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
-model_name_context_windows = {
-    "gpt-4o-mini": 128000 ,
-    "qwen3-30b-a3b-instruct-2507": 128000
-}
+model_name_context_windows = {"gpt-4o-mini": 128000, "qwen3-30b-a3b-instruct-2507": 128000, "Qwen/Qwen-chat": 128000}
+
 
 class OpenaiManager:
     def __init__(self, config: BaseMemoryManagerConfig):
@@ -17,7 +15,7 @@ class OpenaiManager:
 
         if not self.config.model:
             self.config.model = "gpt-4o-mini"
-        
+
         self.context_windows = model_name_context_windows[self.config.model]
 
         http_client = httpx.Client(verify=False)
@@ -121,12 +119,12 @@ class OpenaiManager:
 
         response = self.client.chat.completions.create(**params)
         return self._parse_response(response, tools)
-    
+
     def meta_text_extract(
         self,
         system_prompt: str,
         extract_list: List[List[List[Dict]]],
-        messages_use: Literal["user_only", "assistant_only", "hybrid"] = "user_only"
+        messages_use: Literal["user_only", "assistant_only", "hybrid"] = "user_only",
     ) -> List[Optional[Dict]]:
         """
         Extract metadata from text segments using parallel processing.
@@ -141,14 +139,10 @@ class OpenaiManager:
         """
         if not extract_list:
             return []
-            
+
         def concatenate_messages(segment: List[Dict], messages_use: str) -> str:
             """Concatenate messages based on usage strategy"""
-            role_filter = {
-                "user_only": {"user"},
-                "assistant_only": {"assistant"},
-                "hybrid": {"user", "assistant"}
-            }
+            role_filter = {"user_only": {"user"}, "assistant_only": {"assistant"}, "hybrid": {"user", "assistant"}}
 
             if messages_use not in role_filter:
                 raise ValueError(f"Invalid messages_use value: {messages_use}")
@@ -164,7 +158,7 @@ class OpenaiManager:
                     message_lines.append(f"{sequence_id}.{role}: {content}")
 
             return "\n".join(message_lines)
-        
+
         max_workers = min(len(extract_list), 5)
 
         def process_segment_wrapper(api_call_segments: List[List[Dict]]):
@@ -177,20 +171,10 @@ class OpenaiManager:
 
                 user_prompt = "\n".join(user_prompt_parts)
 
-                messages = [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ]
-                raw_response = self.generate_response(
-                    messages=messages,
-                    response_format={"type": "json_object"}
-                )
+                messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
+                raw_response = self.generate_response(messages=messages, response_format={"type": "json_object"})
                 cleaned_result = clean_response(raw_response)
-                return {
-                    "input_prompt": messages,
-                    "output_prompt": raw_response,
-                    "cleaned_result": cleaned_result
-                }
+                return {"input_prompt": messages, "output_prompt": raw_response, "cleaned_result": cleaned_result}
             except Exception as e:
                 print(f"Error processing API call: {e}")
                 return None
@@ -203,25 +187,18 @@ class OpenaiManager:
                 results = [None] * len(extract_list)
 
         return results
-    
+
     def _call_update_llm(self, system_prompt, target_entry, candidate_sources):
         target_memory = target_entry["payload"]["memory"]
         candidate_memories = [c["payload"]["memory"] for c in candidate_sources]
 
-        user_prompt = (
-            f"Target memory:{target_memory}\n"
-            f"Candidate memories:\n" + "\n".join([f"- {m}" for m in candidate_memories])
+        user_prompt = f"Target memory:{target_memory}\n" f"Candidate memories:\n" + "\n".join(
+            [f"- {m}" for m in candidate_memories]
         )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
+        messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
 
-        response_text = self.generate_response(
-            messages=messages,
-            response_format={"type": "json_object"}
-        )
+        response_text = self.generate_response(messages=messages, response_format={"type": "json_object"})
 
         try:
             result = json.loads(response_text)

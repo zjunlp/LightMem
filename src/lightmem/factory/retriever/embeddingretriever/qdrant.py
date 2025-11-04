@@ -20,9 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Qdrant:
-    def __init__(
-        self, config: Optional[QdrantConfig] = None
-    ):
+    def __init__(self, config: Optional[QdrantConfig] = None):
         """
         Initialize the Qdrant vector store.
 
@@ -149,22 +147,26 @@ class Qdrant:
             query_filter=query_filter,
             limit=limit,
             with_payload=True,
-            with_vectors=True, 
+            with_vectors=True,
         )
 
         results = []
         for h in hits.points:
             if return_full:
-                results.append({
-                    "id": h.id,
-                    "score": h.score,
-                    "payload": h.payload,
-                })
+                results.append(
+                    {
+                        "id": h.id,
+                        "score": h.score,
+                        "payload": h.payload,
+                    }
+                )
             else:
-                results.append({
-                    "id": h.id,
-                    "score": h.score,
-                })
+                results.append(
+                    {
+                        "id": h.id,
+                        "score": h.score,
+                    }
+                )
         return results
 
     def delete(self, vector_id: int):
@@ -285,7 +287,7 @@ class Qdrant:
         except Exception as e:
             logger.error(f"Error checking existence of ID {vector_id}: {e}")
             return False
-        
+
     def get_all(self, with_vectors: bool = True, with_payload: bool = True) -> list:
         """
         Retrieve all points from the collection.
@@ -303,13 +305,33 @@ class Qdrant:
             result, offset = self.client.scroll(
                 collection_name=self.collection_name,
                 scroll_filter=None,
-                limit=100, 
+                limit=100,
                 with_payload=with_payload,
                 with_vectors=with_vectors,
                 offset=offset,
             )
             all_points.extend([p.model_dump() for p in result])
-            if offset is None: 
+            if offset is None:
                 break
         return all_points
 
+    def close(self):
+        """Close the Qdrant client connection."""
+        if hasattr(self, "client") and self.client:
+            try:
+                self.client.close()
+            except Exception:
+                pass
+
+    def __del__(self):
+        """Cleanup on deletion."""
+        self.close()
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
+        return False
