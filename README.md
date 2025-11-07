@@ -232,10 +232,10 @@ lightmem = LightMemory.from_config(config_dict)
 session = {
 "timestamp": "2025-01-10",
 "turns": [
-    [
-        {"role": "user", "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex."}, 
-        {"role": "assistant", "content": "Got it. Pistachio is a great choice."}], 
-    ]
+  [
+    {"role": "user", "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex.", "speaker_name": "John","speaker_id": "speaker_a"},
+    {"role": "assistant", "content": "Got it. Pistachio is a great choice.", "speaker_name": "Assistant", "speaker_id": "speaker_b"}], 
+  ]
 }
 
 
