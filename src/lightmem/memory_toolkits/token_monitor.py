@@ -34,10 +34,7 @@ def get_tokenizer_for_model(model: str) -> SelectTokenizerResponse:
         )
         # See https://github.com/BerriAI/litellm/blob/main/litellm/litellm_core_utils/token_counter.py#L504.
         try:
-            if "gpt-4o" in model:
-                tokenizer = tiktoken.get_encoding("o200k_base")
-            else:
-                tokenizer = tiktoken.encoding_for_model(model)
+            tokenizer = tiktoken.encoding_for_model(model)
         except KeyError:
             print(
                 f"Cannot load tiktoken tokenizer for {model}, " 

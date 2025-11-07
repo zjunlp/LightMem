@@ -1,21 +1,20 @@
 import concurrent
 import json
-import os
-from openai import OpenAI
-from typing import List, Dict, Optional, Literal, Any
+import ollama
+from typing import Dict, List, Optional, Literal, Any, Union
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
 
-class DeepseekManager:
+class OllamaManager:
     def __init__(self, config: BaseMemoryManagerConfig):
         self.config = config
+
         if not self.config.model:
-            self.config.model = "deepseek-chat"
-        self.api_key = self.config.api_key
-        self.base_url = (self.config.deepseek_base_url or "https://api.deepseek.com/v1").rstrip("/")
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+            raise ValueError("Ollama model is not specified. Refer to https://ollama.com/docs/models for available models.")
+
+        self.client = ollama.Client(host=self.config.host or "http://localhost:11434")
 
     def _parse_response(self, response, tools):
         """
@@ -27,85 +26,82 @@ class DeepseekManager:
 
         Returns:
             str or dict: The processed response.
+
+        reference: https://ollama.com/blog/tool-support
         """
         if tools:
             processed_response = {
-                "content": response.choices[0].message.content,
+                "content": response["message"]["content"],
                 "tool_calls": [],
             }
 
-            if response.choices[0].message.tool_calls:
-                for tool_call in response.choices[0].message.tool_calls:
+            if response['message']['tool_calls']:
+                for tool_call in response['message']['tool_calls']:
                     processed_response["tool_calls"].append(
                         {
                             "name": tool_call.function.name,
-                            "arguments": json.loads(tool_call.function.arguments),
+                            "arguments": json.loads(tool_call.function.parameters),
                         }
                     )
 
             return processed_response
         else:
-            return response.choices[0].message.content
+            return response["message"]["content"]
 
     def generate_response(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
-        tool_choice: str = "auto",
+        think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
     ) -> Optional[str]:
         """
-        Generate a response based on the given messages using OpenAI.
+        Generate a response based on the given messages using Ollama.
 
         Args:
             messages (list): List of message dicts containing 'role' and 'content'.
             response_format (str or object, optional): Format of the response. Defaults to "text".
             tools (list, optional): List of tools that the model can call. Defaults to None.
             tool_choice (str, optional): Tool choice method. Defaults to "auto".
+            think (bool or str, optional): Thinking level for the model. Defaults to None.
 
         Returns:
             str: The generated response.
         """
-        params = {
+        if self.client is None:
+            raise ValueError("Ollama client is not initialized.")
+
+        params =  {
             "model": self.config.model,
             "messages": messages,
+            "seed": self.config.seed,
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
+            "top_k": self.config.top_k,
             "top_p": self.config.top_p,
+            "stop": self.config.stop,
         }
+        
+        completion = self.client.chat(
+            model=self.config.model,
+            messages=messages,
+            format=response_format,
+            tools=tools,
+            think=think,
+            options={
+                "num_gpu": self.config.num_gpu,
+                "main_gpu": self.config.main_gpu,
+                "num_ctx": params["max_tokens"],
+                "seed": params["seed"],
+                "temperature": params["temperature"],
+                "top_k": params["top_k"],
+                "top_p": params["top_p"],
+                "stop": params["stop"],
+            }
+        )
 
-        if os.getenv("OPENROUTER_API_KEY"):
-            openrouter_params = {}
-            if self.config.models:
-                openrouter_params["models"] = self.config.models
-                openrouter_params["route"] = self.config.route
-                params.pop("model")
-
-            if self.config.site_url and self.config.app_name:
-                extra_headers = {
-                    "HTTP-Referer": self.config.site_url,
-                    "X-Title": self.config.app_name,
-                }
-                openrouter_params["extra_headers"] = extra_headers
-
-            params.update(**openrouter_params)
-
-        if response_format:
-            params["response_format"] = response_format
-        if tools:  # TODO: Remove tools if no issues found with new memory addition logic
-            params["tools"] = tools
-            params["tool_choice"] = tool_choice
-
-        response = self.client.chat.completions.create(**params)
-        str_response =self._parse_response(response, tools)
-
-        import time, datetime
-        ts = time.time()
-        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-        with open("/disk/disk_20T/ruxiangyuan/push/LightMem/test/deepsk3333333333.txt", "a") as f:
-            f.write(f"{st}\n{str_response}\n\n\n\n\n\n\n\n\n\n\n\n\n")
-
-        return str_response
+        response = self._parse_response(completion, tools)
+        return response
 
     def meta_text_extract(
         self,
@@ -168,7 +164,6 @@ class DeepseekManager:
                 ]
                 raw_response = self.generate_response(
                     messages=messages,
-                    response_format={"type": "json_object"}
                 )
                 cleaned_result = clean_response(raw_response)
                 return {

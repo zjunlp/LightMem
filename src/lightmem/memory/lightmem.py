@@ -240,6 +240,7 @@ class LightMemory:
                 args = (msgs, self.segmenter.tokenizer)
             else:
                 args = (msgs,)
+            # fixed: empty 'content' in the 'messages' of 'compress(*args)'
             compressed_messages = self.compressor.compress(*args)
             cfg = getattr(self.compressor, "config", None)
             target_rate = None

@@ -1,6 +1,6 @@
 import concurrent
 from openai import OpenAI
-from typing import List, Dict, Optional, Literal
+from typing import List, Dict, Optional, Literal, Any
 import json, os, warnings
 import httpx
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
@@ -11,6 +11,7 @@ model_name_context_windows = {
     "qwen3-30b-a3b-instruct-2507": 128000
 }
 
+
 class OpenaiManager:
     def __init__(self, config: BaseMemoryManagerConfig):
         self.config = config
@@ -18,7 +19,10 @@ class OpenaiManager:
         if not self.config.model:
             self.config.model = "gpt-4o-mini"
         
-        self.context_windows = model_name_context_windows[self.config.model]
+        if self.config.model in model_name_context_windows:
+            self.context_windows = model_name_context_windows[self.config.model]
+        else:
+            self.context_windows = 128000  # Recommended
 
         http_client = httpx.Client(verify=False)
 
@@ -73,10 +77,10 @@ class OpenaiManager:
     def generate_response(
         self,
         messages: List[Dict[str, str]],
-        response_format=None,
+        response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
         tool_choice: str = "auto",
-    ):
+    ) -> Optional[str]:
         """
         Generate a response based on the given messages using OpenAI.
 
@@ -167,7 +171,7 @@ class OpenaiManager:
         
         max_workers = min(len(extract_list), 5)
 
-        def process_segment_wrapper(api_call_segments: List[List[Dict]]):
+        def process_segment_wrapper(api_call_segments: List[List[Dict]]) -> Dict[str, Any]:
             """Process one API call (multiple topic segments inside)"""
             try:
                 user_prompt_parts = []
@@ -193,7 +197,12 @@ class OpenaiManager:
                 }
             except Exception as e:
                 print(f"Error processing API call: {e}")
-                return None
+                # When error occurs, return empty but full structure
+                return {
+                    "input_prompt": [],
+                    "output_prompt": "",
+                    "cleaned_result": [],
+                }
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             try:

@@ -3,8 +3,8 @@ import re
 import json
 import uuid
 import tiktoken
-from datetime import datetime
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import List, Dict, Optional, Any, Union
 
 
@@ -93,24 +93,24 @@ def save_memory_entries(memory_entries, file_path="memory_entries.json"):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(existing_data, f, ensure_ascii=False, indent=2)
 
+# TODO：more support for any models
+def resolve_tokenizer(tokenizer_or_name: Union[str, Any]) -> Union[tiktoken.Encoding, Any]:
+    """
+    Resolve the tokenizer for a given model name or tokenizer instance.
+    """
+    try:
+        # OpenAI models can be easily resolved
+        encoding = tiktoken.encoding_for_model(tokenizer_or_name)
+        return encoding
 
-def resolve_tokenizer(tokenizer_or_name: Union[str, Any]):
-    if tokenizer_or_name is None:
-        raise ValueError("Tokenizer or model_name must be provided.")
-    
-    if isinstance(tokenizer_or_name, str):
+    except:
+        # Most other models can't be resolved directly by `tiktoken`
         patterns = [
-            (r"^gpt-4[o.]", "o200k_base"),      # gpt-4o* or gpt-4.*
-            (r"^gpt-3\.5", "cl100k_base"),      # gpt-3.5*
-            (r"^qwen3", "o200k_base"),          # qwen3*
-            (r"^deepseek", "cl100k_base"),      # deepseek*
+            # (r"^qwen3", "o200k_base"), # qwen3*
+            # Add some patterns as needed...
         ]
-        
         for pattern, encoding_name in patterns:
             if re.match(pattern, tokenizer_or_name):
-                print("DEBUG: resolved to encoding", encoding_name)
                 return tiktoken.get_encoding(encoding_name)
-        
-        raise ValueError(f"Unknown model_name '{tokenizer_or_name}'")
-    
-    raise TypeError(f"Unsupported tokenizer type: {type(tokenizer_or_name)}")
+
+        return tiktoken.get_encoding("o200k_base") # Default encoding for other models as a temporary solution...
