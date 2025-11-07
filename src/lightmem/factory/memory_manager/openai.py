@@ -7,8 +7,9 @@ from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
 model_name_context_windows = {
-    "gpt-4o-mini": 128000 ,
-    "qwen3-30b-a3b-instruct-2507": 128000
+    "gpt-4o-mini": 128000,
+    "qwen3-30b-a3b-instruct-2507": 128000,
+    "DEFAULT": 128000,  # Recommended default context window
 }
 
 
@@ -22,7 +23,7 @@ class OpenaiManager:
         if self.config.model in model_name_context_windows:
             self.context_windows = model_name_context_windows[self.config.model]
         else:
-            self.context_windows = 128000  # Recommended
+            self.context_windows = model_name_context_windows["DEFAULT"]
 
         http_client = httpx.Client(verify=False)
 
@@ -82,7 +83,7 @@ class OpenaiManager:
         tool_choice: str = "auto",
     ) -> Optional[str]:
         """
-        Generate a response based on the given messages using OpenAI.
+        Generate a response based on the given messages.
 
         Args:
             messages (list): List of message dicts containing 'role' and 'content'.
@@ -237,5 +238,5 @@ class OpenaiManager:
             if "action" not in result:
                 return {"action": "ignore"}
             return result
-        except Exception:
+        except:
             return {"action": "ignore"}

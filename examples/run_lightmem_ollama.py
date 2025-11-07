@@ -13,7 +13,7 @@ your_ollama_model_name = "your_Ollama_model_name_01"  # such as "llama3:latest"
 your_ollama_JUDGE_model_name = "your_Ollama_model_name_02"  # such as "gemma3:latest"
 your_ollama_host = "http://localhost:11434"  # default Ollama host is "http://localhost:11434"
 your_ollama_options_stable = {
-    "num_ctx": 4096,
+    "num_ctx": 8192,  # set according to the model's context window
     "seed": 42,
     "top_k": 1,
     "top_p": 1.0,
@@ -101,6 +101,7 @@ def load_lightmem(collection_name):
             "configs": {
                 "model": your_ollama_model_name,
                 "host": your_ollama_host,
+                "max_tokens": 16384,  # set according to the model's context window
             }
         },
         "extract_threshold": 0.1,

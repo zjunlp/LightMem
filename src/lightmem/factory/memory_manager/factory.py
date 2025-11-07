@@ -51,7 +51,7 @@ class MemoryManagerFactory:
         except AttributeError as e:
             raise ImportError(
                 f"Maybe class '{class_name}' not found in module '{module_path}': {str(e)}"
-            )
+            ) from e
         except Exception as e:
             raise ValueError(
                 f"Failed to instantiate {model_name} manager: {str(e)}"

@@ -40,6 +40,7 @@ class LlmLingua2Compressor:
         messages: List[Dict[str, str]],
         tokenizer: Union[PreTrainedTokenizerBase, Any, None],
     ) -> List[Dict[str, str]]:
+        # TODO: Consider adding an extra field in the message, compressed_content, and put the compressed content in this field while keeping content unchanged.
         """
         Compress the content of each message.
 

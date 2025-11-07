@@ -40,7 +40,7 @@
   <br> Modular architecture supporting custom storage engines and retrieval strategies
 
 * 🌐 **Broad Compatibility**
-  <br> Support for mainstream LLMs (OpenAI, Qwen, DeepSeek, etc.)
+  <br> Support for mainstream LLMs (OpenAI, Qwen, DeepSeek, Ollama, etc.)
 
 <span id='news'/>
 
@@ -56,7 +56,7 @@ LightMem is continuously evolving! Here's what's coming:
 - Offline Pre-computation of KV Cache for Update (Lossless)
 - Online Pre-computation of KV Cache Before Q&A (Lossy)
 - MCP (Memory Control Policy)
-- Integration of Common Models and Feature Enhancement
+- Integration More Models and Feature Enhancement
 - Coordinated Use of Context and Long-Term Memory Storage
 
 
@@ -135,7 +135,7 @@ The following table lists the backends values currently recognized by each confi
 | :---                            | :--- |
 | `PreCompressorConfig`           | `llmlingua-2`, `entropy_compress` |
 | `TopicSegmenterConfig`          | `llmlingua-2` |
-| `MemoryManagerConfig`           | `openai`, `deepseek` |
+| `MemoryManagerConfig`           | `openai`, `deepseek`, `ollama` |
 | `TextEmbedderConfig`            | `huggingface` |
 | `MMEmbedderConfig`              | `huggingface` |
 | `EmbeddingRetrieverConfig`      | `qdrant` |
@@ -162,7 +162,7 @@ os.makedirs(RUN_LOG_DIR, exist_ok=True)
 
 API_KEY='your_api_key'
 API_BASE_URL='your_api_base_url'
-LLM_MODEL='your_model_name' # such as 'gpt-4o-mini' or 'deepseek-chat'
+LLM_MODEL='your_model_name' # such as 'gpt-4o-mini' (API) or 'gemma3:latest' (Local Ollama) ...
 EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
 LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
 
@@ -187,12 +187,12 @@ config_dict = {
     "metadata_generate": True,
     "text_summary": True,
     "memory_manager": {
-        "model_name": 'xxx', # Support 'openai' and 'deepseek'
+        "model_name": 'xxx', # such as 'openai' or 'ollama' ...
         "configs": {
             "model": LLM_MODEL,
             "api_key": API_KEY,
             "max_tokens": 16000,
-            "xxx_base_url": API_BASE_URL # if OpenAI, use 'openai_base_url', if DeepSeek, use 'deepseek_base_url'...
+            "xxx_base_url": API_BASE_URL # API model specific, such as 'openai_base_url' or 'deepseek_base_url' ...
         }
     },
     "extract_threshold": 0.1,
@@ -289,7 +289,7 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `messages_use`        | `'user_only'`                               | `'user_only'` / `'assistant_only'` / `'hybrid'`. Controls which messages are used to generate metadata and summaries: `user_only` uses user inputs, `assistant_only` uses assistant responses, `hybrid` uses both. Choosing `hybrid` increases processing but yields richer context. |
 | `metadata_generate`   | `True`                                      | True / False. If True, metadata such as keywords and entities are extracted and stored to support attribute-based and filtered retrieval. If False, no metadata extraction occurs. |
 | `text_summary`        | `True`                                      | True / False. If True, a text summary is generated and stored alongside the original text (reduces retrieval cost and speeds review). If False, only the original text is stored. Summary quality depends on `memory_manager`. |
-| `memory_manager`      | `MemoryManagerConfig()`                     | dict / object. Controls the model used to generate summaries and metadata (`MemoryManagerConfig`), e.g., `model_name` (`openai`, `deepseek`) and `configs`. Changing this affects summary style, length, and cost. |
+| `memory_manager`      | `MemoryManagerConfig()`                     | dict / object. Controls the model used to generate summaries and metadata (`MemoryManagerConfig`), e.g., `model_name` (`openai`, `deepseek`, `ollama`) and `configs`. Changing this affects summary style, length, and cost. |
 | `extract_threshold`   | `0.5`                                       | float (0.0 - 1.0). Threshold used to decide whether content is important enough to be extracted as metadata or highlight. Higher values (e.g., 0.8) mean more conservative extraction; lower values (e.g., 0.2) extract more items (may increase noise). |
 | `index_strategy`      | `None`                                      | `'embedding'` / `'context'` / `'hybrid'` / `None`. Determines how memories are indexed: 'embedding' uses vector-based indexing (requires embedders/retriever) for semantic search; 'context' uses text-based/contextual retrieval (requires context_retriever) for keyword/document similarity; and 'hybrid' combines context filtering and vector reranking for robustness and higher accuracy.
 | `text_embedder`       | `None`                                      | dict / object. Configuration for text embedding model (`TextEmbedderConfig`) with `model_name` (e.g., `huggingface`) and `configs` (batch size, device, embedding dim). Required when `index_strategy` or `retrieve_strategy` includes `'embedding'`. |

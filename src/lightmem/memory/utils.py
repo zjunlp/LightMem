@@ -36,7 +36,8 @@ def clean_response(response: str) -> List[Dict[str, Any]]:
 
     try:
         parsed = json.loads(cleaned)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"JSON decoding error: {str(e)}")
         return []
 
     if isinstance(parsed, dict) and "data" in parsed and isinstance(parsed["data"], list):
@@ -82,7 +83,8 @@ def save_memory_entries(memory_entries, file_path="memory_entries.json"):
         with open(file_path, "r", encoding="utf-8") as f:
             try:
                 existing_data = json.load(f)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                print(f"JSON decoding error: {str(e)}")
                 existing_data = []
     else:
         existing_data = []
@@ -98,19 +100,20 @@ def resolve_tokenizer(tokenizer_or_name: Union[str, Any]) -> Union[tiktoken.Enco
     """
     Resolve the tokenizer for a given model name or tokenizer instance.
     """
+    # OpenAI models can be resolved directly by `tiktoken`
     try:
-        # OpenAI models can be easily resolved
         encoding = tiktoken.encoding_for_model(tokenizer_or_name)
         return encoding
 
+    # While most other models can't be resolved directly by `tiktoken`
     except:
-        # Most other models can't be resolved directly by `tiktoken`
         patterns = [
-            # (r"^qwen3", "o200k_base"), # qwen3*
+            (r"^qwen3", "o200k_base"),  # qwen3*
             # Add some patterns as needed...
         ]
         for pattern, encoding_name in patterns:
             if re.match(pattern, tokenizer_or_name):
                 return tiktoken.get_encoding(encoding_name)
 
-        return tiktoken.get_encoding("o200k_base") # Default encoding for other models as a temporary solution...
+        # Default encoding for any other models as a fallback solution...
+        return tiktoken.get_encoding("o200k_base")

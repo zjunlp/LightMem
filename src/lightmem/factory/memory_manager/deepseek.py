@@ -55,7 +55,7 @@ class DeepseekManager:
         tool_choice: str = "auto",
     ) -> Optional[str]:
         """
-        Generate a response based on the given messages using OpenAI.
+        Generate a response based on the given messages.
 
         Args:
             messages (list): List of message dicts containing 'role' and 'content'.

@@ -56,7 +56,7 @@ class OllamaManager:
         think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
     ) -> Optional[str]:
         """
-        Generate a response based on the given messages using Ollama.
+        Generate a response based on the given messages.
 
         Args:
             messages (list): List of message dicts containing 'role' and 'content'.
