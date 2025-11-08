@@ -2,12 +2,14 @@ from pydantic import BaseModel, Field, model_validator
 from typing import Dict, Optional, Type, Any, List, ClassVar
 from .base_config import BaseMemoryManagerConfig
 
+
 class MemoryManagerConfig(BaseModel):
-    model_name: str = Field(description="The memory management model or Deployment platform (e.g., 'openai', 'deepseek', 'ollama')", default="openai")
+    model_name: str = Field(description="The memory management model or Deployment platform (e.g., 'openai', 'deepseek', 'ollama', 'local')", default="openai")
 
     _model_list: ClassVar[List[str]] = [
         "openai",
-        "deepseek"
+        "deepseek",
+        "ollama",
     ]
 
     configs: Optional[dict] = Field(description="Configuration for the specific MemoryManager model", default={})

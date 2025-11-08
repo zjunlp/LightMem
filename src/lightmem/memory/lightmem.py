@@ -50,8 +50,8 @@ class MessageNormalizer:
         try:
             dt = datetime.fromisoformat(raw_ts)
             return dt, dt.strftime("%a")
-        except Exception:
-            raise ValueError(f"Failed to parse session time format: '{raw_ts}'. Expected something like '2023/05/20 (Sat) 00:44'")
+        except Exception as e:
+            raise ValueError(f"{str(e)}: Failed to parse session time format: '{raw_ts}'. Expected something like '2023/05/20 (Sat) 00:44'")
 
     def normalize_messages(self, messages: Any) -> List[Dict[str, Any]]:
         """
@@ -240,6 +240,7 @@ class LightMemory:
                 args = (msgs, self.segmenter.tokenizer)
             else:
                 args = (msgs,)
+            # fixed: empty 'content' in the 'messages' of 'compress(*args)'
             compressed_messages = self.compressor.compress(*args)
             cfg = getattr(self.compressor, "config", None)
             target_rate = None

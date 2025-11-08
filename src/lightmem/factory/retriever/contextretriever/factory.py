@@ -47,10 +47,10 @@ class ContextRetrieverFactory:
             raise ImportError(
                 f"Could not import retriever class '{class_path}': {str(e)}"
             ) from e
-        except AttributeError:
+        except AttributeError as e:
             raise ImportError(
-                f"Class '{class_name}' not found in module '{module_path}'"
-            )
+                f"Maybe class '{class_name}' not found in module '{module_path}': {str(e)}"
+            ) from e
         except Exception as e:
             raise ValueError(
                 f"Failed to instantiate {model_name} retriever: {str(e)}"

@@ -2,10 +2,12 @@ from typing import Dict, Optional
 from importlib import import_module
 from lightmem.configs.memory_manager.base import MemoryManagerConfig
 
+
 class MemoryManagerFactory:
     _MODEL_MAPPING: Dict[str, str] = {
         "deepseek": "lightmem.factory.memory_manager.deepseek.DeepseekManager",
         "openai": "lightmem.factory.memory_manager.openai.OpenaiManager",
+        "ollama": "lightmem.factory.memory_manager.ollama.OllamaManager",
     }
 
     @classmethod
@@ -46,10 +48,10 @@ class MemoryManagerFactory:
             raise ImportError(
                 f"Could not import manager'{class_path}': {str(e)}"
             ) from e
-        except AttributeError:
+        except AttributeError as e:
             raise ImportError(
-                f"Class '{class_name}' not found in module '{module_path}'"
-            )
+                f"Maybe class '{class_name}' not found in module '{module_path}': {str(e)}"
+            ) from e
         except Exception as e:
             raise ValueError(
                 f"Failed to instantiate {model_name} manager: {str(e)}"

@@ -1,49 +1,20 @@
 import concurrent
-from openai import OpenAI
-from typing import List, Dict, Optional, Literal, Any
-import json, os, warnings
-import httpx
+import json
+import ollama
+from typing import Dict, List, Optional, Literal, Any, Union
+
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
-model_name_context_windows = {
-    "gpt-4o-mini": 128000,
-    "qwen3-30b-a3b-instruct-2507": 128000,
-    "DEFAULT": 128000,  # Recommended default context window
-}
 
-
-class OpenaiManager:
+class OllamaManager:
     def __init__(self, config: BaseMemoryManagerConfig):
         self.config = config
 
         if not self.config.model:
-            self.config.model = "gpt-4o-mini"
-        
-        if self.config.model in model_name_context_windows:
-            self.context_windows = model_name_context_windows[self.config.model]
-        else:
-            self.context_windows = model_name_context_windows["DEFAULT"]
+            raise ValueError("Ollama model is not specified. Refer to https://ollama.com/docs/models for available models.")
 
-        http_client = httpx.Client(verify=False)
-
-        if os.environ.get("OPENROUTER_API_KEY"):  # Use OpenRouter
-            self.client = OpenAI(
-                api_key=os.environ.get("OPENROUTER_API_KEY"),
-                base_url=self.config.openrouter_base_url
-                or os.getenv("OPENROUTER_API_BASE")
-                or "https://openrouter.ai/api/v1",
-            )
-        else:
-            api_key = self.config.api_key or os.getenv("OPENAI_API_KEY")
-            base_url = (
-                self.config.openai_base_url
-                or os.getenv("OPENAI_API_BASE")
-                or os.getenv("OPENAI_BASE_URL")
-                or "https://api.openai.com/v1"
-            )
-
-            self.client = OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
+        self.client = ollama.Client(host=self.config.host or "http://localhost:11434")
 
     def _parse_response(self, response, tools):
         """
@@ -55,32 +26,34 @@ class OpenaiManager:
 
         Returns:
             str or dict: The processed response.
+
+        reference: https://ollama.com/blog/tool-support
         """
         if tools:
             processed_response = {
-                "content": response.choices[0].message.content,
+                "content": response["message"]["content"],
                 "tool_calls": [],
             }
 
-            if response.choices[0].message.tool_calls:
-                for tool_call in response.choices[0].message.tool_calls:
+            if response['message']['tool_calls']:
+                for tool_call in response['message']['tool_calls']:
                     processed_response["tool_calls"].append(
                         {
                             "name": tool_call.function.name,
-                            "arguments": json.loads(tool_call.function.arguments),
+                            "arguments": json.loads(tool_call.function.parameters),
                         }
                     )
 
             return processed_response
         else:
-            return response.choices[0].message.content
+            return response["message"]["content"]
 
     def generate_response(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
-        tool_choice: str = "auto",
+        think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
     ) -> Optional[str]:
         """
         Generate a response based on the given messages.
@@ -90,43 +63,46 @@ class OpenaiManager:
             response_format (str or object, optional): Format of the response. Defaults to "text".
             tools (list, optional): List of tools that the model can call. Defaults to None.
             tool_choice (str, optional): Tool choice method. Defaults to "auto".
+            think (bool or str, optional): Thinking level for the model. Defaults to None.
 
         Returns:
             str: The generated response.
         """
-        params = {
+        if self.client is None:
+            raise ValueError("Ollama client is not initialized.")
+
+        params =  {
             "model": self.config.model,
             "messages": messages,
+            "seed": self.config.seed,
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
+            "top_k": self.config.top_k,
             "top_p": self.config.top_p,
+            "stop": self.config.stop,
         }
+        
+        completion = self.client.chat(
+            model=self.config.model,
+            messages=messages,
+            format=response_format,
+            tools=tools,
+            think=think,
+            options={
+                "num_gpu": self.config.num_gpu,
+                "main_gpu": self.config.main_gpu,
+                "num_ctx": params["max_tokens"],
+                "seed": params["seed"],
+                "temperature": params["temperature"],
+                "top_k": params["top_k"],
+                "top_p": params["top_p"],
+                "stop": params["stop"],
+            }
+        )
 
-        if os.getenv("OPENROUTER_API_KEY"):
-            openrouter_params = {}
-            if self.config.models:
-                openrouter_params["models"] = self.config.models
-                openrouter_params["route"] = self.config.route
-                params.pop("model")
+        response = self._parse_response(completion, tools)
+        return response
 
-            if self.config.site_url and self.config.app_name:
-                extra_headers = {
-                    "HTTP-Referer": self.config.site_url,
-                    "X-Title": self.config.app_name,
-                }
-                openrouter_params["extra_headers"] = extra_headers
-
-            params.update(**openrouter_params)
-
-        if response_format:
-            params["response_format"] = response_format
-        if tools:  # TODO: Remove tools if no issues found with new memory addition logic
-            params["tools"] = tools
-            params["tool_choice"] = tool_choice
-
-        response = self.client.chat.completions.create(**params)
-        return self._parse_response(response, tools)
-    
     def meta_text_extract(
         self,
         system_prompt: str,
@@ -188,7 +164,6 @@ class OpenaiManager:
                 ]
                 raw_response = self.generate_response(
                     messages=messages,
-                    response_format={"type": "json_object"}
                 )
                 cleaned_result = clean_response(raw_response)
                 return {
@@ -213,30 +188,3 @@ class OpenaiManager:
                 results = [None] * len(extract_list)
 
         return results
-    
-    def _call_update_llm(self, system_prompt, target_entry, candidate_sources):
-        target_memory = target_entry["payload"]["memory"]
-        candidate_memories = [c["payload"]["memory"] for c in candidate_sources]
-
-        user_prompt = (
-            f"Target memory:{target_memory}\n"
-            f"Candidate memories:\n" + "\n".join([f"- {m}" for m in candidate_memories])
-        )
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
-
-        response_text = self.generate_response(
-            messages=messages,
-            response_format={"type": "json_object"}
-        )
-
-        try:
-            result = json.loads(response_text)
-            if "action" not in result:
-                return {"action": "ignore"}
-            return result
-        except:
-            return {"action": "ignore"}
