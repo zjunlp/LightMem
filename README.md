@@ -377,10 +377,10 @@ We welcome contributions from the community! If you'd like to contribute, please
         </a>
       </td>
       <td align="center" width="150">
-        <a href="https://github.com/usememos/memos">
-          <img src="https://avatars.githubusercontent.com/usememos" width="80" style="border-radius:50%" alt="Memos"/>
+        <a href="https://github.com/MemTensor/MemOS">
+          <img src="https://avatars.githubusercontent.com/MemTensor" width="80" style="border-radius:50%" alt="MemOS"/>
           <br />
-          <sub><b>Memos</b></sub>
+          <sub><b>MemOS</b></sub>
         </a>
       </td>
       <td align="center" width="150">
