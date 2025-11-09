@@ -23,10 +23,13 @@ class BaseMemoryManagerConfig:
         host: Optional[str] = "http://localhost:11434",
         num_gpu: Optional[int] = -1, # number of GPUs to use, -1 means all available GPUs, 0 means CPU only
         main_gpu: Optional[int] = 0,
+        gpu_memory_utilization: Optional[float] = 0.9,  # fraction of GPU memory to use
+        trust_remote_code: bool = True,
         # API model specific parameters
         api_key: Optional[str] = None,
         openai_base_url: Optional[str] = None, # OpenAI specific
         deepseek_base_url: Optional[str] = None, # DeepSeek specific
+        vllm_base_url: Optional[str] = None, # vLLM specific
         site_url: Optional[str] = None,
         app_name: Optional[str] = None,
     ):
@@ -49,10 +52,13 @@ class BaseMemoryManagerConfig:
         self.host = host
         self.num_gpu = num_gpu
         self.main_gpu = main_gpu
+        self.gpu_memory_utilization = gpu_memory_utilization
+        self.trust_remote_code = trust_remote_code
 
         # API model specific parameters
         self.api_key = api_key
         self.openai_base_url = openai_base_url
         self.deepseek_base_url = deepseek_base_url
+        self.vllm_base_url = vllm_base_url
         self.site_url = site_url
         self.app_name = app_name

@@ -1,108 +1,112 @@
+"""
+Need the deployment of vLLM API server first.
+
+The command to start a vLLM API server:
+vllm serve [model_tag] [options]
+"""
+
 import concurrent
 import json
-import ollama
-from typing import Dict, List, Optional, Literal, Any, Union
+import os
+import re
+from openai import OpenAI
+from typing import List, Dict, Optional, Literal, Any
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
 
-class OllamaManager:
+class VllmManager:
     def __init__(self, config: BaseMemoryManagerConfig):
         self.config = config
 
         if not self.config.model:
-            raise ValueError("Ollama model is not specified. Refer to https://ollama.com/docs/models for available models.")
+            raise ValueError("vLLM model is not specified. Refer to https://vllm.ai/docs/models/ for available models.")
 
-        self.client = ollama.Client(host=self.config.host or "http://localhost:11434")
+        if self.config.api_key:
+            print("Using your provided vLLM API key, make sure your vLLM server supports API key authentication.")
+            self.api_key = self.config.api_key or os.getenv("VLLM_API_KEY")
+        else:
+            self.api_key = None
+
+        self.base_url = self.config.vllm_base_url or "http://localhost:8000"
+
+        if self.api_key:
+            self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        else:
+            self.client = OpenAI(base_url=self.base_url)
 
     def _parse_response(self, response, tools):
         """
         Process the response based on whether tools are used or not.
 
         Args:
-            response: The raw response from **Ollama offline deployment**.
+            response: The raw response from vLLM API.
             tools: The list of tools provided in the request.
 
         Returns:
             str or dict: The processed response.
-
-        reference: https://ollama.com/blog/tool-support
         """
         if tools:
             processed_response = {
-                "content": response["message"]["content"],
+                "content": response.choices[0].message.content,
                 "tool_calls": [],
             }
 
-            if response['message']['tool_calls']:
-                for tool_call in response['message']['tool_calls']:
+            if response.choices[0].message.tool_calls:
+                for tool_call in response.choices[0].message.tool_calls:
+                    args = tool_call.function.arguments.strip()
+                    match = re.search(r"```(?:json)?\s*(.*?)\s*```", args, re.DOTALL)
+                    if match:
+                        args = match.group(1)
                     processed_response["tool_calls"].append(
                         {
                             "name": tool_call.function.name,
-                            "arguments": json.loads(tool_call.function.parameters),
+                            "arguments": json.loads(args),
                         }
                     )
 
             return processed_response
         else:
-            return response["message"]["content"]
+            return response.choices[0].message.content
 
     def generate_response(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
-        think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
-    ) -> Optional[str]:
+        tool_choice: str = "auto",
+        **kwargs,
+    ):
         """
-        Generate a response based on the given messages.
+        Generate a response based on the given messages using vLLM.
 
         Args:
             messages (list): List of message dicts containing 'role' and 'content'.
             response_format (str or object, optional): Format of the response. Defaults to "text".
             tools (list, optional): List of tools that the model can call. Defaults to None.
             tool_choice (str, optional): Tool choice method. Defaults to "auto".
-            think (bool or str, optional): Thinking level for the model. Defaults to None.
+            **kwargs: Additional vLLM-specific parameters.
 
         Returns:
             str: The generated response.
         """
-        if self.client is None:
-            raise ValueError("Ollama client is not initialized.")
-
-        params =  {
-            "model": self.config.model,
-            "messages": messages,
-            "seed": self.config.seed,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
-            "top_k": self.config.top_k,
-            "top_p": self.config.top_p,
-            "stop": self.config.stop,
-        }
-        
-        completion = self.client.chat(
-            model=self.config.model,
-            messages=messages,
-            format=response_format,
-            tools=tools,
-            think=think,
-            options={
-                "num_gpu": self.config.num_gpu,
-                "main_gpu": self.config.main_gpu,
-                "num_ctx": params["max_tokens"],
-                "seed": params["seed"],
-                "temperature": params["temperature"],
-                "top_k": params["top_k"],
-                "top_p": params["top_p"],
-                "stop": params["stop"],
+        params = self._get_supported_params(messages=messages, **kwargs)
+        params.update(
+            {
+                "model": self.config.model,
+                "messages": messages,
             }
         )
 
-        response = self._parse_response(completion, tools)
+        if tools:  # TODO: Remove tools if no issues found with new memory addition logic
+            params["tools"] = tools
+            params["tool_choice"] = tool_choice
 
-        return response
+        response = self.client.chat.completions.create(**params)
+        str_response = self._parse_response(response, tools)
+
+        return str_response
 
     def meta_text_extract(
         self,

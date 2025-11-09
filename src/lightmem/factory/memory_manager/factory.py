@@ -8,6 +8,8 @@ class MemoryManagerFactory:
         "deepseek": "lightmem.factory.memory_manager.deepseek.DeepseekManager",
         "openai": "lightmem.factory.memory_manager.openai.OpenaiManager",
         "ollama": "lightmem.factory.memory_manager.ollama.OllamaManager",
+        "vllm": "lightmem.factory.memory_manager.vllm.VllmManager",
+        "vllm_offline": "lightmem.factory.memory_manager.vllm_offline.VllmOfflineManager",
     }
 
     @classmethod

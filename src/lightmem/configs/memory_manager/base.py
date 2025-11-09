@@ -10,6 +10,8 @@ class MemoryManagerConfig(BaseModel):
         "openai",
         "deepseek",
         "ollama",
+        "vllm",
+        "vllm_offline",
     ]
 
     configs: Optional[dict] = Field(description="Configuration for the specific MemoryManager model", default={})

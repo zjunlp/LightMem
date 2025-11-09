@@ -40,7 +40,7 @@
   <br> Modular architecture supporting custom storage engines and retrieval strategies
 
 * 🌐 **Broad Compatibility**
-  <br> Support for mainstream LLMs (OpenAI, Qwen, DeepSeek, Ollama, etc.)
+  <br> Support for cloud APIs (OpenAI, DeepSeek) and local models (Ollama, vLLM, etc.)
 
 <span id='news'/>
 
@@ -135,7 +135,7 @@ The following table lists the backends values currently recognized by each confi
 | :---                            | :--- |
 | `PreCompressorConfig`           | `llmlingua-2`, `entropy_compress` |
 | `TopicSegmenterConfig`          | `llmlingua-2` |
-| `MemoryManagerConfig`           | `openai`, `deepseek`, `ollama` |
+| `MemoryManagerConfig`           | `openai`, `deepseek`, `ollama`, `vllm`, etc. |
 | `TextEmbedderConfig`            | `huggingface` |
 | `MMEmbedderConfig`              | `huggingface` |
 | `EmbeddingRetrieverConfig`      | `qdrant` |
@@ -289,7 +289,7 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `messages_use`        | `'user_only'`                               | `'user_only'` / `'assistant_only'` / `'hybrid'`. Controls which messages are used to generate metadata and summaries: `user_only` uses user inputs, `assistant_only` uses assistant responses, `hybrid` uses both. Choosing `hybrid` increases processing but yields richer context. |
 | `metadata_generate`   | `True`                                      | True / False. If True, metadata such as keywords and entities are extracted and stored to support attribute-based and filtered retrieval. If False, no metadata extraction occurs. |
 | `text_summary`        | `True`                                      | True / False. If True, a text summary is generated and stored alongside the original text (reduces retrieval cost and speeds review). If False, only the original text is stored. Summary quality depends on `memory_manager`. |
-| `memory_manager`      | `MemoryManagerConfig()`                     | dict / object. Controls the model used to generate summaries and metadata (`MemoryManagerConfig`), e.g., `model_name` (`openai`, `deepseek`, `ollama`) and `configs`. Changing this affects summary style, length, and cost. |
+| `memory_manager`      | `MemoryManagerConfig()`                     | dict / object. Controls the model used to generate summaries and metadata (`MemoryManagerConfig`), e.g., `model_name` (`openai`, `ollama`, etc.) and `configs`. Changing this affects summary style, length, and cost. |
 | `extract_threshold`   | `0.5`                                       | float (0.0 - 1.0). Threshold used to decide whether content is important enough to be extracted as metadata or highlight. Higher values (e.g., 0.8) mean more conservative extraction; lower values (e.g., 0.2) extract more items (may increase noise). |
 | `index_strategy`      | `None`                                      | `'embedding'` / `'context'` / `'hybrid'` / `None`. Determines how memories are indexed: 'embedding' uses vector-based indexing (requires embedders/retriever) for semantic search; 'context' uses text-based/contextual retrieval (requires context_retriever) for keyword/document similarity; and 'hybrid' combines context filtering and vector reranking for robustness and higher accuracy.
 | `text_embedder`       | `None`                                      | dict / object. Configuration for text embedding model (`TextEmbedderConfig`) with `model_name` (e.g., `huggingface`) and `configs` (batch size, device, embedding dim). Required when `index_strategy` or `retrieve_strategy` includes `'embedding'`. |

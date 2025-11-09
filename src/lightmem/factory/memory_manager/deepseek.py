@@ -99,12 +99,6 @@ class DeepseekManager:
         response = self.client.chat.completions.create(**params)
         str_response =self._parse_response(response, tools)
 
-        import time, datetime
-        ts = time.time()
-        st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-        with open("/disk/disk_20T/ruxiangyuan/push/LightMem/test/deepsk3333333333.txt", "a") as f:
-            f.write(f"{st}\n{str_response}\n\n\n\n\n\n\n\n\n\n\n\n\n")
-
         return str_response
 
     def meta_text_extract(

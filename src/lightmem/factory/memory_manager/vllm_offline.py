@@ -1,52 +1,73 @@
+"""
+This module implements a memory manager using vLLM for **offline** inference.
+
+Require vLLM version >= 0.9.0, and vLLM version 0.11.0 is recommended.
+"""
+
 import concurrent
 import json
-import ollama
+import warnings
 from typing import Dict, List, Optional, Literal, Any, Union
+
+import torch
+from vllm import LLM, RequestOutput, SamplingParams
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
+DEFAULT_MAX_MODEL_LEN = 128000
 
-class OllamaManager:
+
+class VllmOfflineManager:
     def __init__(self, config: BaseMemoryManagerConfig):
         self.config = config
 
         if not self.config.model:
-            raise ValueError("Ollama model is not specified. Refer to https://ollama.com/docs/models for available models.")
+            raise ValueError("VLLM model is not specified. Refer to https://vllm.ai/models/ for available models.")
 
-        self.client = ollama.Client(host=self.config.host or "http://localhost:11434")
+        if self.config.num_gpu is None:
+            self.config.num_gpu = 1
+        elif self.config.num_gpu == -1:  # Use all available GPUs
+            if torch.cuda.is_available():
+                self.config.num_gpu = torch.cuda.device_count() or 1
+            else:
+                warnings.warn("CUDA not available, using CPU mode.")
+                self.config.num_gpu = 0
+        
+        self.config.gpu_memory_utilization = getattr(self.config, "gpu_memory_utilization", 0.9)
+
+        self.client = LLM(
+            model=self.config.model,
+            trust_remote_code=self.config.trust_remote_code,
+            tensor_parallel_size=max(1, self.config.num_gpu),
+            gpu_memory_utilization=self.config.gpu_memory_utilization,
+            max_model_len=DEFAULT_MAX_MODEL_LEN,
+        )
 
     def _parse_response(self, response, tools):
         """
         Process the response based on whether tools are used or not.
 
         Args:
-            response: The raw response from **Ollama offline deployment**.
+            response: The raw response from **vLLM offline deployment**.
             tools: The list of tools provided in the request.
 
         Returns:
             str or dict: The processed response.
 
-        reference: https://ollama.com/blog/tool-support
+        reference: https://docs.vllm.ai/en/latest/examples/offline_inference/chat_with_tools
         """
+        content = response.outputs[0].text.strip()
+        
         if tools:
             processed_response = {
-                "content": response["message"]["content"],
+                "content": content,
                 "tool_calls": [],
             }
-
-            if response['message']['tool_calls']:
-                for tool_call in response['message']['tool_calls']:
-                    processed_response["tool_calls"].append(
-                        {
-                            "name": tool_call.function.name,
-                            "arguments": json.loads(tool_call.function.parameters),
-                        }
-                    )
-
+            # Offline vLLM doesn't support tool calls in the same way, so we return the content
             return processed_response
         else:
-            return response["message"]["content"]
+            return content
 
     def generate_response(
         self,
@@ -69,38 +90,29 @@ class OllamaManager:
             str: The generated response.
         """
         if self.client is None:
-            raise ValueError("Ollama client is not initialized.")
-
-        params =  {
-            "model": self.config.model,
-            "messages": messages,
-            "seed": self.config.seed,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
-            "top_k": self.config.top_k,
-            "top_p": self.config.top_p,
-            "stop": self.config.stop,
-        }
+            raise ValueError("vLLM client is not initialized.")
         
-        completion = self.client.chat(
-            model=self.config.model,
-            messages=messages,
-            format=response_format,
-            tools=tools,
-            think=think,
-            options={
-                "num_gpu": self.config.num_gpu,
-                "main_gpu": self.config.main_gpu,
-                "num_ctx": params["max_tokens"],
-                "seed": params["seed"],
-                "temperature": params["temperature"],
-                "top_k": params["top_k"],
-                "top_p": params["top_p"],
-                "stop": params["stop"],
-            }
+        params = SamplingParams(
+            seed=self.config.seed,
+            temperature=self.config.temperature,
+            top_p=self.config.top_p,
+            top_k=self.config.top_k,
+            max_tokens=self.config.max_tokens,
+            stop=self.config.stop,
         )
 
-        response = self._parse_response(completion, tools)
+        if think is None or think is False:
+            think = False  # Set to False to strictly disable thinking
+        else:
+            think = True
+
+        outputs = self.client.chat(
+            [messages], 
+            params,
+            chat_template_kwargs={"enable_thinking": think},
+        )
+
+        response = self._parse_response(outputs[0], tools)
 
         return response
 
