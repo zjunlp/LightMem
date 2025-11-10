@@ -378,7 +378,7 @@ We welcome contributions from the community! If you'd like to contribute, please
       </td>
       <td align="center" width="150">
         <a href="https://github.com/MemTensor/MemOS">
-          <img src="https://camo.githubusercontent.com/ae22e51dc95d98c478a05e92069668c70b9c938645f5ee621436e674979ef912/68747470733a2f2f737461746963732e6d656d74656e736f722e636f6d2e636e2f6c6f676f2f6d656d6f735f636f6c6f725f6d2e706e67" width="80" style="border-radius:50%" alt="Memos"/>
+          <img src="https://avatars.githubusercontent.com/MemOS" width="80" style="border-radius:50%" alt="Memos"/>
           <br />
           <sub><b>Memos</b></sub>
         </a>
