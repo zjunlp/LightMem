@@ -378,7 +378,7 @@ We welcome contributions from the community! If you'd like to contribute, please
       </td>
       <td align="center" width="150">
         <a href="https://github.com/MemTensor/MemOS">
-          <img src="https://avatars.githubusercontent.com/MemOS" width="80" style="border-radius:50%" alt="Memos"/>
+          <img src="https://avatars.githubusercontent.com/MemTensor/MemOS" width="80" style="border-radius:50%" alt="Memos"/>
           <br />
           <sub><b>Memos</b></sub>
         </a>
