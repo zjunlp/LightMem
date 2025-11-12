@@ -102,6 +102,13 @@ pip install lightmem  # Coming soon
 ```
 
 ## ⚡ Quick Start
+
+1. Modify the `JUDGE_MODEL`, `LLM_MODEL`, and their respective `API_KEY` and `BASE_URL` in `API Configuration`.
+
+2. Download `LLMLINGUA_MODEL` from [microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank](https://huggingface.co/microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank) and `EMBEDDING_MODEL` from [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and modify their paths in `Model Paths`.
+
+3. Download the dataset from [longmemeval-cleaned](https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned), and modidy the path in `Data Configuration`.
+
 ```python
 cd experiments
 python run_lightmem_qwen.py
