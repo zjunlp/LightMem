@@ -3,3 +3,16 @@ __pycache__/
 __pycache__/
 *.py[cod]
 *.class
+# 忽略 Qdrant 数据目录（动态生成的数据库文件）
+qdrant_data/
+
+# 忽略虚拟环境目录（之前出现的 .venv311 也不需要跟踪）
+.venv311/
+
+# 补充其他常见忽略项（可选，避免后续警告）
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.local

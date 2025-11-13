@@ -145,9 +145,18 @@ class LightMemory:
             self.logger.info("Initializing topic segmenter")
             self.segmenter = TopicSegmenterFactory.from_config(self.config.topic_segmenter, self.config.precomp_topic_shared, self.compressor)
             self.senmem_buffer_manager = SenMemBufferManager(max_tokens=self.segmenter.buffer_len, tokenizer=self.segmenter.tokenizer)
-        self.logger.info("Initializing memory manager")
-        self.manager = MemoryManagerFactory.from_config(self.config.memory_manager)
-        self.shortmem_buffer_manager = ShortMemBufferManager(max_tokens = 1024, tokenizer=getattr(self.manager, "tokenizer", self.manager.config.model))
+        # Initialize memory manager only when LLM-dependent features are enabled
+        if self.config.metadata_generate or self.config.text_summary:
+            self.logger.info("Initializing memory manager")
+            self.manager = MemoryManagerFactory.from_config(self.config.memory_manager)
+            tokenizer_for_shortmem = getattr(self.manager, "tokenizer", getattr(self.manager, "config", None) and self.manager.config.model)
+        else:
+            self.logger.info("Skipping memory manager initialization (LLM features disabled)")
+            self.manager = None
+            # Provide a default tokenizer name that resolve_tokenizer supports
+            tokenizer_for_shortmem = "gpt-4o-mini"
+
+        self.shortmem_buffer_manager = ShortMemBufferManager(max_tokens = 1024, tokenizer=tokenizer_for_shortmem)
         if self.config.index_strategy == 'embedding' or self.config.index_strategy == 'hybrid':
             self.logger.info("Initializing text embedder")
             self.text_embedder = TextEmbedderFactory.from_config(self.config.text_embedder)
@@ -340,6 +349,51 @@ class LightMemory:
         return result
 
     def online_update(self, memory_list: List):
+        """
+        Immediate indexing and storage of new memory entries.
+
+        Mirrors the embedding/context branches of offline_update, but executes synchronously
+        for the provided batch only.
+        """
+        call_id = f"online_update_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        self.logger.info(f"========== START {call_id} ==========")
+        self.logger.info(f"[{call_id}] Received {len(memory_list)} memory entries")
+
+        # Context indexing: write plaintext entries for BM25
+        if self.config.index_strategy in ["context", "hybrid"]:
+            self.logger.info(f"[{call_id}] Saving memory entries to file (strategy: {self.config.index_strategy})")
+            save_memory_entries(memory_list, "memory_entries.json")
+
+        # Embedding indexing: upsert into vector store
+        if self.config.index_strategy in ["embedding", "hybrid"]:
+            inserted_count = 0
+            self.logger.info(f"[{call_id}] Starting embedding and insertion to vector database")
+            for mem_obj in memory_list:
+                embedding_vector = self.text_embedder.embed(mem_obj.memory)
+                ids = mem_obj.id
+                while self.embedding_retriever.exists(ids):
+                    ids = str(uuid.uuid4())
+                    mem_obj.id = ids
+                payload = {
+                    "time_stamp": mem_obj.time_stamp,
+                    "float_time_stamp": mem_obj.float_time_stamp,
+                    "weekday": mem_obj.weekday,
+                    "category": mem_obj.category,
+                    "subcategory": mem_obj.subcategory,
+                    "memory_class": mem_obj.memory_class,
+                    "memory": mem_obj.memory,
+                    "original_memory": mem_obj.original_memory,
+                    "compressed_memory": mem_obj.compressed_memory,
+                }
+                self.embedding_retriever.insert(
+                    vectors=[embedding_vector],
+                    payloads=[payload],
+                    ids=[ids],
+                )
+                inserted_count += 1
+            self.logger.info(f"[{call_id}] Successfully inserted {inserted_count} entries to vector database")
+
+        self.logger.info(f"========== END {call_id} ==========")
         return None
 
     def offline_update(self, memory_list: List, construct_update_queue_trigger: bool = False, offline_update_trigger: bool = False):
@@ -570,17 +624,45 @@ class LightMemory:
         self.logger.info(f"========== START {call_id} ==========")
         self.logger.info(f"[{call_id}] Query: {query}")
         self.logger.info(f"[{call_id}] Parameters: limit={limit}, filters={filters}")
-        self.logger.debug(f"[{call_id}] Generating embedding for query")
-        query_vector = self.text_embedder.embed(query)
-        self.logger.debug(f"[{call_id}] Query embedding dimension: {len(query_vector)}")
-        self.logger.info(f"[{call_id}] Searching vector database")
-        results = self.embedding_retriever.search(
-            query_vector=query_vector,
-            limit=limit,
-            filters=filters,
-            return_full=True,
-        )
-        self.logger.info(f"[{call_id}] Found {len(results)} results")
+        results = []
+        embed_results = []
+        ctx_results = []
+
+        if self.config.retrieve_strategy in ["embedding", "hybrid"]:
+            self.logger.debug(f"[{call_id}] Generating embedding for query")
+            query_vector = self.text_embedder.embed(query)
+            self.logger.debug(f"[{call_id}] Query embedding dimension: {len(query_vector)}")
+            self.logger.info(f"[{call_id}] Searching vector database (embedding)")
+            embed_results = self.embedding_retriever.search(
+                query_vector=query_vector,
+                limit=limit,
+                filters=filters,
+                return_full=True,
+            )
+            self.logger.info(f"[{call_id}] Found {len(embed_results)} embedding results")
+
+        if self.config.retrieve_strategy in ["context", "hybrid"]:
+            self.logger.info(f"[{call_id}] Searching BM25 corpus (context)")
+            ctx_results = self.context_retriever.search(query=query, limit=limit, filters=filters, return_full=True)
+            self.logger.info(f"[{call_id}] Found {len(ctx_results)} context results")
+
+        if self.config.retrieve_strategy == "embedding":
+            results = embed_results
+        elif self.config.retrieve_strategy == "context":
+            results = ctx_results
+        else:
+            # Hybrid: simple merge and deduplicate by (time_stamp, memory)
+            seen = set()
+            merged = []
+            for r in embed_results + ctx_results:
+                payload = r.get("payload", {})
+                key = (payload.get("time_stamp"), payload.get("memory"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(r)
+            # Keep top-N by score if available
+            results = sorted(merged, key=lambda x: x.get("score", 0.0), reverse=True)[:limit]
         formatted_results = []
         for r in results:
             payload = r.get("payload", {})

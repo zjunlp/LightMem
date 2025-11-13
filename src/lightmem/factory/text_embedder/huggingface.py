@@ -14,21 +14,7 @@ class TextEmbedderHuggingface:
             self.model = SentenceTransformer(config.model, **config.model_kwargs)
             self.config.embedding_dims = config.embedding_dims or self.model.get_sentence_embedding_dimension()
 
-    @classmethod
-    def from_config(cls, config):
-        cls.validate_config(config)
-        return cls(config)
-
-    @staticmethod
-    def validate_config(config):
-        """
-        Validate whether the provided config dictionary contains the required configuration items.
-        Assume that the HuggingFace embedder requires at least 'model_name'.
-        """
-        required_keys = ['model_name']
-        missing = [key for key in required_keys if key not in config]
-        if missing:
-            raise ValueError(f"Missing required config keys for HuggingFace embedder: {missing}")
+    # Factory 调用时直接构造，不再进行冗余的二次验证
 
     def embed(self, text):
         """

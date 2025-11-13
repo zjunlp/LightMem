@@ -18,7 +18,7 @@ class OpenaiManager:
         if not self.config.model:
             self.config.model = "gpt-4o-mini"
         
-        self.context_windows = model_name_context_windows[self.config.model]
+        self.context_windows = model_name_context_windows.get(self.config.model, 128000)
 
         http_client = httpx.Client(verify=False)
 

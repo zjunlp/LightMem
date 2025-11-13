@@ -53,32 +53,50 @@ class SenMemBufferManager:
             self.token_count = 0
             return segments
 
+        # 如果未提供 text_embedder，则跳过精细边界调整步骤
         turns = []
-        for i in range(0, len(self.buffer), 2):
-            user_msg = self.buffer[i]["content"]
-            assistant_msg = self.buffer[i + 1]["content"]
-            turns.append(user_msg + " " + assistant_msg)
+        if text_embedder is not None:
+            for i in range(0, len(self.buffer), 2):
+                user_msg = self.buffer[i]["content"]
+                assistant_msg = self.buffer[i + 1]["content"]
+                turns.append(user_msg + " " + assistant_msg)
 
-        embeddings = []
-        for turn in turns:
-            emb = text_embedder.embed(turn)
-            embeddings.append(np.array(emb, dtype=np.float32))
-        embeddings = np.vstack(embeddings)
+            embeddings = []
+            for turn in turns:
+                emb = text_embedder.embed(turn)
+                embeddings.append(np.array(emb, dtype=np.float32))
+            embeddings = np.vstack(embeddings)
 
         fine_boundaries = []
-        threshold = 0.2
-        while threshold <= 0.5 and not fine_boundaries:
-            for i in range(len(turns) - 1):
-                sim = self._cosine_similarity(embeddings[i], embeddings[i + 1])
-                if sim < threshold:
-                    fine_boundaries.append(i + 1)
-            if not fine_boundaries:
-                threshold += 0.05
+        if text_embedder is not None:
+            threshold = 0.2
+            while threshold <= 0.5 and not fine_boundaries:
+                for i in range(len(turns) - 1):
+                    sim = self._cosine_similarity(embeddings[i], embeddings[i + 1])
+                    if sim < threshold:
+                        fine_boundaries.append(i + 1)
+                if not fine_boundaries:
+                    threshold += 0.05
         
         if not fine_boundaries:
-            segments.append(self.buffer.copy())
-            self.buffer.clear()
-            self.token_count = 0
+            # 无法通过语义边界细化时，直接使用粗粒度边界进行切分
+            adjusted_boundaries = sorted(set(b for b in boundaries if 0 <= b <= len(self.buffer)//2))
+            if not adjusted_boundaries:
+                segments.append(self.buffer.copy())
+                self.buffer.clear()
+                self.token_count = 0
+                return segments
+            start_idx = 0
+            for boundary in adjusted_boundaries:
+                end_idx = 2 * boundary
+                seg = self.buffer[start_idx:end_idx]
+                segments.append(seg)
+                start_idx = end_idx
+            if force_segment and start_idx < len(self.buffer):
+                segments.append(self.buffer[start_idx:])
+            if start_idx > 0:
+                del self.buffer[:start_idx]
+                self._recount_tokens()
             return segments
 
         adjusted_boundaries = []

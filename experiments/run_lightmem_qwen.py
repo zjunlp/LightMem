@@ -7,17 +7,17 @@ import os
 from lightmem.memory.lightmem import LightMemory
 
 # ============ API Configuration ============
-API_KEY='your_api_key_here'
-API_BASE_URL=''
-LLM_MODEL='qwen3-30b-a3b-instruct-2507'
-JUDGE_MODEL='gpt-4o-mini'
+API_KEY='c689bd36-b9a7-4efa-85f1-a265565ff8d5'
+API_BASE_URL='https://ark.cn-beijing.volces.com/api/v3/'
+LLM_MODEL='deepseek-v3-1-250821'
+JUDGE_MODEL='deepseek-r1-250528'
 
 # ============ Model Paths ============
-LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
-EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
+LLMLINGUA_MODEL_PATH='microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank'
+EMBEDDING_MODEL_PATH='sentence-transformers/all-MiniLM-L6-v2'
 
 # ============ Data Configuration ============
-DATA_PATH='/your/path/to/dataset/longmemeval/longmemeval_s.json'
+DATA_PATH='./data/longmemeval_converted.json'
 RESULTS_DIR='../results'
 QDRANT_DATA_DIR='./qdrant_data'
 
@@ -102,7 +102,7 @@ def load_lightmem(collection_name):
             "configs": {
                 "llmlingua_config": {
                     "model_name": LLMLINGUA_MODEL_PATH,
-                    "device_map": "cuda",
+                    "device_map": "cpu",
                     "use_llmlingua2": True,
                 },
             }
@@ -131,8 +131,8 @@ def load_lightmem(collection_name):
             "configs": {
                 "model": EMBEDDING_MODEL_PATH,
                 "embedding_dims": 384,
-                "model_kwargs": {"device": "cuda"},
-            },
+                "model_kwargs": {"device": "cpu"}
+            }
         },
         "retrieve_strategy": "embedding",
         "embedding_retriever": {
@@ -140,7 +140,8 @@ def load_lightmem(collection_name):
             "configs": {
                 "collection_name": collection_name,
                 "embedding_model_dims": 384,
-                "path": f'{QDRANT_DATA_DIR}/{collection_name}',
+                "path": f"{QDRANT_DATA_DIR}/{collection_name}",
+                "on_disk": True
             }
         },
         "update": "offline",
@@ -151,8 +152,7 @@ def load_lightmem(collection_name):
 llm_judge = LLMModel(JUDGE_MODEL, API_KEY, API_BASE_URL)
 llm = LLMModel(LLM_MODEL, API_KEY, API_BASE_URL)
 
-data = json.load(open(DATA_PATH, "r"))
-data = data[:10]
+data = json.load(open(DATA_PATH, "r", encoding="utf-8"))
 
 INIT_RESULT = {
     "add_input_prompt": [],

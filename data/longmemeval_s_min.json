@@ -1,0 +1,16 @@
+[
+  {
+    "question_id": "demo_001",
+    "question": "用户最后一次提到的喜欢的食物是什么？",
+    "answer": "披萨",
+    "question_type": "single-session-user",
+    "question_date": "2024-01-01",
+    "haystack_sessions": [
+      [
+        {"role": "user", "content": "我喜欢披萨", "sequence_number": 1},
+        {"role": "assistant", "content": "我已记录你喜欢披萨", "sequence_number": 2}
+      ]
+    ],
+    "haystack_dates": ["2024-01-01"]
+  }
+]

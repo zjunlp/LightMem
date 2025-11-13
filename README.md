@@ -107,6 +107,81 @@ cd experiments
 python run_lightmem_qwen.py
 ```
 
+## ✅ End-to-End Run (Ark + CPU)
+
+- Requirements:
+  - Python `3.9` or `3.10`（recommend `3.9` for Ark SDK compatibility）
+  - Minimal deps: `openai==2.3.0`, `httpx==0.28.1`, `tiktoken==0.12.0`, `numpy>=2.0.2`
+  - Full pipeline: `torch==2.8.0`, `transformers==4.57.0`, `sentence-transformers==2.6.1`, `qdrant-client==1.15.1`, `llmlingua==0.2.2`
+
+- Configure `experiments/run_lightmem_qwen.py`:
+  - Set `API_KEY` and `API_BASE_URL` (lines 10–11)
+  - Set `LLM_MODEL` and `JUDGE_MODEL` (lines 12–13), e.g. `deepseek-v3-1-250821`, `deepseek-r1-250528`
+  - Set `LLMLINGUA_MODEL_PATH` and `EMBEDDING_MODEL_PATH` (lines 16–18), e.g. `microsoft/llmlingua-2-...`, `sentence-transformers/all-MiniLM-L6-v2`
+  - Point `DATA_PATH` to your dataset (line 20); converted dataset path: `./data/longmemeval_converted.json`
+  - Enable vector retrieval and Qdrant (lines 128–146), with `embedding_dims=384` and `on_disk=True`
+
+- Run:
+  - `Set-Location <repo_root>`
+  - `$env:PYTHONPATH = (Join-Path $PWD 'src')`
+  - `py -3.9 experiments\run_lightmem_qwen.py`
+
+- Outputs:
+  - Per-sample result: `../results/result_<question_id>.json` (lines 227–230)
+  - Vector store on disk: `QDRANT_DATA_DIR/<question_id>/...` (lines 139–145)
+
+## 🗂 Data Format (LongMemEval)
+
+- Required fields per sample:
+  - `question_id`, `question`, `answer`, `question_type`, `question_date`
+  - `haystack_sessions`: list of sessions; each session is a list of messages, strictly paired `{role:"user"|"assistant", content, sequence_number}`
+  - `haystack_dates`: same length as `haystack_sessions`; ISO date strings recommended
+
+- Processing details:
+  - Sessions are trimmed to start with a `user` message and processed in user/assistant pairs (experiments/run_lightmem_qwen.py:171–189)
+  - Dates are assigned/parsed and converted to timestamps internally (src/lightmem/memory/lightmem.py:319–333)
+
+## 🔁 Convert Your Conversations
+
+- Script: `scripts/convert_conversations_to_longmemeval.py`
+  - Input: `user.json`, `conversations.json` (root directory)
+  - Output: `data/longmemeval_converted.json`
+
+- Rules:
+  - Extract a linear chain from `mapping` and build user/assistant pairs
+  - User text: `fragments.type == "REQUEST"`
+  - Assistant text: first fragment not `REQUEST/THINK`; if missing, empty string to ensure pairing
+  - `question`: `title` or first user message; `answer`: last assistant message; `question_date`: `inserted_at/updated_at`
+
+- Run:
+  - `py -3.9 scripts\convert_conversations_to_longmemeval.py`
+  - Set `DATA_PATH='./data/longmemeval_converted.json'`
+
+## 🔧 Retrieval & Storage
+
+- Vector retrieval: `index_strategy='embedding'`, `retrieve_strategy='embedding'`
+- Embedder: `sentence-transformers/all-MiniLM-L6-v2` with `embedding_dims=384`, `model_kwargs={'device':'cpu'}`
+- Qdrant: per-sample collection (name=`question_id`), on-disk storage enabled for large datasets
+
+## 📊 Results & Evaluation
+
+- Each result file includes:
+  - `construction_time`, `generated_answer`, `ground_truth`, `correct`, `results`
+  - Use simple scripts to aggregate accuracy and avg construction time over `../results/*.json`
+
+## ⚠️ Troubleshooting
+
+- HuggingFace model downloads fail: use mirrors, ensure network, or cache locally
+- Tokenizer mapping missing: add model name to encoding map (src/lightmem/memory/utils.py:104–116)
+- Windows file encoding: ensure `encoding='utf-8'` when loading JSON (experiments/run_lightmem_qwen.py:146)
+- Ark API errors (Unauthorized/404): check key, endpoint, and model access
+
+## 🧮 Resource Guidelines
+
+- Lightweight default (BERT-base + MiniLM 384d): GPU 2–5 GB, CPU 2–6 GB
+- Heavier setup (large models, 768/1024d, high parallel): GPU 8–24 GB, CPU 4–12 GB
+- Prefer `on_disk=True` and reasonable `num_workers` (4–8) for stability
+
 <span id='architecture'/>
 
 ## 🏗️ Architecture
