@@ -279,7 +279,7 @@ def main(args):
         res_counter.add_time = time_end - time_start
         
         search_time_start = time.time()
-        related_memories = memory.search(item["question"], user_id=item["question_id"], limit=10)
+        related_memories = memory.search(item["question"], user_id=item["question_id"], limit=20)
         search_time_end = time.time()
         res_counter.search_time = search_time_end - search_time_start
         res_counter.related_memories = related_memories
