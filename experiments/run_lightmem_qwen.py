@@ -7,17 +7,27 @@ import os
 from lightmem.memory.lightmem import LightMemory
 
 # ============ API Configuration ============
-API_KEY='c689bd36-b9a7-4efa-85f1-a265565ff8d5'
-API_BASE_URL='https://ark.cn-beijing.volces.com/api/v3/'
-LLM_MODEL='deepseek-v3-1-250821'
-JUDGE_MODEL='deepseek-r1-250528'
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+env_path = os.path.join(base_dir, '.env')
+if os.path.exists(env_path):
+    for line in open(env_path, 'r', encoding='utf-8').read().splitlines():
+        s = line.strip()
+        if not s or s.startswith('#') or '=' not in s:
+            continue
+        k, v = s.split('=', 1)
+        v = v.strip().strip('"').strip('\'')
+        os.environ.setdefault(k.strip(), v)
+API_KEY = os.environ.get('API_KEY', '')
+API_BASE_URL = os.environ.get('API_BASE_URL', '')
+LLM_MODEL = os.environ.get('LLM_MODEL', '')
+JUDGE_MODEL = os.environ.get('JUDGE_MODEL', '')
 
 # ============ Model Paths ============
-LLMLINGUA_MODEL_PATH='microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank'
-EMBEDDING_MODEL_PATH='sentence-transformers/all-MiniLM-L6-v2'
+LLMLINGUA_MODEL_PATH = os.environ.get('LLMLINGUA_MODEL_PATH', 'microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank')
+EMBEDDING_MODEL_PATH = os.environ.get('EMBEDDING_MODEL_PATH', 'sentence-transformers/all-MiniLM-L6-v2')
 
 # ============ Data Configuration ============
-DATA_PATH='./data/longmemeval_converted.json'
+DATA_PATH = os.environ.get('DATA_PATH', './data/longmemeval_converted.json')
 RESULTS_DIR='../results'
 QDRANT_DATA_DIR='./qdrant_data'
 
@@ -228,3 +238,22 @@ for item in tqdm(data):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(save_data, f, ensure_ascii=False, indent=4)
+
+base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+results_dir = os.path.join(base_dir, 'results')
+qdrant_dir = os.path.join(base_dir, 'qdrant_data')
+out_path = os.path.join(base_dir, 'reports', 'summary.json')
+import importlib.util
+spec = importlib.util.spec_from_file_location("summarize_results", os.path.join(base_dir, 'scripts', 'summarize_results.py'))
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+os.makedirs(os.path.dirname(out_path), exist_ok=True)
+summary = mod.summarize(results_dir, qdrant_dir)
+with open(out_path, 'w', encoding='utf-8') as f:
+    json.dump(summary, f, ensure_ascii=False, indent=2)
+print(f"total_samples={summary['total_samples']}")
+print(f"correct_count={summary['correct_count']}")
+print(f"accuracy={summary['accuracy']:.4f}")
+print(f"avg_construction_time={summary['avg_construction_time']:.3f}s")
+print(f"total_vectors={summary['total_vectors']}")
+print(f"avg_vectors_per_collection={summary['avg_vectors_per_collection']:.2f}")

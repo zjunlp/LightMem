@@ -69,11 +69,14 @@ LightMem is continuously evolving! Here's what's coming:
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
 * <a href='#quickstart'>⚡ Quick Start</a>
+* <a href='#fulltestrunner'>🧪 Full Test Runner</a>
 * <a href='#architecture'>🏗️ Architecture</a>
 * <a href='#examples'>💡 Examples</a>
 * <a href='#configuration'>⚙️ Configuration</a>
 * <a href='#contributors'>👥 Contributors</a>
 * <a href='#related'>🔗 Related Projects</a>
+* <a href='docs/full_test_runner.md'>🧪 Full Test Runner (docs)</a>
+* <a href='docs/results_summary.md'>📊 Results Summary (docs)</a>
 
 <span id='installation'/>
 
@@ -102,10 +105,42 @@ pip install lightmem  # Coming soon
 ```
 
 ## ⚡ Quick Start
-```python
+```powershell
+# 方式一：统一入口（推荐）
+python scripts/run_full_tests.py
+
+# 方式二：直接运行单脚本
 cd experiments
 python run_lightmem_qwen.py
 ```
+
+<span id='fulltestrunner'/>
+
+## 🧪 Full Test Runner
+
+统一“全量测试”入口脚本位于 `scripts/run_full_tests.py`，支持交互选择或通过参数指定测设，结束后自动生成并打印汇总（`reports/summary.json`）。
+
+```powershell
+# 交互式选择测设
+python scripts/run_full_tests.py
+
+# 指定测设（qwen / gpt / both / summarize_only）
+python scripts/run_full_tests.py --target qwen
+python scripts/run_full_tests.py --target gpt
+python scripts/run_full_tests.py --target both
+python scripts/run_full_tests.py --target summarize_only
+```
+
+```bash
+# Bash 示例
+python scripts/run_full_tests.py --target both
+```
+
+说明：
+
+- 脚本将调用对应的实验脚本（`experiments/run_lightmem_qwen.py`、`experiments/run_lightmem_gpt.py`）。
+- 两个实验脚本均将结果写入 `../results/result_<question_id>.json`，并在结束时自动触发汇总；统一入口脚本结束时也会再次汇总以确保最终统计同步。
+- 统一入口在运行子进程前会自动加载并注入 `.env` 到环境变量。
 
 ## ✅ End-to-End Run (Ark + CPU)
 
@@ -115,10 +150,12 @@ python run_lightmem_qwen.py
   - Full pipeline: `torch==2.8.0`, `transformers==4.57.0`, `sentence-transformers==2.6.1`, `qdrant-client==1.15.1`, `llmlingua==0.2.2`
 
 - Configure `experiments/run_lightmem_qwen.py`:
-  - Set `API_KEY` and `API_BASE_URL` (lines 10–11)
-  - Set `LLM_MODEL` and `JUDGE_MODEL` (lines 12–13), e.g. `deepseek-v3-1-250821`, `deepseek-r1-250528`
-  - Set `LLMLINGUA_MODEL_PATH` and `EMBEDDING_MODEL_PATH` (lines 16–18), e.g. `microsoft/llmlingua-2-...`, `sentence-transformers/all-MiniLM-L6-v2`
-  - Point `DATA_PATH` to your dataset (line 20); converted dataset path: `./data/longmemeval_converted.json`
+  - 在仓库根目录创建 `.env`（或复制 `.env.example` 并填写）：
+    - `API_KEY`、`API_BASE_URL`
+    - `LLM_MODEL`、`JUDGE_MODEL`
+    - `LLMLINGUA_MODEL_PATH`、`EMBEDDING_MODEL_PATH`
+    - `DATA_PATH`
+  - 脚本会自动加载 `.env`，无需在代码中硬编码以上配置。
   - Enable vector retrieval and Qdrant (lines 128–146), with `embedding_dims=384` and `on_disk=True`
 
 - Run:
@@ -169,12 +206,45 @@ python run_lightmem_qwen.py
   - `construction_time`, `generated_answer`, `ground_truth`, `correct`, `results`
   - Use simple scripts to aggregate accuracy and avg construction time over `../results/*.json`
 
+### Summary（reports/summary.json）
+
+统一入口或单脚本运行结束后，会生成 `reports/summary.json`，字段说明：
+
+- `total_samples`：样本总数
+- `correct_count`：预测正确样本数
+- `accuracy`：准确率（`correct_count / total_samples`）
+- `avg_construction_time`：平均构建耗时（秒）
+- `total_vectors`：向量总数（需要安装并启用 Qdrant）
+- `avg_vectors_per_collection`：每集合平均向量数
+- `vector_counts`：各 `question_id` 的向量数量
+- `top_collections_by_vectors`：按向量数排序的 Top10 集合
+- `source`：汇总输入与输出路径
+
+示例：
+
+```json
+{
+  "total_samples": 384,
+  "correct_count": 279,
+  "accuracy": 0.7266,
+  "avg_construction_time": 5.406,
+  "total_vectors": 0,
+  "avg_vectors_per_collection": 0.0,
+  "vector_counts": {"<question_id>": 0},
+  "top_collections_by_vectors": [{"question_id": "<qid>", "vector_count": 0}],
+  "source": {"results_dir": "../results", "qdrant_dir": "./qdrant_data"}
+}
+```
+
 ## ⚠️ Troubleshooting
 
 - HuggingFace model downloads fail: use mirrors, ensure network, or cache locally
 - Tokenizer mapping missing: add model name to encoding map (src/lightmem/memory/utils.py:104–116)
 - Windows file encoding: ensure `encoding='utf-8'` when loading JSON (experiments/run_lightmem_qwen.py:146)
 - Ark API errors (Unauthorized/404): check key, endpoint, and model access
+
+- 汇总为空：如果 `results` 目录没有任何 `result_*.json`，`reports/summary.json` 中统计将为 0。请先运行 `--target qwen` 或 `--target gpt` 再执行 `--target summarize_only`。
+- 向量统计为 0：未安装 `qdrant-client` 或未启用向量检索时，`vector_counts` 为 0 属于正常现象；启用后将统计各集合向量数。
 
 ## 🧮 Resource Guidelines
 

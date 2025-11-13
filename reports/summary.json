@@ -1,0 +1,15 @@
+{
+  "total_samples": 0,
+  "correct_count": 0,
+  "accuracy": 0.0,
+  "avg_construction_time": 0.0,
+  "total_vectors": 0,
+  "avg_vectors_per_collection": 0.0,
+  "vector_counts": {},
+  "top_collections_by_vectors": [],
+  "missing_collections": [],
+  "source": {
+    "results_dir": "E:\\HuaweiMoveData\\Users\\92534\\Desktop\\论文gogogo\\LightMem\\results",
+    "qdrant_dir": "E:\\HuaweiMoveData\\Users\\92534\\Desktop\\论文gogogo\\LightMem\\qdrant_data"
+  }
+}
