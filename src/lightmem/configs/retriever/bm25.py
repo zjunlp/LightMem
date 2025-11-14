@@ -5,6 +5,8 @@ from typing import Any, Dict, Optional
 class BM25Config(BaseModel):
     """Configuration for BM25 retriever."""
 
+    collection_name: str
+    path: str
     k1: float = Field(1.5, description="BM25 k1 parameter controlling term frequency scaling")
     b: float = Field(0.75, description="BM25 b parameter controlling document length normalization")
     tokenizer: Optional[str] = Field(None, description="Optional tokenizer identifier or function name")

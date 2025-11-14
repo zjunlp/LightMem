@@ -215,3 +215,4 @@ __marimo__/
 __pycache__/
 *.py[codz]
 *$py.class
+memory_entries.json

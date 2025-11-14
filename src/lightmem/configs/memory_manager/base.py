@@ -12,7 +12,7 @@ class MemoryManagerConfig(BaseModel):
         "ollama",
     ]
 
-    configs: Optional[dict] = Field(description="Configuration for the specific MemoryManager model", default={})
+    configs: Optional[Any] = Field(description="Configuration for the specific MemoryManager model", default={})
 
     @model_validator(mode='before')
     def validate_model_name(cls, values):

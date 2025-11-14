@@ -22,6 +22,10 @@ from lightmem.memory.prompts import METADATA_GENERATE_PROMPT, UPDATE_PROMPT
 from lightmem.configs.logging.utils import get_logger
 
 
+class _DummyEmbedder:
+    def embed(self, text: str) -> List[float]:
+        return [0.0] * 128
+
 class MessageNormalizer:
 
     _SESSION_RE = re.compile(
@@ -138,6 +142,7 @@ class LightMemory:
         self.logger.info("Initializing LightMemory with provided configuration")
         
         self.config = config
+        self.compressor = None
         if self.config.pre_compress:
             self.logger.info("Initializing pre-compressor")
             self.compressor = PreCompressorFactory.from_config(self.config.pre_compressor)
@@ -147,12 +152,15 @@ class LightMemory:
             self.senmem_buffer_manager = SenMemBufferManager(max_tokens=self.segmenter.buffer_len, tokenizer=self.segmenter.tokenizer)
         self.logger.info("Initializing memory manager")
         self.manager = MemoryManagerFactory.from_config(self.config.memory_manager)
-        self.shortmem_buffer_manager = ShortMemBufferManager(max_tokens = 1024, tokenizer=getattr(self.manager, "tokenizer", self.manager.config.model))
+        self.shortmem_buffer_manager = ShortMemBufferManager(max_tokens = 1024, tokenizer=getattr(self.manager, "tokenizer", self.manager.config.model_name))
         if self.config.index_strategy == 'embedding' or self.config.index_strategy == 'hybrid':
             self.logger.info("Initializing text embedder")
             self.text_embedder = TextEmbedderFactory.from_config(self.config.text_embedder)
+        else:
+            self.logger.debug("Initializing _DummyEmbedder for non-embedding strategy.")
+            self.text_embedder = _DummyEmbedder()
         # if self.config.multimodal_embedder:
-        if self.config.retrieve_strategy in ["context", "hybrid"]:
+        if self.config.retrieve_strategy in ["context", "hybrid", "bm25"]:
             self.logger.info("Initializing context retriever")
             self.context_retriever = ContextRetrieverFactory.from_config(self.config.context_retriever)
         if self.config.retrieve_strategy in ["embedding", "hybrid"]:
@@ -349,9 +357,19 @@ class LightMemory:
         self.logger.info(f"[{call_id}] Received {len(memory_list)} memory entries")
         self.logger.info(f"[{call_id}] construct_update_queue_trigger={construct_update_queue_trigger}, offline_update_trigger={offline_update_trigger}")
 
-        if self.config.index_strategy in ["context", "hybrid"]:
+        if self.config.index_strategy in ["context", "hybrid", "bm25"]:
             self.logger.info(f"[{call_id}] Saving memory entries to file (strategy: {self.config.index_strategy})")
             save_memory_entries(memory_list, "memory_entries.json")
+
+            if self.config.index_strategy == "bm25":
+                self.logger.info(f"[{call_id}] Indexing {len(memory_list)} entries for BM25")
+                corpus = [entry.memory for entry in memory_list if entry.memory]
+                if corpus:
+                    self.context_retriever.index(corpus)
+                    self.logger.info(f"[{call_id}] BM25 indexing complete.")
+                else:
+                    elf.logger.warning(f"[{call_id}] No memory content found to index for BM25.")
+
 
         if self.config.index_strategy in ["embedding", "hybrid"]:
             inserted_count = 0
@@ -557,42 +575,66 @@ class LightMemory:
     def retrieve(self, query: str, limit: int = 10, filters: dict = None) -> list[str]:
         """
         Retrieve relevant entries and return them as formatted strings.
-
-        Args:
-            query (str): The natural language query string.
-            limit (int, optional): Number of results to return. Defaults to 10.
-            filters (dict, optional): Optional filters to narrow down the search. Defaults to None.
-
-        Returns:
-            list[str]: A list of formatted strings containing time_stamp, weekday, and memory.
+        This method checks the retrieve_strategy to decide which retriever to use.
         """
         call_id = f"retrieve_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
-        
         self.logger.info(f"========== START {call_id} ==========")
         self.logger.info(f"[{call_id}] Query: {query}")
+        self.logger.info(f"[{call_id}] Strategy: {self.config.retrieve_strategy}")
         self.logger.info(f"[{call_id}] Parameters: limit={limit}, filters={filters}")
-        self.logger.debug(f"[{call_id}] Generating embedding for query")
-        query_vector = self.text_embedder.embed(query)
-        self.logger.debug(f"[{call_id}] Query embedding dimension: {len(query_vector)}")
-        self.logger.info(f"[{call_id}] Searching vector database")
-        results = self.embedding_retriever.search(
-            query_vector=query_vector,
-            limit=limit,
-            filters=filters,
-            return_full=True,
-        )
-        self.logger.info(f"[{call_id}] Found {len(results)} results")
+
+        results = []
         formatted_results = []
-        for r in results:
-            payload = r.get("payload", {})
-            time_stamp = payload.get("time_stamp", "")
-            weekday = payload.get("weekday", "")
-            memory = payload.get("memory", "")
-            formatted_results.append(f"{time_stamp} {weekday} {memory}")
-            
+
+        if self.config.retrieve_strategy in ["context", "hybrid", "bm25"]:
+            self.logger.info(f"[{call_id}] Retrieving using Context retriever (strategy: {self.config.retrieve_strategy})")
+
+            results = self.context_retriever.retrieve( 
+                query=query, 
+                top_k=limit 
+            )
+
+            self.logger.info(f"[{call_id}] Found {len(results)} BM25 results")
+            for doc in results:
+                if isinstance(doc, str):
+                    formatted_results.append(doc)
+                elif isinstance(doc, dict):
+                    formatted_results.append(doc.get("content", str(doc)))
+                else:
+                    formatted_results.append(str(doc))
+
+        elif self.config.retrieve_strategy == "embedding":
+            self.logger.debug(f"[{call_id}] Generating embedding for query")
+            query_vector = self.text_embedder.embed(query) 
+            self.logger.debug(f"[{call_id}] Query embedding dimension: {len(query_vector)}")
+            self.logger.info(f"[{call_id}] Searching vector database")
+            results = self.embedding_retriever.search(
+                query_vector=query_vector,
+                limit=limit,
+                filters=filters,
+                return_full=True,
+            )
+
+            self.logger.info(f"[{call_id}] Found {len(results)} embedding results")
+            for r in results:
+                if isinstance(r, dict):
+                    payload = r.get("payload", {})
+                else:
+                    try:
+                        payload = r.payload
+                    except AttributeError:
+                        payload = {}
+
+                time_stamp = payload.get("time_stamp", "")
+                weekday = payload.get("weekday", "")
+                memory = payload.get("memory", "")
+                formatted_results.append(f"{time_stamp} {weekday} {memory}")
+
+        else:
+            self.logger.warning(f"[{call_id}] Unknown retrieve_strategy: {self.config.retrieve_strategy}")
+
         result_string = "\n".join(formatted_results)
         self.logger.info(f"[{call_id}] Formatted {len(formatted_results)} results into output string")
         self.logger.debug(f"[{call_id}] Output string length: {len(result_string)} characters")
         self.logger.info(f"========== END {call_id} ==========")
         return result_string
-

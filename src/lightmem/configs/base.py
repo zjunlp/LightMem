@@ -9,6 +9,7 @@ from lightmem.configs.text_embedder.base import TextEmbedderConfig
 from lightmem.configs.multimodal_embedder.base import MMEmbedderConfig
 from lightmem.configs.retriever.contextretriever.base import ContextRetrieverConfig
 from lightmem.configs.retriever.embeddingretriever.base import EmbeddingRetrieverConfig
+from lightmem.configs.retriever.bm25 import BM25Config
 from lightmem.configs.logging.base import LoggingConfig
 
 lightmem_dir = ""
@@ -57,7 +58,7 @@ class BaseMemoryConfigs(BaseModel):
     extract_threshold: float = Field(
         default=0.5,
     )
-    index_strategy: Optional[Literal["embedding", "context", "hybrid"]] = Field(
+    index_strategy: Optional[Literal["embedding", "context", "hybrid", "bm25"]] = Field(
         default=None,
         description="Indexing strategy to use. Choices: "
                 "embedding|text|hybrid"
@@ -74,10 +75,9 @@ class BaseMemoryConfigs(BaseModel):
         description="Path to the history database",
         default=os.path.join(lightmem_dir, "history.db"),
     )
-    retrieve_strategy: Optional[Literal["context", "embedding", "hybrid"]] = Field(
-        default="embedding",
-        description="Retrieving strategy to use. Choices: "
-                "embedding|context|hybrid"
+    retrieve_strategy: Optional[Literal["context", "embedding", "hybrid", "bm25"]] = Field(
+    default="embedding",
+    description="Retrieving strategy to use. Choices: 'embedding' | 'context' | 'hybrid' | 'bm25'"
     )
     context_retriever: Optional[ContextRetrieverConfig] = Field(
         description="Configuration for the context-based retriever (active only if retrieve_strategy is 'context' or 'hybrid')",
@@ -86,6 +86,10 @@ class BaseMemoryConfigs(BaseModel):
     embedding_retriever: Optional[EmbeddingRetrieverConfig] = Field(
         description="Configuration for the embedding-based retriever (active only if retrieve_strategy is 'embedding' or 'hybrid')",
         default=None,
+    )
+    bm25_retriever: Optional[BM25Config] = Field(
+    default=None,
+    description="Configuration for BM25 retriever (active only if retrieve_strategy is 'bm25')."
     )
     update: Optional[Literal["online","offline"]] = Field(
         description="'online'=immediate during execution, 'offline'=scheduled updates",
