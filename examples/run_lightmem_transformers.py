@@ -207,7 +207,8 @@ def main():
         options=your_example_options,
     )
 
-    data = json.load(open(DATA_PATH, "r"))
+    with open(DATA_PATH, "r") as f:
+        data = json.load(f)
     # data = data[:100]
 
     INIT_RESULT = {
