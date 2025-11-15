@@ -41,7 +41,7 @@ class TransformersManager:
         Process the response based on whether tools are used or not.
 
         Args:
-            response: The raw response from **Ollama offline deployment**.
+            response: The raw response from the **HuggingFace Transformers model**.
             tools: The list of tools provided in the request.
 
         Returns:
