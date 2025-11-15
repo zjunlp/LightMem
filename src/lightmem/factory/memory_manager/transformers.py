@@ -22,7 +22,7 @@ class TransformersManager:
             self.device = "auto"
         elif self.config.num_gpu == 1:
             self.device = {"": f"cuda:{self.config.main_gpu}"}
-        else: # TODO: specify multiple GPUs
+        else: # For multiple GPUs, use 'auto' to let Transformers distribute the model across all available GPUs.
             self.device = "auto"
 
         self.tokenizer = AutoTokenizer.from_pretrained(
