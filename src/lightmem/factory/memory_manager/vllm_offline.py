@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Literal, Any, Union
 
 import torch
 try:
-    from vllm import LLM, RequestOutput, SamplingParams
+    from vllm import LLM, SamplingParams
 except ImportError:
     raise ImportError("The 'vllm' library is required. Please install it in a new environment using 'pip install vllm', recommended version >= 0.9.0.")
 
