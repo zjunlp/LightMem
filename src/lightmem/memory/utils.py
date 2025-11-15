@@ -116,7 +116,7 @@ def resolve_tokenizer(tokenizer_or_name: Union[str, Any]) -> Union[tiktoken.Enco
 
     # --- Case: user-defined patterns (Qwen etc.) ---
     patterns = [
-        (r"^qwen3", "o200k_base")
+        (r"^qwen3", "o200k_base"),
         # Add more patterns as needed...
     ]
     for pattern, encoding_name in patterns:
