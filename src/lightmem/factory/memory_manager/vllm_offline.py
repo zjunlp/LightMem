@@ -13,7 +13,7 @@ import torch
 try:
     from vllm import LLM, RequestOutput, SamplingParams
 except ImportError:
-    raise ImportError("The 'vllm' library is required. Please install it in a new environment and using 'pip install vllm', recommended version >= 0.9.0.")
+    raise ImportError("The 'vllm' library is required. Please install it in a new environment using 'pip install vllm', recommended version >= 0.9.0.")
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
