@@ -1,7 +1,11 @@
 import concurrent
 import json
-import ollama
 from typing import Dict, List, Optional, Literal, Any, Union
+
+try:
+    import ollama
+except ImportError:
+    raise ImportError("The 'ollama' library is required. Please install it using 'pip install ollama', recommended version>=0.6.0.")
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response

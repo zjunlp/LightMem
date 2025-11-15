@@ -1,50 +1,39 @@
-"""
-This module implements a memory manager using vLLM for **offline** inference.
-
-Require vLLM version >= 0.9.0, and vLLM version 0.11.0 is recommended.
-"""
-
 import concurrent
 import json
-import warnings
 from typing import Dict, List, Optional, Literal, Any, Union
 
 import torch
-try:
-    from vllm import LLM, RequestOutput, SamplingParams
-except ImportError:
-    raise ImportError("The 'vllm' library is required. Please install it in a new environment and using 'pip install vllm', recommended version >= 0.9.0.")
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
-DEFAULT_MAX_MODEL_LEN = 128000
 
-
-class VllmOfflineManager:
+class TransformersManager:
     def __init__(self, config: BaseMemoryManagerConfig):
         self.config = config
 
         if not self.config.model:
-            raise ValueError("VLLM model is not specified. Refer to https://vllm.ai/models/ for available models.")
+            self.config.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
-        if self.config.num_gpu is None:
-            self.config.num_gpu = 1
-        elif self.config.num_gpu == -1:  # Use all available GPUs
-            if torch.cuda.is_available():
-                self.config.num_gpu = torch.cuda.device_count() or 1
-            else:
-                warnings.warn("CUDA not available, using CPU mode.")
-                self.config.num_gpu = 0
-        
-        self.config.gpu_memory_utilization = getattr(self.config, "gpu_memory_utilization", 0.9)
+        if not torch.cuda.is_available() or self.config.num_gpu == 0:
+            self.device = "cpu"
+        elif self.config.num_gpu == -1:
+            self.device = "auto"
+        elif self.config.num_gpu == 1:
+            self.device = {"": f"cuda:{self.config.main_gpu}"}
+        else: # TODO: specify multiple GPUs
+            self.device = "auto"
 
-        self.client = LLM(
-            model=self.config.model,
-            trust_remote_code=self.config.trust_remote_code,
-            tensor_parallel_size=max(1, self.config.num_gpu),
-            gpu_memory_utilization=self.config.gpu_memory_utilization,
-            max_model_len=DEFAULT_MAX_MODEL_LEN,
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.config.model, 
+            use_fast=True
+        )
+
+        self.client = AutoModelForCausalLM.from_pretrained(
+            self.config.model,
+            torch_dtype=torch.float16,
+            device_map=self.device,
         )
 
     def _parse_response(self, response, tools):
@@ -52,22 +41,22 @@ class VllmOfflineManager:
         Process the response based on whether tools are used or not.
 
         Args:
-            response: The raw response from **vLLM offline deployment**.
+            response: The raw response from **Ollama offline deployment**.
             tools: The list of tools provided in the request.
 
         Returns:
             str or dict: The processed response.
 
-        reference: https://docs.vllm.ai/en/latest/examples/offline_inference/chat_with_tools
+        TODO: reference at https://huggingface.co/docs/transformers/main/chat_extras#tool-use
         """
-        content = response.outputs[0].text.strip()
+        content = response.strip()
         
         if tools:
             processed_response = {
                 "content": content,
                 "tool_calls": [],
             }
-            # Offline vLLM doesn't support tool calls in the same way, so return the content
+            # Transformers doesn't support tool calls in the same way, so return the content
             return processed_response
         else:
             return content
@@ -77,7 +66,6 @@ class VllmOfflineManager:
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
-        think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
     ) -> Optional[str]:
         """
         Generate a response based on the given messages.
@@ -86,36 +74,40 @@ class VllmOfflineManager:
             messages (list): List of message dicts containing 'role' and 'content'.
             response_format (str or object, optional): Format of the response. Defaults to "text".
             tools (list, optional): List of tools that the model can call. Defaults to None.
-            tool_choice (str, optional): Tool choice method. Defaults to "auto".
-            think (bool or str, optional): Thinking level for the model. Defaults to None.
 
         Returns:
             str: The generated response.
         """
-        if self.client is None:
-            raise ValueError("vLLM client is not initialized.")
-        
-        params = SamplingParams(
-            seed=self.config.seed,
-            temperature=self.config.temperature,
-            top_p=self.config.top_p,
-            top_k=self.config.top_k,
-            max_tokens=self.config.max_tokens,
-            stop=self.config.stop,
+        params =  {
+            "do_sample": self.config.do_sample,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "top_k": self.config.top_k,
+            "top_p": self.config.top_p,
+            "stop": self.config.stop,
+        }
+
+        prompt = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
         )
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.client.device)
 
-        if think is None or think is False:
-            think = False  # Set to False to strictly disable thinking
-        else:
-            think = True
-
-        outputs = self.client.chat(
-            [messages], 
-            params,
-            chat_template_kwargs={"enable_thinking": think},
+        outputs = self.client.generate(
+            **inputs,
+            do_sample=params["do_sample"],
+            temperature=params["temperature"],
+            max_new_tokens=params["max_tokens"],
+            top_k=params["top_k"],
+            top_p=params["top_p"],
+            pad_token_id=self.tokenizer.eos_token_id,
         )
+        generated = outputs[0][inputs["input_ids"].shape[1]:]
 
-        response = self._parse_response(outputs[0], tools)
+        text = self.tokenizer.decode(generated, skip_special_tokens=True)
+
+        response = self._parse_response(text, tools)
 
         return response
 
@@ -136,6 +128,7 @@ class VllmOfflineManager:
         Returns:
             List of extracted metadata results, None for failed segments
         """
+
         if not extract_list:
             return []
             
@@ -178,9 +171,11 @@ class VllmOfflineManager:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ]
+
                 raw_response = self.generate_response(
                     messages=messages,
                 )
+
                 cleaned_result = clean_response(raw_response)
                 return {
                     "input_prompt": messages,
