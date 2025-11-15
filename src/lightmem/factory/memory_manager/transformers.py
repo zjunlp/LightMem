@@ -84,7 +84,6 @@ class TransformersManager:
             "max_tokens": self.config.max_tokens,
             "top_k": self.config.top_k,
             "top_p": self.config.top_p,
-            "stop": self.config.stop,
         }
 
         prompt = self.tokenizer.apply_chat_template(
