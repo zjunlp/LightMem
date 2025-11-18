@@ -374,6 +374,13 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
         <sub><b>Norah-Feathertail</b></sub>
       </a>
     </td>
+    <td align="center" width="120">
+      <a href="https://github.com/453251">
+        <img src="https://avatars.githubusercontent.com/453251?v=4" width="80" style="border-radius:50%" alt="453251"/>
+        <br />
+        <sub><b>453251</b></sub>
+      </a>
+    </td>
   </tr>
 </table>
 We welcome contributions from the community! If you'd like to contribute, please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
