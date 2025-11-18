@@ -290,6 +290,20 @@ backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
 
 
 
+| Method | Overall ↑ | Single | Multi | Open | Temp |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| FullText | 72.01 | 66.67 | 54.17 | 84.54 | 49.22 |
+| NaiveRAG | 45.13 | 31.91 | 38.54 | 56.12 | 29.91 |
+| LangMem |  |  |  |  |  |
+| A-MEM | 64.16 | 56.03 | 31.25 | 72.06 | 60.44 |
+| MemoryOS | - | - | - | - | - |
+| Mem0 | 61.69 | 56.38 | 43.75 | 66.47 | 59.19 |
+| Mem0-g | 60.32 | 54.26 | 39.58 | 65.99 | 57.01 |
+
+
+
+
+
 ## ⚙️ Configuration
 
 All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration class. Users can customize aspects like pre-processing, memory extraction, retrieval strategy, and update mechanisms by providing a custom configuration.
