@@ -274,6 +274,21 @@ Please feel free to download, explore, and use these resources for research or r
 
 <span id='configuration'/>
 
+### LOCOMO: 
+
+backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
+
+| Method       | ACC (%) | Summary Tokens (k) In | Summary Tokens (k) Out | Update Tokens (k) In | Update Tokens (k) Out | Total (k) | Calls   | Runtime (s) mem-con | Runtime (s) qa |  Runtime(s) total   |
+|--------------|---------|------------------------|-------------------------|------------------------|-------------------------|-----------|---------|----------------------|----------------| ------------|
+| FullText     | 56.80   | –                      | –                       | –                      | –                       | 105.07    | –       | 867.38               | aaa            |           |
+| NaiveRAG     | 61.00   | –                      | –                       | –                      | –                       | –         | –       | –                    | bbb            |           |
+| LangMem      | 37.20   | –                      | –                       | 982.68                 | 119.48                  | 1,102.16  | 520.62  | 2,293.70             | ccc            |           |
+| A-MEM        | 62.60   | 214.66                 | 42.82                   | 1,157.52               | 190.81                  | 1,605.81  | 986.55  | 5,132.06             | dddd           |           |
+| MemoryOS     | 44.80   | 2,302.35               | 304.18                  | 350.02                 | 35.19                   | 2,991.75  | 2,938.41 | 8,030.04             | eee            |           |
+| Mem0         | 53.61   | 424.13                 | 17.76                   | 560.17                 | 150.56                  | 1,152.62  | 811.57  | 4,248.49             | ffff           |           |
+
+
+
 ## ⚙️ Configuration
 
 All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration class. Users can customize aspects like pre-processing, memory extraction, retrieval strategy, and update mechanisms by providing a custom configuration.
