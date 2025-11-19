@@ -2,62 +2,70 @@ import concurrent
 import json
 from typing import Dict, List, Optional, Literal, Any, Union
 
-try:
-    import ollama
-except ImportError:
-    raise ImportError("The 'ollama' library is required. Please install it using 'pip install ollama', recommended version >= 0.6.0.")
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
 
-class OllamaManager:
+class TransformersManager:
     def __init__(self, config: BaseMemoryManagerConfig):
         self.config = config
 
         if not self.config.model:
-            raise ValueError("Ollama model is not specified. Refer to https://ollama.com/docs/models for available models.")
+            self.config.model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
-        self.client = ollama.Client(host=self.config.host or "http://localhost:11434")
+        if not torch.cuda.is_available() or self.config.num_gpu == 0:
+            self.device = "cpu"
+        elif self.config.num_gpu == -1:
+            self.device = "auto"
+        elif self.config.num_gpu == 1:
+            self.device = {"": f"cuda:{self.config.main_gpu}"}
+        else: # For multiple GPUs, use 'auto' to let Transformers distribute the model across all available GPUs.
+            self.device = "auto"
+
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.config.model, 
+            use_fast=True
+        )
+
+        self.client = AutoModelForCausalLM.from_pretrained(
+            self.config.model,
+            torch_dtype=torch.float16,
+            device_map=self.device,
+        )
 
     def _parse_response(self, response, tools):
         """
         Process the response based on whether tools are used or not.
 
         Args:
-            response: The raw response from **Ollama offline deployment**.
+            response: The raw response from the **HuggingFace Transformers model**.
             tools: The list of tools provided in the request.
 
         Returns:
             str or dict: The processed response.
 
-        reference: https://ollama.com/blog/tool-support
+        TODO: reference at https://huggingface.co/docs/transformers/main/chat_extras#tool-use
         """
+        content = response.strip()
+        
         if tools:
             processed_response = {
-                "content": response["message"]["content"],
+                "content": content,
                 "tool_calls": [],
             }
-
-            if response['message']['tool_calls']:
-                for tool_call in response['message']['tool_calls']:
-                    processed_response["tool_calls"].append(
-                        {
-                            "name": tool_call.function.name,
-                            "arguments": json.loads(tool_call.function.parameters),
-                        }
-                    )
-
+            # Transformers doesn't support tool calls in the same way, so return the content
             return processed_response
         else:
-            return response["message"]["content"]
+            return content
 
     def generate_response(
         self,
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
-        think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
     ) -> Optional[str]:
         """
         Generate a response based on the given messages.
@@ -66,45 +74,39 @@ class OllamaManager:
             messages (list): List of message dicts containing 'role' and 'content'.
             response_format (str or object, optional): Format of the response. Defaults to "text".
             tools (list, optional): List of tools that the model can call. Defaults to None.
-            tool_choice (str, optional): Tool choice method. Defaults to "auto".
-            think (bool or str, optional): Thinking level for the model. Defaults to None.
 
         Returns:
             str: The generated response.
         """
-        if self.client is None:
-            raise ValueError("Ollama client is not initialized.")
-
         params =  {
-            "model": self.config.model,
-            "messages": messages,
-            "seed": self.config.seed,
+            "do_sample": self.config.do_sample,
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
             "top_k": self.config.top_k,
             "top_p": self.config.top_p,
-            "stop": self.config.stop,
         }
-        
-        completion = self.client.chat(
-            model=self.config.model,
-            messages=messages,
-            format=response_format,
-            tools=tools,
-            think=think,
-            options={
-                "num_gpu": self.config.num_gpu,
-                "main_gpu": self.config.main_gpu,
-                "num_ctx": params["max_tokens"],
-                "seed": params["seed"],
-                "temperature": params["temperature"],
-                "top_k": params["top_k"],
-                "top_p": params["top_p"],
-                "stop": params["stop"],
-            }
-        )
 
-        response = self._parse_response(completion, tools)
+        prompt = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
+        )
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.client.device)
+
+        outputs = self.client.generate(
+            **inputs,
+            do_sample=params["do_sample"],
+            temperature=params["temperature"],
+            max_new_tokens=params["max_tokens"],
+            top_k=params["top_k"],
+            top_p=params["top_p"],
+            pad_token_id=self.tokenizer.eos_token_id,
+        )
+        generated = outputs[0][inputs["input_ids"].shape[1]:]
+
+        text = self.tokenizer.decode(generated, skip_special_tokens=True)
+
+        response = self._parse_response(text, tools)
 
         return response
 
@@ -125,6 +127,7 @@ class OllamaManager:
         Returns:
             List of extracted metadata results, None for failed segments
         """
+
         if not extract_list:
             return []
             
@@ -167,9 +170,11 @@ class OllamaManager:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ]
+
                 raw_response = self.generate_response(
                     messages=messages,
                 )
+
                 cleaned_result = clean_response(raw_response)
                 return {
                     "input_prompt": messages,

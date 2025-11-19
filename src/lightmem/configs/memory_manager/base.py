@@ -4,11 +4,12 @@ from .base_config import BaseMemoryManagerConfig
 
 
 class MemoryManagerConfig(BaseModel):
-    model_name: str = Field(description="The memory management model or Deployment platform (e.g., 'openai', 'deepseek', 'ollama', 'local')", default="openai")
+    model_name: str = Field(description="The memory management model or Deployment platform (e.g., 'openai', 'ollama'...)", default="openai")
 
     _model_list: ClassVar[List[str]] = [
         "openai",
         "deepseek",
+        "transformers",
         "ollama",
         "vllm",
         "vllm_offline",

@@ -1,11 +1,14 @@
 import os
 import re
 import json
-import uuid
-import tiktoken
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Dict, Optional, Any, Union
+
+import tiktoken
+import uuid
+from dataclasses import dataclass, field
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from transformers.tokenization_utils import PreTrainedTokenizer
 
 
 @dataclass
@@ -100,20 +103,25 @@ def resolve_tokenizer(tokenizer_or_name: Union[str, Any]) -> Union[tiktoken.Enco
     """
     Resolve the tokenizer for a given model name or tokenizer instance.
     """
-    # OpenAI models can be resolved directly by `tiktoken`
+
+    # --- Case: already a tokenizer object (transformers local model) ---
+    if isinstance(tokenizer_or_name, (PreTrainedTokenizer, PreTrainedTokenizerFast)):
+        return tokenizer_or_name
+
+    # --- Case: OpenAI tiktoken model name ---
     try:
-        encoding = tiktoken.encoding_for_model(tokenizer_or_name)
-        return encoding
-
-    # While most other models can't be resolved directly by `tiktoken`
+        return tiktoken.encoding_for_model(tokenizer_or_name)
     except:
-        patterns = [
-            (r"^qwen3", "o200k_base"),  # qwen3*
-            # Add some patterns as needed...
-        ]
-        for pattern, encoding_name in patterns:
-            if re.match(pattern, tokenizer_or_name):
-                return tiktoken.get_encoding(encoding_name)
+        pass
 
-        # Default encoding for any other models as a fallback solution...
-        return tiktoken.get_encoding("o200k_base")
+    # --- Case: user-defined patterns (Qwen etc.) ---
+    patterns = [
+        (r"^qwen3", "o200k_base"),
+        # Add more patterns as needed...
+    ]
+    for pattern, encoding_name in patterns:
+        if isinstance(tokenizer_or_name, str) and re.match(pattern, tokenizer_or_name):
+            return tiktoken.get_encoding(encoding_name)
+
+    # --- Case: fallback ---
+    return tiktoken.get_encoding("o200k_base")
