@@ -88,7 +88,7 @@ git clone https://github.com/zjunlp/LightMem.git
 cd LightMem
 
 # Create virtual environment
-conda create -n lightmem python=3.10 -y
+conda create -n lightmem python=3.11 -y
 conda activate lightmem
 
 # Install dependencies
