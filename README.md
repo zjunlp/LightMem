@@ -377,6 +377,13 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
       </a>
     </td>
     <td align="center" width="120">
+      <a href="https://github.com/453251">
+        <img src="https://avatars.githubusercontent.com/453251?v=4" width="80" style="border-radius:50%" alt="453251"/>
+        <br />
+        <sub><b>453251</b></sub>
+      </a>
+    </td>
+    <td align="center" width="120">
       <a href="https://github.com/James-TYQ">
         <img src="https://avatars.githubusercontent.com/James-TYQ?v=4" width="80" style="border-radius:50%" alt="James-TYQ"/>
         <br />
@@ -395,13 +402,6 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
         <img src="https://avatars.githubusercontent.com/Norah-Feathertail?v=4" width="80" style="border-radius:50%" alt="Norah-Feathertail"/>
         <br />
         <sub><b>Norah-Feathertail</b></sub>
-      </a>
-    </td>
-    <td align="center" width="120">
-      <a href="https://github.com/453251">
-        <img src="https://avatars.githubusercontent.com/453251?v=4" width="80" style="border-radius:50%" alt="453251"/>
-        <br />
-        <sub><b>453251</b></sub>
       </a>
     </td>
   </tr>
