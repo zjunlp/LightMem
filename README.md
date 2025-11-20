@@ -280,38 +280,41 @@ backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
 
 | Method       | ACC(%) gpt-4o-mini | ACC(%) qwen2.5-32b-instruct | Summary Tokens(k) In | Summary Tokens(k) Out | Update Tokens(k) In | Update Tokens(k) Out | QA tokens(k) In |  QA tokens Out  |  Total(k) | Calls   | Runtime(s) mem-con | Runtime(s) qa |  Runtime(s) total   |
 |--------------|---------|-------|--------------------|-------------------------|--------------------|----------------------|-----------------|-----------------|-----------|---------| ------------------ | ------------- |  ---------------- |
-| FullText     | 73.83   | 73.18      | –                   | –                     | –                   | –                    | 54,858.770               | 25.709               | 54,884.479    | –       | -              | 6,971.8443          | 6,971.8443                   |
-| NaiveRAG     | 63.64   | 63.12     | –                   | –                     | –                   | –                    | 3,851.029               | 19.158              | 3,870.187          | –       | –                   | 1,884.5565          | 1,884.5565                   |
-| LangMem      | 37.20   |      | –                   | –                     | 982.68              | 119.48               |                 |                 | 1,102.16  | 520.62  | 2,293.70            | ccc          |                    |
-| A-MEM        | 64.16   | 60.71     |1,827.373           | 492.883               | 7,298.878           | 1,875.210            | 10,113.252                | 57.315                |21,664.907  | 11,754  | 60,607.33           | 6,477.95     | 67,085.28          |
-| MemoryOS     | 44.80   |      | 2,302.35            | 304.18                | 350.02              | 35.19                |                 |                 |  2,991.75 | 2,938.41| 8,030.04            | eee          |                    |
-| Mem0         | 61.69   | 61.69     | 424.13              | 17.76                 | 560.17              | 150.56               | 4,156.850                | 13.059                | 72,517.629 | 6,022   | 4,328               | 6,117        | 10,445             |
-| Mem0-g       | 60.32   | 59.48     | 424.13              | 17.76                 | 560.17              | 150.56               | 4,375.900                | 13.247                |74,073.965 | 6,022   | 5,381               | 5,545        | 10,926             |
+| FullText           | 73.83   | 73.18     | –                   | –                     | –                   | –                    | 54,858.770                | 25.709               |  54,884.479            | –       | -              | 6,971.8443          | 6,971.8443                   |
+| NaiveRAG           | 63.64   | 63.12     | –                   | –                     | –                   | –                    | 3,851.029                 | 19.158               |  3,870.187             | –       | –                   | 1,884.5565          | 1,884.5565                   |
+| LangMem            | 37.20   |           | –                   | –                     | 982.68              | 119.48               |                           |                      |  1,102.16              | 520.62  | 2,293.70            | ccc          |                    |
+| A-MEM              | 64.16   | 60.71     | 1,827.373           | 492.883               | 7,298.878           | 1,875.210            | 10,113.252                | 57.315               |  21,664.907            | 11,754  | 60,607.33           | 6,477.95     | 67,085.28          |
+| MemoryOS(eval)     | 58.25   | 61.04     | 593.415             | 209.675               | 1,297.241           | 769.705              | 7,638.539                 | 10.804               |  10,519.379            | 5,534   | 24,220.47           | 1909.08      | 26,129.55          |
+| MemoryOS(pypi)     | 54.87   | 55.91     | 509.310             | 190.348               | 3,535.02            | 1,029.215            | 6,116.239                 | 9.872                |  11,390.004            | 10,160  | 33,325.928          | 4,587.82     | 37,912.91          |
+| Mem0               | 61.69   | 61.69     | 424.13              | 17.76                 | 560.17              | 150.56               | 4,156.850                 | 13.059               |  72,517.629            | 6,022   | 4,328               | 6,117        | 10,445             |
+| Mem0-g             | 60.32   | 59.48     | 424.13              | 17.76                 | 560.17              | 150.56               | 4,375.900                 | 13.247               |  74,073.965            | 6,022   | 5,381               | 5,545        | 10,926             |
 
 #### Performance metrics
 backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
 
 | Method | Overall ↑ | Single | Multi | Open | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| FullText | 73.83 | 68.79 | 56.25 | 86.56 | 50.16 |
-| NaiveRAG | 63.64 | 55.32 | 47.92 | 70.99 | 56.39 |
-| LangMem |  |  |  |  |  |
-| A-MEM | 64.16 | 56.03 | 31.25 | 72.06 | 60.44 |
-| MemoryOS | - | - | - | - | - |
-| Mem0 | 61.69 | 56.38 | 43.75 | 66.47 | 59.19 |
-| Mem0-g | 60.32 | 54.26 | 39.58 | 65.99 | 57.01 |
+| FullText       | 73.83 | 68.79 | 56.25 | 86.56 | 50.16 |
+| NaiveRAG       | 63.64 | 55.32 | 47.92 | 70.99 | 56.39 |
+| LangMem        |  |  |  |  |  |
+| A-MEM          | 64.16 | 56.03 | 31.25 | 72.06 | 60.44 |
+| MemoryOS(eval) | 58.25 | 56.74 | 45.83 | 67.06 | 40.19 |
+| MemoryOS(pypi) | 54.87 | 52.13 | 43.75 | 63.97 | 36.76 |
+| Mem0           | 61.69 | 56.38 | 43.75 | 66.47 | 59.19 |
+| Mem0-g         | 60.32 | 54.26 | 39.58 | 65.99 | 57.01 |
 
 backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 
 | Method | Overall ↑ | Single | Multi | Open | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| FullText | 73.18 | 68.09 | 54.17 | 86.21 | 49.22 |
-| NaiveRAG | 63.12 | 53.55 | 50.00 | 71.34 | 53.89 |
-| LangMem |  |  |  |  |  |
-| A-MEM | 60.71 | 53.55 | 32.29 | 69.08 | 53.58 |
-| MemoryOS | - | - | - | - | - |
-| Mem0 | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
-| Mem0-g | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
+| FullText        | 73.18 | 68.09 | 54.17 | 86.21 | 49.22 |
+| NaiveRAG        | 63.12 | 53.55 | 50.00 | 71.34 | 53.89 |
+| LangMem         |  |  |  |  |  |
+| A-MEM           | 60.71 | 53.55 | 32.29 | 69.08 | 53.58 |
+| MemoryOS(eval)  | 61.04 | 64.18 | 40.62 | 70.15 | 40.50 |
+| MemoryOS(pypi)  | 55.91 | 52.48 | 41.67 | 66.35 | 35.83 |
+| Mem0            | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
+| Mem0-g          | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
 
 ## ⚙️ Configuration
 
@@ -377,13 +380,6 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
       </a>
     </td>
     <td align="center" width="120">
-      <a href="https://github.com/453251">
-        <img src="https://avatars.githubusercontent.com/453251?v=4" width="80" style="border-radius:50%" alt="453251"/>
-        <br />
-        <sub><b>453251</b></sub>
-      </a>
-    </td>
-    <td align="center" width="120">
       <a href="https://github.com/James-TYQ">
         <img src="https://avatars.githubusercontent.com/James-TYQ?v=4" width="80" style="border-radius:50%" alt="James-TYQ"/>
         <br />
@@ -402,6 +398,13 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
         <img src="https://avatars.githubusercontent.com/Norah-Feathertail?v=4" width="80" style="border-radius:50%" alt="Norah-Feathertail"/>
         <br />
         <sub><b>Norah-Feathertail</b></sub>
+      </a>
+    </td>
+    <td align="center" width="120">
+      <a href="https://github.com/453251">
+        <img src="https://avatars.githubusercontent.com/453251?v=4" width="80" style="border-radius:50%" alt="453251"/>
+        <br />
+        <sub><b>453251</b></sub>
       </a>
     </td>
   </tr>
