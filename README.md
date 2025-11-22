@@ -343,6 +343,38 @@ backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 | LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
 | LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
 
+judge model : `gpt-4o-mini`, randomly sampled 1/10 of the total questions
+
+| Method | Overall ↑ | Single | Multi | Open | Temp |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| FullText         | 70.80 | 64.15 | 33.33 | 84.33 | 52.08 |
+| NaiveRAG         | 64.80 | 56.52 | 40.00 | 73.08 | 59.32 |
+| LangMem          |  |  |  |  |  |
+| A-MEM            | 60.40 | 60.87 | 20.00 | 65.38 | 62.96 |
+| MemoryOS(eval)   | 61.04 | 64.18 | 40.62 | 70.15 | 40.50 |
+| MemoryOS(pypi)   | 55.91 | 52.48 | 41.67 | 66.35 | 35.83 |
+| Mem0             | 63.20 | 64.86 | 55.56 | 63.08 | 66.07 |
+| Mem0-g           | 58.00 | 55.10 | 31.58 | 61.07 | 62.75 |
+| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
+| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
+| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
+
+judge: `human evaluation`, randomly sampled 1/10 of the total questions
+
+| Method | Overall ↑ | Single | Multi | Open | Temp |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| FullText         | 65.20 | 54.72 | 26.67 | 80.60 | 45.83 |
+| NaiveRAG         | 60.80 | 50.00 | 33.33 | 70.00 | 55.93 |
+| LangMem          |  |  |  |  |  |
+| A-MEM            | 53.20 | 36.96 | 30.00 | 65.38 | 46.30 |
+| MemoryOS(eval)   | 61.04 | 64.18 | 40.62 | 70.15 | 40.50 |
+| MemoryOS(pypi)   | 55.91 | 52.48 | 41.67 | 66.35 | 35.83 |
+| Mem0             | 55.60 | 43.24 | 55.56 | 60.77 | 51.79 |
+| Mem0-g           | 56.40 | 55.10 | 31.58 | 61.83 | 52.94 |
+| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
+| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
+| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
+
 ## ⚙️ Configuration
 
 All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration class. Users can customize aspects like pre-processing, memory extraction, retrieval strategy, and update mechanisms by providing a custom configuration.
