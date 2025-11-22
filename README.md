@@ -355,9 +355,6 @@ judge model : `gpt-4o-mini`, randomly sampled 1/10 of the total questions
 | MemoryOS(pypi)   | 48.00 | 35.42 | 29.41 | 56.82 | 43.40 |
 | Mem0             | 63.20 | 64.86 | 55.56 | 63.08 | 66.07 |
 | Mem0-g           | 58.00 | 55.10 | 31.58 | 61.07 | 62.75 |
-| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
-| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
-| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
 
 judge: `human evaluation`, randomly sampled 1/10 of the total questions
 
@@ -371,9 +368,6 @@ judge: `human evaluation`, randomly sampled 1/10 of the total questions
 | MemoryOS(pypi)   | 44.80 | 31.25 | 29.41 | 54.55 | 37.74 |
 | Mem0             | 55.60 | 43.24 | 55.56 | 60.77 | 51.79 |
 | Mem0-g           | 56.40 | 55.10 | 31.58 | 61.83 | 52.94 |
-| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
-| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
-| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
 
 ## ⚙️ Configuration
 
