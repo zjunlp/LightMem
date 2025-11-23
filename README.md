@@ -377,6 +377,23 @@ backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 | LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
 | LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
 
+backbone: `qwen2.5-32b-instruct`, judge model: `gpt-4o-mini`
+
+| Method | Overall ↑ | Single | Multi | Open | Temp |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| FullText         | 74.87 | 69.86 | 57.29 | 87.40 | 51.71 |
+| NaiveRAG         | 66.95 | 62.41 | 57.29 | 76.81 | 47.98 |
+| LangMem          |  |  |  |  |  |
+| A-MEM            | 56.10 | 57.45 | 43.75 | 67.90 | 27.73 |
+| MemoryOS(eval)   | 61.04 | 64.18 | 40.62 | 70.15 | 40.50 |
+| MemoryOS(pypi)   | 55.91 | 52.48 | 41.67 | 66.35 | 35.83 |
+| Mem0             | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
+| Mem0-g           | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
+| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
+| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
+| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
+
+#### Human Evaluation
 judge model : `gpt-4o-mini`, randomly sampled 1/10 of the total questions
 
 | Method | Overall ↑ | Single | Multi | Open | Temp |
@@ -403,21 +420,6 @@ judge: `human evaluation`, randomly sampled 1/10 of the total questions
 | Mem0             | 55.60 | 43.24 | 55.56 | 60.77 | 51.79 |
 | Mem0-g           | 56.40 | 55.10 | 31.58 | 61.83 | 52.94 |
 
-backbone: `qwen2.5-32b-instruct`, judge model: `gpt-4o-mini`
-
-| Method | Overall ↑ | Single | Multi | Open | Temp |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| FullText         | 74.87 | 69.86 | 57.29 | 87.40 | 51.71 |
-| NaiveRAG         | 66.95 | 62.41 | 57.29 | 76.81 | 47.98 |
-| LangMem          |  |  |  |  |  |
-| A-MEM            | 56.10 | 57.45 | 43.75 | 67.90 | 27.73 |
-| MemoryOS(eval)   | 61.04 | 64.18 | 40.62 | 70.15 | 40.50 |
-| MemoryOS(pypi)   | 55.91 | 52.48 | 41.67 | 66.35 | 35.83 |
-| Mem0             | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
-| Mem0-g           | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
-| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
-| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
-| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
 
 ## ⚙️ Configuration
 
