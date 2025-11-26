@@ -59,7 +59,6 @@ LightMem is continuously evolving! Here's what's coming:
 
 ## 📑 Table of Contents
 
-* <a href='#features'>✨ Key Features</a>
 * <a href='#news'>📢 News</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
