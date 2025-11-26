@@ -39,8 +39,8 @@
 
 ## 📢 News
 
-- **[2025-11-26]**: 🚀 Added full LoCoMo dataset support, achieving leading performance and efficiency!
-- **[2025-11-09]**: ✨ LightMem now supports local deployment via Ollama, vLLM, and Transformers auto-loading!
+- **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency!
+- **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
 
 <span id='todo'/>
