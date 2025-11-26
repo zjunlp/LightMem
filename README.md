@@ -48,9 +48,9 @@ LightMem is continuously evolving! Here's what's coming:
     
 - Offline Pre-computation of KV Cache for Update (Lossless)
 - Online Pre-computation of KV Cache Before Q&A (Lossy)
-- MCP (Memory Control Policy)
 - Integration More Models and Feature Enhancement
 - Coordinated Use of Context and Long-Term Memory Storage
+- Multi Modal Memory 
 
 
 <span id='contents'/>
