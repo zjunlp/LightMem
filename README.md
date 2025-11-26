@@ -33,7 +33,7 @@
 * 🌐 **Broad Compatibility**
   <br> Support for cloud APIs (OpenAI, DeepSeek) and local models (Ollama, vLLM, etc.)
 
-  <div align=center><img src="./figs/motivation.png" width="50%" height="40%" /></div>
+  <div align=center><img src="./figs/Lightmem.png" width="50%" height="40%" /></div>
 
 <span id='news'/>
 
