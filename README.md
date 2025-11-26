@@ -39,6 +39,8 @@
 
 ## 📢 News
 
+- **[2025-11-26]**: 🚀 Added full LoCoMo dataset support, achieving leading performance and efficiency!
+- **[2025-11-09]**: ✨ LightMem now supports local deployment via Ollama, vLLM, and Transformers auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
 
 <span id='todo'/>
