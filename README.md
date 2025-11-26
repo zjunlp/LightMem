@@ -1,5 +1,5 @@
 <div align=center><img src="./figs/lightmem.png" width="60%" height="40%" /></div>
-<h1 align="center"> LightMem </h1>
+<h1 align="center"> LightMem: Lightweight and Efficient Memory-Augmented Generation </h1>
 
 <p align="center">
   <a href="https://arxiv.org/abs/2510.18866">
