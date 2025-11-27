@@ -183,24 +183,39 @@ class Qdrant:
 
     def update(self, vector_id: int, vector: list = None, payload: dict = None):
         """
-        Update a vector and its payload.
+        Update a vector and/or its payload.
 
         Args:
             vector_id (int): ID of the vector to update.
             vector (list, optional): Updated vector. Defaults to None.
             payload (dict, optional): Updated payload. Defaults to None.
         """
-        update_data = {}
-        if vector is not None:
-            update_data["vector"] = vector
-        if payload is not None:
-            update_data["payload"] = payload
 
-        if not update_data:
+        # Case 1：只有 payload
+        if vector is None and payload is not None:
+            self.client.set_payload(
+                collection_name=self.collection_name,
+                payload=payload,
+                points=[vector_id]
+            )
             return
 
-        point = PointStruct(id=vector_id, **update_data)
-        self.client.upsert(collection_name=self.collection_name, points=[point])
+        # Case 2：只有 vector
+        if vector is not None and payload is None:
+            self.client.update_vectors(
+                collection_name=self.collection_name,
+                points={vector_id: vector}
+            )
+            return
+
+        # Case 3：vector + payload 
+        if vector is not None and payload is not None:
+            point = PointStruct(id=vector_id, vector=vector, payload=payload)
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=[point]
+            )
+            return
 
     def get(self, vector_id: int) -> dict:
         """
