@@ -13,7 +13,6 @@ class BaseMemoryManagerConfig:
         max_tokens: int = 2000,
         top_p: float = 0.1,
         top_k: int = 1,
-        include_topic_summary: bool = False,
         enable_vision: bool = False,
         vision_details: Optional[str] = "auto",
         # Openai specific
@@ -32,7 +31,6 @@ class BaseMemoryManagerConfig:
         self.max_tokens = max_tokens
         self.top_p = top_p
         self.top_k = top_k
-        self.include_topic_summary = include_topic_summary
         self.enable_vision = enable_vision
         self.vision_details = vision_details
         # Openai specific

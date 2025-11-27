@@ -311,7 +311,8 @@ class LightMemory:
         self.logger.info(f"[{call_id}] Extraction triggered {extract_trigger_num} times, extract_list length: {len(extract_list)}")
         extract_list, timestamps_list, weekday_list, speaker_list, topic_id_map = assign_sequence_numbers_with_timestamps(extract_list, offset_ms=500, topic_id_mapping=topic_id_mapping)
         self.logger.debug(f"[{call_id}] Extract list sample: {json.dumps(extract_list)}")
-
+        max_source_ids = [sum(1 for seg in batch for msg in seg if msg.get("role") == "user") - 1 for batch in extract_list]
+        self.logger.info(f"[{call_id}] Batch max_source_ids: {max_source_ids}")
         if self.config.metadata_generate and self.config.text_summary:
             self.logger.info(f"[{call_id}] Starting metadata generation")
             extracted_results = self.manager.meta_text_extract(METADATA_GENERATE_PROMPT_locomo, extract_list, self.config.messages_use, topic_id_mapping)
@@ -351,6 +352,7 @@ class LightMemory:
             weekday_list=weekday_list,
             speaker_list=speaker_list,
             topic_id_map=topic_id_map,
+            max_source_ids=max_source_ids,
             logger=self.logger
         )
         self.logger.info(f"[{call_id}] Created {len(memory_entries)} MemoryEntry objects")
@@ -509,7 +511,7 @@ class LightMemory:
         )
         self.logger.info(f"========== END {call_id} ==========")
 
-    def offline_update_all_entries(self, score_threshold: float = 0.5, max_workers: int = 5):
+    def offline_update_all_entries(self, score_threshold: float = 0.9, max_workers: int = 5):
         """
         Perform offline updates for all entries based on their update_queue, in parallel.
 

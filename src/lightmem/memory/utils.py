@@ -85,7 +85,7 @@ def assign_sequence_numbers_with_timestamps(extract_list, offset_ms: int = 500, 
                 timestamps_list.append(message["time_stamp"])
                 weekday_list.append(message["weekday"])
                 speaker_info = {
-                    'speaker_id': message.get('speaker_id', 'Unknown'),
+                    'speaker_id': message.get('speaker_id', 'unknown'),
                     'speaker_name': message.get('speaker_name', 'Unknown')
                 }
                 speaker_list.append(speaker_info)
@@ -164,6 +164,7 @@ def convert_extraction_results_to_memory_entries(
     weekday_list: List,
     speaker_list: List = None,
     topic_id_map: Dict[int, int] = None,
+    max_source_ids: List[int] = None, 
     logger = None
 ) -> List[MemoryEntry]:
     """
@@ -188,17 +189,42 @@ def convert_extraction_results_to_memory_entries(
         if item and item.get("cleaned_result")
     ]
 
-    for topic_memory in extracted_memory_entry:
+    for batch_idx, topic_memory in enumerate(extracted_memory_entry):
         if not topic_memory:
             continue
-
+        
+        max_valid_sid = max_source_ids[batch_idx] if max_source_ids and batch_idx < len(max_source_ids) else None
+        
         for topic_idx, fact_list in enumerate(topic_memory):
             if not isinstance(fact_list, list):
                 fact_list = [fact_list]
 
             for fact_entry in fact_list:
-                sid = int(fact_entry.get("source_id"))
+                original_sid = int(fact_entry.get("source_id", 0))
+                sid = original_sid
+                
+                if max_valid_sid is not None and sid > max_valid_sid:
+                    sid = max_valid_sid  
+                    if logger:
+                        logger.warning(
+                            f"LLM returned invalid source_id={original_sid} "
+                            f"(valid range: [0, {max_valid_sid}]) in batch {batch_idx}. "
+                            f"Auto-corrected to source_id={sid}. "
+                            f"Fact: {fact_entry.get('fact', '')[:100]}..."
+                        )
+                
                 seq_candidate = sid * 2
+                
+                if seq_candidate not in topic_id_map:
+                    if logger:
+                        logger.error(
+                            f"sequence {seq_candidate} (from corrected source_id={sid}) "
+                            f"not found in topic_id_map. "
+                            f"Available range: {min(topic_id_map.keys())}-{max(topic_id_map.keys())}. "
+                            f"Skipping this fact."
+                        )
+                    continue
+                
                 resolved_topic_id = topic_id_map[seq_candidate]
                 
                 mem_obj = _create_memory_entry_from_fact(
@@ -241,8 +267,9 @@ def _create_memory_entry_from_fact(
     Returns:
         MemoryEntry object or None if creation fails
     """
-    sequence_n = fact_entry.get("source_id") * 2
-    
+    source_id = int(fact_entry.get("source_id", 0))
+    sequence_n = source_id * 2
+
     try:
         time_stamp = timestamps_list[sequence_n]
         

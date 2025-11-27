@@ -134,8 +134,6 @@ class OpenaiManager:
         self,
         system_prompt: str,
         extract_list: List[List[List[Dict]]],
-        timestamps_list: Optional[List[List[List[str]]]] = None,
-        weekday_list: Optional[List[List[List[str]]]] = None,
         messages_use: Literal["user_only", "assistant_only", "hybrid"] = "user_only",
         topic_id_mapping: Optional[List[List[int]]] = None
     ) -> List[Optional[Dict]]:
@@ -145,8 +143,6 @@ class OpenaiManager:
         Args:
             system_prompt: The system prompt for metadata generation
             extract_list: List of message segments to process
-            timestamps_list: Optional list of timestamps (reserved for future use)
-            weekday_list: Optional list of weekdays (reserved for future use)
             messages_use: Strategy for which messages to use
             topic_id_mapping: For each API call, the global topic IDs
 
@@ -183,7 +179,7 @@ class OpenaiManager:
                     if time_stamp and weekday:
                         time_prefix = f"[{time_stamp}, {weekday}] "
 
-                    if speaker_name != 'Unknown':
+                    if speaker_name:
                         message_lines.append(f"{time_prefix}{sequence_id//2}.{speaker_name}: {content}")
                     else:
                         message_lines.append(f"{time_prefix}{sequence_id//2}.{role}: {content}")
