@@ -2,12 +2,6 @@
 /dev
 /test
 
-# This project specific .gitignore file has been generated using
-/experiments/*/
-!/experiment/*.*
-/logs
-/my_long_term_chat
-/results
 
 # C extensions
 *.so
