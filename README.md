@@ -1,4 +1,9 @@
-<div align=center><img src="./figs/lightmem_logo.png" width="60%" height="40%" /></div>
+<div align="center">
+  <picture>
+    <source srcset="./figs/lightmem_logo_dark.png" media="(prefers-color-scheme: dark)">
+    <img src="./figs/lightmem_logo_light.png" width="60%" height="40%" />
+  </picture>
+</div>
 <h1 align="center"> LightMem: Lightweight and Efficient Memory-Augmented Generation </h1>
 
 <p align="center">
