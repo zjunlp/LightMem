@@ -134,6 +134,30 @@ The following table lists the backends values currently recognized by each confi
 | `MMEmbedderConfig`              | `huggingface` |
 | `EmbeddingRetrieverConfig`      | `qdrant` |
 
+## BM25 Retrieval
+
+BM25 retrieval offers lightweight keyword-based search for stored memories. Ensure the `rank-bm25` package is installed (included in `pyproject.toml`) before enabling it.
+
+```python
+from lightmem.memory.lightmem import LightMemory
+
+config = {
+    "index_strategy": "context",
+    "retrieve_strategy": "context",
+    "context_retriever": {
+        "model_name": "BM25",
+        "configs": {
+            "on_disk": True,
+            "index_path": "bm25_index.pkl",
+        },
+    },
+}
+
+lightmem = LightMemory.from_config(config)
+```
+
+Use `index_strategy="hybrid"` and `retrieve_strategy="hybrid"` to combine BM25 with embedding search.
+
 <span id='examples'/>
 
 ## 💡 Examples

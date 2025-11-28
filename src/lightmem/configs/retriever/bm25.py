@@ -10,7 +10,8 @@ class BM25Config(BaseModel):
     tokenizer: Optional[str] = Field(None, description="Optional tokenizer identifier or function name")
     use_stemming: Optional[bool] = Field(False, description="Whether to apply stemming on tokens")
     lowercase: Optional[bool] = Field(True, description="Whether to lowercase text before tokenization")
-    on_disk: Optional[bool] = Field(False, description="Enable local cache for indexed corpus")
+    on_disk: bool = Field(False, description="Enable local cache for indexed corpus")
+    index_path: str = Field("bm25_index.pkl", description="Path to persist BM25 index and documents")
 
     @model_validator(mode="before")
     @classmethod
@@ -43,5 +44,6 @@ class BM25Config(BaseModel):
     def __repr__(self):
         return (
             f"<BM25Config(k1={self.k1}, b={self.b}, tokenizer={self.tokenizer}, "
-            f"use_stemming={self.use_stemming}, lowercase={self.lowercase}, on_disk={self.on_disk})>"
+            f"use_stemming={self.use_stemming}, lowercase={self.lowercase}, "
+            f"on_disk={self.on_disk}, index_path='{self.index_path}')>"
         )
