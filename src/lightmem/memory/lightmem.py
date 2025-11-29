@@ -123,6 +123,7 @@ class LightMemory:
             - segmenter (optional): Topic segmentation model if topic_segment=True
             - manager: Memory management model for metadata generation and text summarization
             - text_embedder (optional): Text embedding model if index_strategy is 'embedding' or 'hybrid'
+            - retrieve_strategy (optional): Retrieval strategy ('context', 'embedding', or 'hybrid')
             - context_retriever (optional): Context-based retriever if retrieve_strategy is 'context' or 'hybrid'
             - embedding_retriever (optional): Embedding-based retriever if retrieve_strategy is 'embedding' or 'hybrid'
             - graph (optional): Graph memory store if graph_mem is enabled
@@ -152,10 +153,11 @@ class LightMemory:
             self.logger.info("Initializing text embedder")
             self.text_embedder = TextEmbedderFactory.from_config(self.config.text_embedder)
         # if self.config.multimodal_embedder:
-        if self.config.retrieve_strategy in ["context", "hybrid"]:
+        self.retrieve_strategy = self.config.retrieve_strategy
+        if self.retrieve_strategy in ["context", "hybrid"]:
             self.logger.info("Initializing context retriever")
             self.context_retriever = ContextRetrieverFactory.from_config(self.config.context_retriever)
-        if self.config.retrieve_strategy in ["embedding", "hybrid"]:
+        if self.retrieve_strategy in ["embedding", "hybrid"]:
             self.logger.info("Initializing embedding retriever")
             self.embedding_retriever = EmbeddingRetrieverFactory.from_config(self.config.embedding_retriever)
         if self.config.graph_mem:
@@ -554,7 +556,7 @@ class LightMemory:
         self.logger.info(f"[{call_id}]   - Skipped (no candidates): {skipped_count} entries")
         self.logger.info(f"========== END {call_id} ==========")
     
-    def retrieve(self, query: str, limit: int = 10, filters: dict = None) -> list[str]:
+    def retrieve(self, query: str, limit: int = 10, filters: Optional[dict] = None) -> list[str]:
         """
         Retrieve relevant entries and return them as formatted strings.
 

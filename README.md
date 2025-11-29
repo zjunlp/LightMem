@@ -44,6 +44,7 @@
 
 ## 📢 News
 
+- **[2025-11-30]**: 🚌 LightMem now supports calling multiple tools provided by its MCP Server.
 - **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency!
 - **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
@@ -121,6 +122,7 @@ LightMem/
 │   ├── factory/             # Factory methods
 │   ├── memory/              # Core memory management
 │   └── memory_toolkits/     # Memory toolkits
+├── mcp/                     # LightMem MCP server
 ├── experiments/             # Experiment scripts
 ├── datasets/                # Datasets files
 └── examples/                # Examples
@@ -145,17 +147,12 @@ The following table lists the backends values currently recognized by each confi
 
 ### Initialize LightMem
 ```python
-"""
-Start at root directory or anywhere
-"""
-
 import os
-import datetime
+from datetime import datetime
 from lightmem.memory.lightmem import LightMemory
 
-
 LOGS_ROOT = "./logs"
-RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
 os.makedirs(RUN_LOG_DIR, exist_ok=True)
 
@@ -226,28 +223,30 @@ lightmem = LightMemory.from_config(config_dict)
 
 ### Add Memory
 ```python
+import time
 
-### Add Memory
-session = {
-"timestamp": "2025-01-10",
-"turns": [
-    [
-        {"role": "user", "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex."}, 
-        {"role": "assistant", "content": "Got it. Pistachio is a great choice."}], 
-    ]
-}
+messages = [
+    {
+        "role": "user",
+        "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex."
+    },
+    {
+        "role": "assistant",
+        "content": "Got it. Pistachio is a great choice."
+    }
+]
 
-
-for turn_messages in session["turns"]:
-    timestamp = session["timestamp"]
-    for msg in turn_messages:
+for msg in messages:
+    timestamp = datetime.now().isoformat(timespec="milliseconds")
+    if "time_stamp" not in msg:
         msg["time_stamp"] = timestamp
-        
-    store_result = lightmem.add_memory(
-        messages=turn_messages,
-        force_segment=True,
-        force_extract=True
-    )
+    time.sleep(0.1)  # just example
+
+added_result = lightmem.add_memory(
+    messages=messages,
+    force_segment=True,
+    force_extract=True,
+)
 ```
 
 ### Offline Update
@@ -262,6 +261,23 @@ question = "What is the name of my dog?"
 related_memories = lightmem.retrieve(question, limit=5)
 print(related_memories)
 ``` 
+
+### MCP Server
+
+LightMem also support the Model Context Protocol (MCP) server, Let's Quick start:
+
+```bash
+# running at root directory
+cd LightMem
+
+# env
+pip install '.[mcp]'
+
+# start by STDIO
+npx @modelcontextprotocol/inspector python mcp/server.py
+# start by HTTP (http://127.0.0.1:8000/mcp)
+fastmcp run mcp/server.py:mcp --transport http --port 8000
+```
 
 ## 📁 Experimental Results
 
