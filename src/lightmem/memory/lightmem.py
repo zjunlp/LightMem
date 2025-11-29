@@ -349,19 +349,54 @@ class LightMemory:
         self.logger.info(f"[{call_id}] Received {len(memory_list)} memory entries")
         self.logger.info(f"[{call_id}] construct_update_queue_trigger={construct_update_queue_trigger}, offline_update_trigger={offline_update_trigger}")
 
+        def ensure_unique_id(entry):
+            while True:
+                duplicate = False
+                if self.config.index_strategy in ["context", "hybrid"] and hasattr(self, "context_retriever"):
+                    if self.context_retriever.exists(entry.id):
+                        duplicate = True
+                if self.config.index_strategy in ["embedding", "hybrid"] and hasattr(self, "embedding_retriever"):
+                    if self.embedding_retriever.exists(entry.id):
+                        duplicate = True
+                if not duplicate:
+                    break
+                entry.id = str(uuid.uuid4())
+
+        for mem_obj in memory_list:
+            ensure_unique_id(mem_obj)
+
         if self.config.index_strategy in ["context", "hybrid"]:
             self.logger.info(f"[{call_id}] Saving memory entries to file (strategy: {self.config.index_strategy})")
             save_memory_entries(memory_list, "memory_entries.json")
+            if hasattr(self, "context_retriever"):
+                docs = []
+                payloads = []
+                ids = []
+                for mem_obj in memory_list:
+                    payload = {
+                        "time_stamp": mem_obj.time_stamp,
+                        "float_time_stamp": mem_obj.float_time_stamp,
+                        "weekday": mem_obj.weekday,
+                        "category": mem_obj.category,
+                        "subcategory": mem_obj.subcategory,
+                        "memory_class": mem_obj.memory_class,
+                        "memory": mem_obj.memory,
+                        "original_memory": mem_obj.original_memory,
+                        "compressed_memory": mem_obj.compressed_memory,
+                    }
+                    docs.append(mem_obj.memory)
+                    payloads.append(payload)
+                    ids.append(mem_obj.id)
+                if docs:
+                    self.context_retriever.insert(docs=docs, payloads=payloads, ids=ids)
+            else:
+                self.logger.warning(f"[{call_id}] Context retriever not initialized; skipping context index update")
 
         if self.config.index_strategy in ["embedding", "hybrid"]:
             inserted_count = 0
             self.logger.info(f"[{call_id}] Starting embedding and insertion to vector database")
             for mem_obj in memory_list:
                 embedding_vector = self.text_embedder.embed(mem_obj.memory)
-                ids = mem_obj.id
-                while self.embedding_retriever.exists(ids):
-                    ids = str(uuid.uuid4())
-                    mem_obj.id = ids
                 payload = {
                     "time_stamp": mem_obj.time_stamp,
                     "float_time_stamp": mem_obj.float_time_stamp,
@@ -376,7 +411,7 @@ class LightMemory:
                 self.embedding_retriever.insert(
                     vectors = [embedding_vector],
                     payloads = [payload],
-                    ids = [ids],
+                    ids = [mem_obj.id],
                 )
                 inserted_count += 1
 
@@ -571,16 +606,42 @@ class LightMemory:
         self.logger.info(f"========== START {call_id} ==========")
         self.logger.info(f"[{call_id}] Query: {query}")
         self.logger.info(f"[{call_id}] Parameters: limit={limit}, filters={filters}")
-        self.logger.debug(f"[{call_id}] Generating embedding for query")
-        query_vector = self.text_embedder.embed(query)
-        self.logger.debug(f"[{call_id}] Query embedding dimension: {len(query_vector)}")
-        self.logger.info(f"[{call_id}] Searching vector database")
-        results = self.embedding_retriever.search(
-            query_vector=query_vector,
-            limit=limit,
-            filters=filters,
-            return_full=True,
-        )
+        results = []
+        if self.config.retrieve_strategy == "context":
+            if hasattr(self, "context_retriever"):
+                self.logger.info(f"[{call_id}] Searching BM25 index")
+                results = self.context_retriever.search(query=query, limit=limit, filters=filters)
+            else:
+                self.logger.warning(f"[{call_id}] Context retriever not initialized; returning empty result")
+        elif self.config.retrieve_strategy == "hybrid":
+            bm25_results = []
+            embedding_results = []
+            if hasattr(self, "context_retriever"):
+                self.logger.info(f"[{call_id}] Searching BM25 index for hybrid retrieval")
+                bm25_results = self.context_retriever.search(query=query, limit=limit, filters=filters)
+            if hasattr(self, "embedding_retriever"):
+                self.logger.debug(f"[{call_id}] Generating embedding for query")
+                query_vector = self.text_embedder.embed(query)
+                self.logger.debug(f"[{call_id}] Query embedding dimension: {len(query_vector)}")
+                self.logger.info(f"[{call_id}] Searching vector database for hybrid retrieval")
+                embedding_results = self.embedding_retriever.search(
+                    query_vector=query_vector,
+                    limit=limit,
+                    filters=filters,
+                    return_full=True,
+                )
+            results = self._rrf_fuse(bm25_results, embedding_results, k=60, limit=limit)
+        else:
+            self.logger.debug(f"[{call_id}] Generating embedding for query")
+            query_vector = self.text_embedder.embed(query)
+            self.logger.debug(f"[{call_id}] Query embedding dimension: {len(query_vector)}")
+            self.logger.info(f"[{call_id}] Searching vector database")
+            results = self.embedding_retriever.search(
+                query_vector=query_vector,
+                limit=limit,
+                filters=filters,
+                return_full=True,
+            )
         self.logger.info(f"[{call_id}] Found {len(results)} results")
         formatted_results = []
         for r in results:
@@ -596,3 +657,35 @@ class LightMemory:
         self.logger.info(f"========== END {call_id} ==========")
         return result_string
 
+    def _rrf_fuse(self, bm25_results: list, embedding_results: list, k: int = 60, limit: int = 10) -> list:
+        fused_scores = {}
+        merged_entries = {}
+
+        def add_results(results):
+            for rank, item in enumerate(results, start=1):
+                doc_id = str(item.get("id"))
+                score = 1 / (k + rank)
+                fused_scores[doc_id] = fused_scores.get(doc_id, 0.0) + score
+                if doc_id not in merged_entries:
+                    merged_entries[doc_id] = {
+                        "id": item.get("id"),
+                        "text": item.get("text", item.get("payload", {}).get("memory", "")),
+                        "payload": item.get("payload", {}),
+                    }
+
+        add_results(bm25_results or [])
+        add_results(embedding_results or [])
+
+        ranked = sorted(fused_scores.items(), key=lambda x: x[1], reverse=True)[:limit]
+        results = []
+        for doc_id, score in ranked:
+            entry = merged_entries.get(doc_id, {})
+            results.append(
+                {
+                    "id": entry.get("id"),
+                    "text": entry.get("text", ""),
+                    "score": score,
+                    "payload": entry.get("payload", {}),
+                }
+            )
+        return results
