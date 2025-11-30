@@ -35,7 +35,7 @@ mcp = FastMCP("LightMem")
 @mcp.tool()
 def get_timestamp() -> Dict[str, Any]:
     """
-    Get the current time and return it in the specified format(YYYY-MM-DDTHH:MM:SS.sss).
+    Get the current time and return it in the specified format (YYYY-MM-DDTHH:MM:SS.sss).
 
     Returns:
         A dictionary containing the operation result
