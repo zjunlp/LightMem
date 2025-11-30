@@ -248,7 +248,7 @@ def retrieve_memory(query: str, limit: int = 10, filters: Optional[Any] = {}) ->
 
         return {
             "status": STATUS_SUCCESS,
-            "message": f"LightMem has retrieved {limit} relevant memories.",
+            "message": f"LightMem has retrieved {len(related_memories_list)} relevant memories.",
             "details": related_memories_list
         }
 
