@@ -330,7 +330,7 @@ def main():
         mcp.run()
 
     except KeyboardInterrupt:
-        print("Server may interrupted by user", file=sys.stderr)
+        print("Server was interrupted by user", file=sys.stderr)
     except Exception as e:
         print(f"Error occurred while starting the server: {e}", file=sys.stderr)
         import traceback
