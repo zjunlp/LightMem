@@ -166,7 +166,7 @@ def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] =
 @mcp.tool()
 def offline_update(top_k: int = 20, keep_top_n: int = 10, score_threshold: float = 0.8) -> Dict[str, Any]:
     """
-    En: Update all memory entries by using LightMem's update strategy.
+    Update all memory entries by using LightMem's update strategy.
 
     Args:
         top_k: Number of nearest neighbors to consider for each entry
