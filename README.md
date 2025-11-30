@@ -264,7 +264,7 @@ print(related_memories)
 
 ### MCP Server
 
-LightMem also support the Model Context Protocol (MCP) server, Let's Quick start:
+LightMem also supports the Model Context Protocol (MCP) server, let's quick start:
 
 ```bash
 # running at root directory
