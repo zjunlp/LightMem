@@ -315,7 +315,7 @@ def init_lightmem(config_path: str) -> LightMemory:
     return LightMemory.from_config(config)
 
 def main():
-    parser = argparse.ArgumentParser(description="a MCP server for LightMem")
+    parser = argparse.ArgumentParser(description="an MCP server for LightMem")
     parser.add_argument(
         "--config",
         type=str,
