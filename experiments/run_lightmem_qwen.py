@@ -7,10 +7,12 @@ import os
 from lightmem.memory.lightmem import LightMemory
 
 # ============ API Configuration ============
-API_KEY='your_api_key_here'
-API_BASE_URL=''
-LLM_MODEL='qwen3-30b-a3b-instruct-2507'
-JUDGE_MODEL='gpt-4o-mini'
+JUDGE_MODEL_API_KEY='sk-xxxxxxxxxxxxxxxxxxxxxxxxxx'
+JUDGE_MODEL_BASE_URL='https://api.deepseek.com/v1'
+JUDGE_MODEL='deepseek-chat'
+API_KEY='sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+API_BASE_URL='https://dashscope.aliyuncs.com/compatible-mode/v1'
+LLM_MODEL='qwen-plus'
 
 # ============ Model Paths ============
 LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
@@ -149,7 +151,7 @@ def load_lightmem(collection_name):
     lightmem = LightMemory.from_config(config)
     return lightmem
 
-llm_judge = LLMModel(JUDGE_MODEL, API_KEY, API_BASE_URL)
+llm_judge = LLMModel(JUDGE_MODEL, JUDGE_MODEL_API_KEY, JUDGE_MODEL_BASE_URL)
 llm = LLMModel(LLM_MODEL, API_KEY, API_BASE_URL)
 
 data = json.load(open(DATA_PATH, "r"))
