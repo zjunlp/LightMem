@@ -17,20 +17,23 @@ class SenMemBufferManager:
         self.big_buffer.extend(messages)
 
         while self.big_buffer:
+            processed_messages = []
             for msg in self.big_buffer:
                 if msg["role"] == "user":
-                    cur_token_count = len(self.tokenizer.encode(msg["content"])) 
+                    cur_token_count = len(self.tokenizer.encode(msg["content"]))
                     if self.token_count + cur_token_count <= self.max_tokens:
                         self.buffer.append(msg)
                         self.token_count += cur_token_count
-                        self.big_buffer.remove(msg)
+                        processed_messages.append(msg)
                     else:
                         segments = self.cut_with_segmenter(segmenter, text_embedder)
                         all_segments.extend(segments)
                         break
                 else:
                     self.buffer.append(msg)
-                    self.big_buffer.remove(msg)
+                    processed_messages.append(msg)
+            for msg in processed_messages:
+                self.big_buffer.remove(msg)
 
         return all_segments
 
