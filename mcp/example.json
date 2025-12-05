@@ -1,0 +1,55 @@
+{
+    "pre_compress": true,
+    "pre_compressor": {
+        "model_name": "llmlingua-2",
+        "configs": {
+            "llmlingua_config": {
+                "model_name": "/your_model_path/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+                "device_map": "cuda",
+                "use_llmlingua2": true
+            }
+        }
+    },
+    "topic_segment": true,
+    "precomp_topic_shared": true,
+    "topic_segmenter": {
+        "model_name": "llmlingua-2"
+    },
+    "messages_use": "user_only",
+    "metadata_generate": true,
+    "text_summary": true,
+    "memory_manager": {
+        "model_name": "openai",
+        "configs": {
+            "model": "gpt-4o-mini",
+            "api_key": "",
+            "max_tokens": 16000,
+            "openai_base_url": ""
+        }
+    },
+    "extract_threshold": 0.1,
+    "index_strategy": "embedding",
+    "text_embedder": {
+        "model_name": "huggingface",
+        "configs": {
+            "model": "all-MiniLM-L6-v2",
+            "embedding_dims": 384,
+            "model_kwargs": {"device": "cuda"}
+        }
+    },
+    "retrieve_strategy": "embedding",
+    "embedding_retriever": {
+        "model_name": "qdrant",
+        "configs": {
+            "collection_name": "my_long_term_chat",
+            "embedding_model_dims": 384,
+            "path": "./my_long_term_chat"
+        }
+    },
+    "update": "offline",
+    "logging": {
+        "level": "DEBUG",
+        "file_enabled": true,
+        "log_dir": "./logs/20250101_000000"
+    }
+}
