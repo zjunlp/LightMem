@@ -1,7 +1,3 @@
-"""
-(lightmem) xxx/LightMem$ npx @modelcontextprotocol/inspector python mcp/server.py
-"""
-
 import argparse
 import json
 import os
@@ -9,13 +5,13 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 try:
     from fastmcp import FastMCP
 except ImportError:
     print("fastmcp module is not installed. Please install it to proceed.")
     sys.exit(1)
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     from lightmem.memory.lightmem import LightMemory
@@ -24,11 +20,38 @@ except ImportError:
     sys.exit(1)
 
 
+# -----------------------------
+# Init LightMemory
+# -----------------------------
+
+_lightmem_instance: Optional[LightMemory] = None
+
+# the default config path is `example.json` in the same directory as this script
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'example.json')
+
+def get_lightmem_instance() -> LightMemory:
+    """
+    Delays the initialization of the LightMemory instance and ensures that all tools share the same instance.
+    """
+    global _lightmem_instance
+
+    if _lightmem_instance is None:
+        if not os.path.exists(CONFIG_PATH):
+            raise FileNotFoundError(f"Configuration file does not exist: {CONFIG_PATH}")
+
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        _lightmem_instance = LightMemory.from_config(config)
+
+    return _lightmem_instance
+
+
+# -----------------------------
+# MCP Initialization
+# -----------------------------
+
 STATUS_SUCCESS = "success"
 STATUS_ERROR = "error"
-
-lightmem_instance: Optional[LightMemory] = None
-
 
 mcp = FastMCP("LightMem")
 
@@ -67,7 +90,7 @@ def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] =
     Returns:
         A dictionary containing the operation result
     """
-    global lightmem_instance
+    lightmem_instance = get_lightmem_instance()
 
     if lightmem_instance is None:
         return {
@@ -121,8 +144,7 @@ def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] =
 
         if (
             "add_input_prompt" in added_result and 
-            "add_output_prompt" in added_result and 
-            added_result.get("api_call_nums", 0) > 0
+            "add_output_prompt" in added_result
         ):
             return {
                 "status": STATUS_SUCCESS,
@@ -131,21 +153,6 @@ def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] =
                     "add_input_prompt": added_result.get("add_input_prompt", []),
                     "add_output_prompt": added_result.get("add_output_prompt", []),
                     "api_call_nums": added_result.get("api_call_nums", 0),
-                }
-            }
-
-        if (
-            "add_input_prompt" in added_result and
-            "add_output_prompt" in added_result and
-            added_result.get("api_call_nums", 0) == 0
-        ):
-            return {
-                "status": STATUS_SUCCESS,
-                "message": "Segmentation completed, but memory extraction was not triggered.",
-                "details": {
-                    "add_input_prompt": added_result.get("add_input_prompt", []),
-                    "add_output_prompt": added_result.get("add_output_prompt", []),
-                    "api_call_nums": 0,
                 }
             }
 
@@ -176,15 +183,15 @@ def offline_update(top_k: int = 20, keep_top_n: int = 10, score_threshold: float
     Returns:
         A dictionary containing the operation result
     """
-    global lightmem_instance
+    lightmem_instance = get_lightmem_instance()
+
+    if lightmem_instance is None:
+        return {
+            "status": STATUS_ERROR,
+            "message": "LightMem is not initialized. Please check the configuration file."
+        }
 
     try:
-        if lightmem_instance is None:
-            return {
-                "status": STATUS_ERROR,
-                "message": "LightMem is not initialized. Please check the configuration file."
-            }
-
         lightmem_instance.construct_update_queue_all_entries(
             top_k=top_k,
             keep_top_n=keep_top_n
@@ -217,7 +224,7 @@ def retrieve_memory(query: str, limit: int = 10, filters: Optional[Any] = {}) ->
     Returns:
         A dictionary containing the operation result
     """
-    global lightmem_instance
+    lightmem_instance = get_lightmem_instance()
     
     if lightmem_instance is None:
         return {
@@ -225,15 +232,16 @@ def retrieve_memory(query: str, limit: int = 10, filters: Optional[Any] = {}) ->
             "message": "LightMem is not initialized. Please check the configuration file."
         }
 
-    if filters == {}: filters = None
+    if filters == {}:
+        filters = None
+
+    if not query:
+        return {
+            "status": STATUS_ERROR,
+            "message": "query parameter is required"
+        }
 
     try:
-        if not query:
-            return {
-                "status": STATUS_ERROR,
-                "message": "query parameter is required"
-            }
-
         related_memories = lightmem_instance.retrieve(
             query=query,
             limit=limit,
@@ -259,14 +267,14 @@ def retrieve_memory(query: str, limit: int = 10, filters: Optional[Any] = {}) ->
         }
 
 @mcp.tool()
-def show_lightmem() -> Dict[str, Any]:
+def show_lightmem_instance() -> Dict[str, Any]:
     """
     Show the current LightMem instance's status.
 
     Returns:
         A dictionary containing the operation result
     """
-    global lightmem_instance
+    lightmem_instance = get_lightmem_instance()
 
     if lightmem_instance is None:
         return {
@@ -303,36 +311,33 @@ def show_lightmem() -> Dict[str, Any]:
             "message": f"Error retrieving configuration: {str(e)}"
         }
 
-# Regular function:
 
-def init_lightmem(config_path: str) -> LightMemory:
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Configuration file does not exist: {config_path}")
-
-    with open(config_path, 'r', encoding='utf-8') as f:
-        config = json.load(f)
-
-    return LightMemory.from_config(config)
+# -----------------------------
+# Main Function
+# -----------------------------
 
 def main():
+    global CONFIG_PATH
+
     parser = argparse.ArgumentParser(description="an MCP server for LightMem")
     parser.add_argument(
         "--config",
         type=str,
-        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'example.json'),
+        default=CONFIG_PATH,
     )
     args = parser.parse_args()
 
-    try:
-        global lightmem_instance
-        lightmem_instance = init_lightmem(args.config)
+    CONFIG_PATH = args.config
 
-        mcp.run()
+    try:
+        print("Using config:", CONFIG_PATH)
+        print("Starting MCP server...")
+        mcp.run(single_thread=True) # Single thread
 
     except KeyboardInterrupt:
-        print("Server was interrupted by user", file=sys.stderr)
+        print("Server interrupted by user", file=sys.stderr)
     except Exception as e:
-        print(f"Error occurred while starting the server: {e}", file=sys.stderr)
+        print(f"Error starting server: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -340,3 +345,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+"""
+for example, to run the MCP server, use the following commands:
+
+(lightmem) xxx/LightMem$ npx @modelcontextprotocol/inspector python mcp/server.py
+
+(lightmem) xxx/LightMem$ fastmcp run mcp/server.py:mcp --transport http --port 8000
+"""
