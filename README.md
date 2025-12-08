@@ -1,10 +1,5 @@
-<div align="center">
-  <picture>
-    <source srcset="./figs/lightmem_logo_dark.png" media="(prefers-color-scheme: dark)">
-    <img src="./figs/lightmem_logo_light.png" width="60%" height="40%" />
-  </picture>
-</div>
-<h1 align="center"> LightMem: Lightweight and Efficient Memory-Augmented Generation </h1>
+<div align=center><img src="./figs/lightmem.png" width="60%" height="40%" /></div>
+<h1 align="center"> LightMem </h1>
 
 <p align="center">
   <a href="https://arxiv.org/abs/2510.18866">
@@ -24,7 +19,16 @@
 
 ---
 
+<div align=center><img src="./figs/motivation.png" width="50%" height="40%" /></div>
+
 **LightMem** is a lightweight and efficient memory management framework designed for Large Language Models and AI Agents. It provides a simple yet powerful memory storage, retrieval, and update mechanism to help you quickly build intelligent applications with long-term memory capabilities.
+
+- **Paper**: https://arxiv.org/abs/2510.18866
+- **GitHub**: https://github.com/zjunlp/LightMem
+
+<span id='features'/>
+
+## ✨ Key Features
 
 * 🚀 **Lightweight & Efficient**
   <br> Minimalist design with minimal resource consumption and fast response times
@@ -36,16 +40,12 @@
   <br> Modular architecture supporting custom storage engines and retrieval strategies
 
 * 🌐 **Broad Compatibility**
-  <br> Support for cloud APIs (OpenAI, DeepSeek) and local models (Ollama, vLLM, etc.)
-
-  <div align=center><img src="./figs/Lightmem.png" width="100%" height="60%" /></div>
+  <br> Support for mainstream LLMs (OpenAI, Qwen, DeepSeek, etc.)
 
 <span id='news'/>
 
 ## 📢 News
 
-- **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency!
-- **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
 
 <span id='todo'/>
@@ -55,15 +55,16 @@ LightMem is continuously evolving! Here's what's coming:
     
 - Offline Pre-computation of KV Cache for Update (Lossless)
 - Online Pre-computation of KV Cache Before Q&A (Lossy)
-- Integration More Models and Feature Enhancement
+- MCP (Memory Control Policy)
+- Integration of Common Models and Feature Enhancement
 - Coordinated Use of Context and Long-Term Memory Storage
-- Multi Modal Memory 
 
 
 <span id='contents'/>
 
 ## 📑 Table of Contents
 
+* <a href='#features'>✨ Key Features</a>
 * <a href='#news'>📢 News</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
@@ -87,7 +88,7 @@ git clone https://github.com/zjunlp/LightMem.git
 cd LightMem
 
 # Create virtual environment
-conda create -n lightmem python=3.11 -y
+conda create -n lightmem python=3.10 -y
 conda activate lightmem
 
 # Install dependencies
@@ -134,7 +135,7 @@ The following table lists the backends values currently recognized by each confi
 | :---                            | :--- |
 | `PreCompressorConfig`           | `llmlingua-2`, `entropy_compress` |
 | `TopicSegmenterConfig`          | `llmlingua-2` |
-| `MemoryManagerConfig`           | `openai`, `deepseek`, `ollama`, `vllm`, etc. |
+| `MemoryManagerConfig`           | `openai`, `deepseek` |
 | `TextEmbedderConfig`            | `huggingface` |
 | `MMEmbedderConfig`              | `huggingface` |
 | `EmbeddingRetrieverConfig`      | `qdrant` |
@@ -161,7 +162,7 @@ os.makedirs(RUN_LOG_DIR, exist_ok=True)
 
 API_KEY='your_api_key'
 API_BASE_URL='your_api_base_url'
-LLM_MODEL='your_model_name' # such as 'gpt-4o-mini' (API) or 'gemma3:latest' (Local Ollama) ...
+LLM_MODEL='your_model_name' # such as 'gpt-4o-mini' or 'deepseek-chat'
 EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
 LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
 
@@ -186,12 +187,12 @@ config_dict = {
     "metadata_generate": True,
     "text_summary": True,
     "memory_manager": {
-        "model_name": 'xxx', # such as 'openai' or 'ollama' ...
+        "model_name": 'xxx', # Support 'openai' and 'deepseek'
         "configs": {
             "model": LLM_MODEL,
             "api_key": API_KEY,
             "max_tokens": 16000,
-            "xxx_base_url": API_BASE_URL # API model specific, such as 'openai_base_url' or 'deepseek_base_url' ...
+            "xxx_base_url": API_BASE_URL # if OpenAI, use 'openai_base_url', if DeepSeek, use 'deepseek_base_url'...
         }
     },
     "extract_threshold": 0.1,
@@ -273,139 +274,6 @@ Please feel free to download, explore, and use these resources for research or r
 
 <span id='configuration'/>
 
-### LOCOMO: 
-
-#### Overview
-
-backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
-
-| Method             | ACC(%) gpt-4o-mini | ACC(%) qwen2.5-32b-instruct | Memory-Con Tokens(k) Total | QA Tokens(k) total | Total(k)     | Calls  | Runtime(s) total |
-|-------------------|--------------------|------------------------------|-----------------------------|---------------------|--------------|--------|------------------|
-| FullText          | 73.83              | 73.18                        | –                           | 54,884.479          | 54,884.479   | –      | 6,971           |
-| NaiveRAG          | 63.64              | 63.12                        | –                           | 3,870.187           | 3,870.187    | –      | 1,884           |
-| A-MEM             | 64.16              | 60.71                        | 11,494.344                  | 10,170.567          | 21,664.907   | 11,754 | 67,084          |
-| MemoryOS(eval)    | 58.25              | 61.04                        | 2,870.036                   | 7,649.343           | 10,519.379   | 5,534  | 26,129          |
-| MemoryOS(pypi)    | 54.87              | 55.91                        | 5,264.801                   | 6,126.111           | 11,390.004   | 10,160 | 37,912          |
-| Mem0              | 36.49              | 37.01                        | 24,304.872                  | 1,488.618           | 25,793.490   | 19,070 | 120,175         |
-| Mem0(api)         | 61.69              | 61.69                        | 68,347.720                  | 4,169.909           | 72,517.629   | 6,022  | 10,445          |
-| Mem0-g(api)       | 60.32              | 59.48                        | 69,684.818                  | 4,389.147           | 74,073.965   | 6,022  | 10,926          |
-| LightMem(512,0.7) | 71.95              | 73.90                        | 997.60                      | 4,008.243           | 5,005.851    | 415    | 12,831          |
-| LightMem(768,0.7) | 70.26              | 72.40                        | 804.77                      | 3,958.228           | 4,763.005    | 295    | 11,643          |
-| LightMem(768,0.8) | 72.99              | 74.35                        | 851.87                      | 4,012.034           | 4,863.900    | 298    | 12,423          |
-
-backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
-
-| Method             | ACC(%) gpt-4o-mini | ACC(%) qwen2.5-32b-instruct | Memory-Con Tokens(k) Total | QA Tokens(k) total | Total(k)     | Calls  | Runtime(s) total |
-|-------------------|--------------------|------------------------------|-----------------------------|---------------------|--------------|--------|------------------|
-| FullText          | 74.87              | 74.35                        | –                           | 60,873.076          | 60,873.076   | –      | 10,555           |
-| NaiveRAG          | 66.95              | 64.68                        | –                           | 4,271.052           | 4,271.052    | –      | 1,252            |
-| A-MEM             | 56.10              | 54.81                        | 16,267.997                  | 17,340.881          | 33,608.878   | 11,754 | 69,339           |
-| MemoryOS(eval)    | 61.04              | 59.81                        | 3,615.087                   | 9,703.169           | 11,946.442   | 4,147  | 13,710           |
-| MemoryOS(pypi)    | 51.30              | 51.95                        | 6,663.527                   | 7,764.991           | 14,428.518   | 10,046 | 20,830           |
-| Mem0              | 43.31              | 43.25                        | 17,994.035                  | 1,765.570           | 19,759.605   | 16,145 | 46,500           |
-| LightMem(768,0.4) | 64.09              | 60.84                        | 726.682                     | 5,151.393           | 5,878.075    | 174    | 9,638            |
-| LightMem(768,0.6) | 71.36              | 69.03                        | 998.728                     | 5,220.252           | 6,218.980    | 291    | 10,541           |
-| LightMem(1024,0.8)| 72.60              | 71.36                        | 1,084.465                   | 5,304.471           | 6,388.936    | 320    | 13,075           |
-
-
-#### Details
-
-backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
-
-| Method             | Summary Tokens(k) In | Summary Tokens(k) Out | Update Tokens(k) In | Update Tokens(k) Out | QA Tokens(k) In | QA Tokens(k) Out | Runtime(s) mem-con | Runtime(s) qa |
-|-------------------|-----------------------|------------------------|----------------------|-----------------------|------------------|-------------------|----------------------|----------------|
-| FullText          | –                     | –                      | –                    | –                     | 54,858.770       | 25.709            | –                    | 6,971          |
-| NaiveRAG          | –                     | –                      | –                    | –                     | 3,851.029        | 19.158            | –                    | 1,884          |
-| A-MEM             | 1,827.373             | 492.883                | 7,298.878            | 1,875.210             | 10,113.252       | 57.315            | 60,607               | 6,477          |
-| MemoryOS(eval)    | 1,109.849             | 333.970                | 780.807              | 645.410               | 7,638.539        | 10.804            | 24,220               | 1,909          |
-| MemoryOS(pypi)    | 1,007.729             | 294.601                | 3,037.509            | 924.962               | 6,116.239        | 9.872             | 33,325               | 4,587          |
-| Mem0              | 8,127.398             | 253.187                | 12,722.011           | 3,202.276             | 1,478.830        | 9.788             | 118,268              | 1,907          |
-| Mem0(api)         | \                     | \                      | \                    | \                     | 4,156.850        | 13.059            | 4,328                | 6,117          |
-| Mem0-g(api)       | \                     | \                      | \                    | \                     | 4,375.900        | 13.247            | 5,381                | 5,545          |
-| LightMem(512,0.7) | 731.89                | 201.29                 | 60.45                | 3.97                  | 3,997.984        | 10.259            | 8,484                | 4,347          |
-| LightMem(768,0.7) | 575.36                | 189.24                 | 37.85                | 2.32                  | 3,948.124        | 10.104            | 7,378                | 4,265          |
-| LightMem(768,0.8) | 628.20                | 179.53                 | 41.38                | 2.76                  | 4,001.759        | 10.275            | 8,153                | 4,270          |
-
-backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
-
-| Method             | Summary Tokens(k) In | Summary Tokens(k) Out | Update Tokens(k) In | Update Tokens(k) Out | QA Tokens(k) In | QA Tokens(k) Out | Runtime(s) mem-con | Runtime(s) qa |
-|-------------------|-----------------------|------------------------|----------------------|-----------------------|------------------|-------------------|----------------------|----------------|
-| FullText          | –                     | –                      | –                    | –                     | 60,838.694       | 34.382            | –                    | 10,555         |
-| NaiveRAG          | –                     | –                      | –                    | –                     | 4,239.030        | 32.022            | –                    | 1,252          |
-| A-MEM             | 1,582.942             | 608.507                | 9,241.928            | 4,835.070             | 17,528.876       | 82.005            | 55,439               | 13,900         |
-| MemoryOS(eval)    | 1,222.139             | 531.157                | 1,044.307            | 817.484               | 9,679.996        | 23.173            | 12,697               | 1,012          |
-| MemoryOS(pypi)    | 2,288.533             | 516.024                | 2,422.693            | 1,436.277             | 7,743.391        | 21.600            | 19,822               | 1,007          |
-| Mem0              | 8,270.874             | 186.354                | 7,638.827            | 1,897.980             | 1,739.246        | 26.324            | 45,407               | 1,093          |
-| LightMem(768,0.4) | 430.572               | 296.110                | 51.026               | 4.200                 | 5,132.643        | 18.750            | 7,309                | 2,329          |
-| LightMem(768,0.6) | 566.803               | 341.381                | 83.135               | 7.409                 | 5,201.980        | 18.272            | 8,157                | 2,384          |
-| LightMem(1024,0.8)| 613.820               | 363.293                | 98.593               | 8.759                 | 5,288.685        | 15.786            | 10,794               | 2,281          |
-
-#### Performance metrics
-backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
-
-| Method | Overall ↑ | Single | Multi | Open | Temp |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| FullText         | 73.83 | 68.79 | 56.25 | 86.56 | 50.16 |
-| NaiveRAG         | 63.64 | 55.32 | 47.92 | 70.99 | 56.39 |
-| A-MEM            | 64.16 | 56.03 | 31.25 | 72.06 | 60.44 |
-| MemoryOS(eval)   | 58.25 | 56.74 | 45.83 | 67.06 | 40.19 |
-| MemoryOS(pypi)   | 54.87 | 52.13 | 43.75 | 63.97 | 36.76 |
-| Mem0             | 36.49 | 30.85 | 34.38 | 38.41 | 37.07 |
-| Mem0(api)        | 61.69 | 56.38 | 43.75 | 66.47 | 59.19 |
-| Mem0-g(api)      | 60.32 | 54.26 | 39.58 | 65.99 | 57.01 |
-| LightMem(512,0.7)| 71.95 | 62.41 | 44.79 | 77.41 | 74.14 |
-| LightMem(768,0.7)| 70.26 | 62.06 | 42.71 | 74.67 | 74.14 |
-| LightMem(768,0.8)| 72.99 | 67.02 | 45.83 | 76.81 | 76.32 |
-
-backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
-
-| Method | Overall ↑ | Single | Multi | Open | Temp |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| FullText         | 73.18 | 68.09 | 54.17 | 86.21 | 49.22 |
-| NaiveRAG         | 63.12 | 53.55 | 50.00 | 71.34 | 53.89 |
-| A-MEM            | 60.71 | 53.55 | 32.29 | 69.08 | 53.58 |
-| MemoryOS(eval)   | 61.04 | 64.18 | 40.62 | 70.15 | 40.50 |
-| MemoryOS(pypi)   | 55.91 | 52.48 | 41.67 | 66.35 | 35.83 |
-| Mem0             | 37.01 | 31.91 | 37.50 | 38.53 | 37.38 |
-| Mem0(api)        | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
-| Mem0-g(api)      | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
-| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
-| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
-| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
-
-backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini`
-
-| Method | Overall ↑ | Single | Multi | Open | Temp |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| FullText         | 74.87 | 69.86 | 57.29 | 87.40 | 51.71 |
-| NaiveRAG         | 66.95 | 62.41 | 57.29 | 76.81 | 47.98 |
-| A-MEM            | 56.10 | 57.45 | 43.75 | 67.90 | 27.73 |
-| MemoryOS(eval)   | 61.04 | 62.77 | 51.04 | 72.29 | 33.02 |
-| MemoryOS(pypi)   | 51.30 | 52.48 | 40.62 | 61.59 | 26.48 |
-| Mem0             | 43.31 | 42.91 | 46.88 | 46.37 | 34.58 |
-| Mem0(api)        | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
-| Mem0-g(api)      | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
-| LightMem(768,0.4)| 64.09 | 63.12 | 45.83 | 72.29 | 48.91 |
-| LightMem(768,0.6)| 71.36 | 70.57 | 60.42 | 79.19 | 54.83 |
-| LightMem(1024,0.8)|72.60 | 72.34 | 50.00 | 82.16 | 54.52 |
-
-backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
-
-| Method | Overall ↑ | Single | Multi | Open | Temp |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| FullText         | 74.35 | 68.09 | 63.54 | 86.33 | 51.71 |
-| NaiveRAG         | 64.68 | 60.28 | 52.08 | 75.62 | 43.61 |
-| A-MEM            | 54.81 | 56.74 | 39.58 | 67.42 | 24.61 |
-| MemoryOS(eval)   | 59.81 | 63.12 | 48.96 | 70.51 | 32.09 |
-| MemoryOS(pypi)   | 51.95 | 55.67 | 39.58 | 61.47 | 27.41 |
-| Mem0             | 43.25 | 45.04 | 46.88 | 45.78 | 33.96 |
-| Mem0(api)        | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
-| Mem0-g(api)      | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
-| LightMem(768,0.4)| 60.84 | 59.22 | 42.68 | 69.92 | 42.68 |
-| LightMem(768,0.6)| 69.03 | 67.38 | 60.42 | 78.48 | 48.29 |
-| LightMem(1024,0.8)|71.36 | 68.09 | 52.08 | 82.76 | 50.16 |
-
-
 ## ⚙️ Configuration
 
 All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration class. Users can customize aspects like pre-processing, memory extraction, retrieval strategy, and update mechanisms by providing a custom configuration.
@@ -421,7 +289,7 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `messages_use`        | `'user_only'`                               | `'user_only'` / `'assistant_only'` / `'hybrid'`. Controls which messages are used to generate metadata and summaries: `user_only` uses user inputs, `assistant_only` uses assistant responses, `hybrid` uses both. Choosing `hybrid` increases processing but yields richer context. |
 | `metadata_generate`   | `True`                                      | True / False. If True, metadata such as keywords and entities are extracted and stored to support attribute-based and filtered retrieval. If False, no metadata extraction occurs. |
 | `text_summary`        | `True`                                      | True / False. If True, a text summary is generated and stored alongside the original text (reduces retrieval cost and speeds review). If False, only the original text is stored. Summary quality depends on `memory_manager`. |
-| `memory_manager`      | `MemoryManagerConfig()`                     | dict / object. Controls the model used to generate summaries and metadata (`MemoryManagerConfig`), e.g., `model_name` (`openai`, `ollama`, etc.) and `configs`. Changing this affects summary style, length, and cost. |
+| `memory_manager`      | `MemoryManagerConfig()`                     | dict / object. Controls the model used to generate summaries and metadata (`MemoryManagerConfig`), e.g., `model_name` (`openai`, `deepseek`) and `configs`. Changing this affects summary style, length, and cost. |
 | `extract_threshold`   | `0.5`                                       | float (0.0 - 1.0). Threshold used to decide whether content is important enough to be extracted as metadata or highlight. Higher values (e.g., 0.8) mean more conservative extraction; lower values (e.g., 0.2) extract more items (may increase noise). |
 | `index_strategy`      | `None`                                      | `'embedding'` / `'context'` / `'hybrid'` / `None`. Determines how memories are indexed: 'embedding' uses vector-based indexing (requires embedders/retriever) for semantic search; 'context' uses text-based/contextual retrieval (requires context_retriever) for keyword/document similarity; and 'hybrid' combines context filtering and vector reranking for robustness and higher accuracy.
 | `text_embedder`       | `None`                                      | dict / object. Configuration for text embedding model (`TextEmbedderConfig`) with `model_name` (e.g., `huggingface`) and `configs` (batch size, device, embedding dim). Required when `index_strategy` or `retrieve_strategy` includes `'embedding'`. |
@@ -470,13 +338,6 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
       </a>
     </td>
     <td align="center" width="120">
-      <a href="https://github.com/453251">
-        <img src="https://avatars.githubusercontent.com/453251?v=4" width="80" style="border-radius:50%" alt="453251"/>
-        <br />
-        <sub><b>453251</b></sub>
-      </a>
-    </td>
-    <td align="center" width="120">
       <a href="https://github.com/James-TYQ">
         <img src="https://avatars.githubusercontent.com/James-TYQ?v=4" width="80" style="border-radius:50%" alt="James-TYQ"/>
         <br />
@@ -516,8 +377,8 @@ We welcome contributions from the community! If you'd like to contribute, please
         </a>
       </td>
       <td align="center" width="150">
-        <a href="https://github.com/MemTensor/MemOS">
-          <img src="https://avatars.githubusercontent.com/MemTensor" width="80" style="border-radius:50%" alt="MemOS"/>
+        <a href="https://github.com/usememos/memos">
+          <img src="https://avatars.githubusercontent.com/usememos" width="80" style="border-radius:50%" alt="Memos"/>
           <br />
           <sub><b>Memos</b></sub>
         </a>
