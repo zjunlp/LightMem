@@ -8,7 +8,7 @@ class TextEmbedderConfig(BaseModel):
         description="The embedding model or Deployment platform (e.g., 'openai', 'huggingface')"
     )
 
-    _model_list: ClassVar[List[str]] = ["huggingface"]
+    _model_list: ClassVar[List[str]] = ["huggingface", "openai"]
 
     configs: Optional[Union[BaseTextEmbedderConfig, Dict[str, Any]]] = Field(
         default=None,

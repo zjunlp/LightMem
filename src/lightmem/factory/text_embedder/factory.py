@@ -5,6 +5,7 @@ from lightmem.configs.text_embedder.base import TextEmbedderConfig
 class TextEmbedderFactory:
     _MODEL_MAPPING: Dict[str, str] = {
         "huggingface": "lightmem.factory.text_embedder.huggingface.TextEmbedderHuggingface",
+        "openai": "lightmem.factory.text_embedder.openai.TextEmbedderOpenAI",
     }
 
     @classmethod
