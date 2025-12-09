@@ -44,10 +44,34 @@
 
 ## 📢 News
 
+- **[2025-12-09]**: 🎬 Released a **[Demo Video](#demo)** showcasing long-context handling, along with comprehensive **[Tutorial Notebooks](./tutorial-notebooks/)** for various scenarios!
 - **[2025-11-30]**: 🚌 LightMem now supports calling multiple tools provided by its MCP Server.
 - **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency!
 - **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
+
+
+<span id='demo'/>
+
+## 🎥 Demo & Tutorials
+
+### 🎬 Travel Planning with LightMem
+Watch how LightMem handles complex, long-context history to assist in travel planning efficiently. 
+
+<div align="center">
+  <video src="./demo/travel_demo.mp4" width="100%" controls></video>
+  <br>
+  <i>(If the video above does not play, you can <a href="./demo/travel_demo.mp4">download or watch it here</a>)</i>
+</div>
+
+### 📚 Hands-on Tutorials
+We provide ready-to-use Jupyter notebooks corresponding to the demo and other use cases. You can find them in the [`tutorial-notebooks`](./tutorial-notebooks/) directory.
+
+| Scenario | Description | Notebook Link |
+| :--- | :--- | :--- |
+| **Travel Planning** | A complete guide to building a travel agent with memory. | [LightMem_Example_travel.ipynb](./tutorial-notebooks/LightMem_Example_travel.ipynb) |
+| **Code Assistant** | A complete guide to building a code agent with memory. | [LightMem_Example_code.ipynb](./tutorial-notebooks/LightMem_Example_code.ipynb) |
+| **LongMemEval** | A tutorial on how to run evaluations on LongMemEval benchmarks using LightMem. | [LightMem_Example_longmemeval.ipynb](./tutorial-notebooks/LightMem_Example_longmemeval.ipynb) |
 
 <span id='todo'/>
 
@@ -66,6 +90,7 @@ LightMem is continuously evolving! Here's what's coming:
 ## 📑 Table of Contents
 
 * <a href='#news'>📢 News</a>
+* <a href='#demo'>🎥 Demo & Tutorials</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
 * <a href='#quickstart'>⚡ Quick Start</a>
