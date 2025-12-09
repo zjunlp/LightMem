@@ -58,11 +58,7 @@
 ### 🎬 Travel Planning with LightMem
 Watch how LightMem handles complex, long-context history to assist in travel planning efficiently. 
 
-<div align="center">
-  <video src="./demo/travel_demo.mp4" width="100%" controls></video>
-  <br>
-  <i>(If the video above does not play, you can <a href="./demo/travel_demo.mp4">download or watch it here</a>)</i>
-</div>
+**Watch Demo:** [YouTube](https://www.youtube.com/watch?v=r7sk_7Yv66I) | [Bilibili](https://www.bilibili.com/video/BV1a7mJBbEVM/)
 
 ### 📚 Hands-on Tutorials
 We provide ready-to-use Jupyter notebooks corresponding to the demo and other use cases. You can find them in the [`tutorial-notebooks`](./tutorial-notebooks/) directory.
