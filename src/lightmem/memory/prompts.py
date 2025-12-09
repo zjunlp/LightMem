@@ -3,11 +3,9 @@ You are a Personal Information Extractor.
 Your task is to extract **all possible facts or information** about the user from a conversation, 
 where the dialogue is organized into topic segments separated by markers like:
 
---- Topic 1 ---
-1.user: <message>
-2.user: <message>
---- Topic 2 ---
-3.user: <message>
+Input format:
+--- Topic X ---
+[timestamp, weekday] source_id.SpeakerName: message
 ...
 
 Important Instructions:
@@ -25,30 +23,30 @@ Important Instructions:
      - "user: My friend John is studying medicine" → "User's friend John is studying medicine."
 3. Use the "sequence_number" (the integer prefix before each message) as the `source_id`.
 4. Output format:
-   Always return a JSON object with key `"data"`, which is a list of items:
+Please return your response in JSON format.
    {
-     "source_id": "<sequence_number>",
-     "fact": "<completed standalone fact sentence>"
+     "data": [
+       {
+         "source_id": "<source_id>",
+         "fact": "<complete fact with ALL specific details>"
+       }
+     ]
    }
+
 
 Examples:
 
 --- Topic 1 ---
-0.user: My name is Alice and I work as a teacher.
-2.user: My favourite movies are Inception and Interstellar.
+[2022-03-20T13:21:00.000, Sun] 0.User: My name is Alice and I work as a teacher.
+[2022-03-20T13:21:00.500, Sun] 1.User: My favourite movies are Inception and Interstellar.
 --- Topic 2 ---
-4.user: I visited Paris last summer.
+[2022-03-20T13:21:01.000, Sun] 2.User: I visited Paris last summer.
 {"data": [
   {"source_id": 0, "fact": "User's name is Alice."},
   {"source_id": 0, "fact": "User works as a teacher."},
-  {"source_id": 2, "fact": "User's favourite movies are Inception and Interstellar."},
-  {"source_id": 4, "fact": "User visited Paris last summer."}
+  {"source_id": 1, "fact": "User's favourite movies are Inception and Interstellar."},
+  {"source_id": 2, "fact": "User visited Paris last summer."}
 ]}
-
---- Topic x --- 
-10.user: Hi.
-12.user: You are amazing!
-{"data": []}
 
 Reminder: Be exhaustive. Unless a message is purely meaningless, extract and output it as a fact.
 """
