@@ -44,6 +44,7 @@
 
 ## 📢 News
 
+- **[2025-11-30]**: 🚌 LightMem now supports calling multiple tools provided by its MCP Server.
 - **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency!
 - **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
@@ -121,6 +122,7 @@ LightMem/
 │   ├── factory/             # Factory methods
 │   ├── memory/              # Core memory management
 │   └── memory_toolkits/     # Memory toolkits
+├── mcp/                     # LightMem MCP server
 ├── experiments/             # Experiment scripts
 ├── datasets/                # Datasets files
 └── examples/                # Examples
@@ -145,17 +147,13 @@ The following table lists the backends values currently recognized by each confi
 
 ### Initialize LightMem
 ```python
-"""
-Start at root directory or anywhere
-"""
-
 import os
-import datetime
+from datetime import datetime
 from lightmem.memory.lightmem import LightMemory
 
 
 LOGS_ROOT = "./logs"
-RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
 os.makedirs(RUN_LOG_DIR, exist_ok=True)
 
@@ -226,8 +224,6 @@ lightmem = LightMemory.from_config(config_dict)
 
 ### Add Memory
 ```python
-
-### Add Memory
 session = {
 "timestamp": "2025-01-10",
 "turns": [
@@ -262,6 +258,36 @@ question = "What is the name of my dog?"
 related_memories = lightmem.retrieve(question, limit=5)
 print(related_memories)
 ``` 
+
+### MCP Server
+
+LightMem also supports the Model Context Protocol ([MCP](https://modelcontextprotocol.io/docs/getting-started/intro)) server:
+
+```bash
+# Running at Root Directory
+cd LightMem
+
+# Environment
+pip install '.[mcp]'
+
+# MCP Inspector [Optional]
+npx @modelcontextprotocol/inspector python mcp/server.py
+
+# Start API by HTTP (http://127.0.0.1:8000/mcp)
+fastmcp run mcp/server.py:mcp --transport http --port 8000
+```
+
+The MCP config `json` file of your local client may looks like:
+
+```json
+{
+  "yourMcpServers": {
+    "LightMem": {
+      "url": "http://127.0.0.1:8000/mcp",
+      "otherParameters": "..."
+    }
+}
+```
 
 ## 📁 Experimental Results
 
