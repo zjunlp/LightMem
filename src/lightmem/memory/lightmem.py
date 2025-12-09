@@ -194,6 +194,7 @@ class LightMemory:
     def add_memory(
         self,
         messages,
+        METADATA_GENERATE_PROMPT,
         *,
         force_segment: bool = False, 
         force_extract: bool = False
@@ -318,7 +319,7 @@ class LightMemory:
         self.logger.info(f"[{call_id}] Batch max_source_ids: {max_source_ids}")
         if self.config.metadata_generate and self.config.text_summary:
             self.logger.info(f"[{call_id}] Starting metadata generation")
-            extracted_results = self.manager.meta_text_extract(METADATA_GENERATE_PROMPT_locomo, extract_list, self.config.messages_use, topic_id_mapping)
+            extracted_results = self.manager.meta_text_extract(METADATA_GENERATE_PROMPT, extract_list, self.config.messages_use, topic_id_mapping)
         
             # =============API Consumption======================
             for idx, item in enumerate(extracted_results):

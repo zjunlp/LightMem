@@ -8,11 +8,11 @@ import logging
 from lightmem.memory.lightmem import LightMemory
 from lightmem.configs.retriever.embeddingretriever.qdrant import QdrantConfig
 from lightmem.factory.retriever.embeddingretriever.qdrant import Qdrant
+from prompts import METADATA_GENERATE_PROMPT_locomo
 import sqlite3
 import shutil
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import multiprocessing as mp
-
 
 # ============ Configuration ============
 LOGS_ROOT = "./logs"
@@ -299,6 +299,7 @@ def process_single_sample(sample, api_key):
                 is_last_turn = (session is sessions[-1] and turn_idx == num_turns - 1)
                 lightmem.add_memory(
                     messages=turn_messages,
+                    METADATA_GENERATE_PROMPT=METADATA_GENERATE_PROMPT_locomo,
                     force_segment=is_last_turn,
                     force_extract=is_last_turn,
                 )
