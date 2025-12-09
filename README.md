@@ -151,6 +151,7 @@ import os
 from datetime import datetime
 from lightmem.memory.lightmem import LightMemory
 
+
 LOGS_ROOT = "./logs"
 RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
@@ -223,30 +224,26 @@ lightmem = LightMemory.from_config(config_dict)
 
 ### Add Memory
 ```python
-import time
+session = {
+"timestamp": "2025-01-10",
+"turns": [
+    [
+        {"role": "user", "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex."}, 
+        {"role": "assistant", "content": "Got it. Pistachio is a great choice."}], 
+    ]
+}
 
-messages = [
-    {
-        "role": "user",
-        "content": "My favorite ice cream flavor is pistachio, and my dog's name is Rex."
-    },
-    {
-        "role": "assistant",
-        "content": "Got it. Pistachio is a great choice."
-    }
-]
 
-for msg in messages:
-    timestamp = datetime.now().isoformat(timespec="milliseconds")
-    if "time_stamp" not in msg:
+for turn_messages in session["turns"]:
+    timestamp = session["timestamp"]
+    for msg in turn_messages:
         msg["time_stamp"] = timestamp
-    time.sleep(0.1)  # just example
-
-added_result = lightmem.add_memory(
-    messages=messages,
-    force_segment=True,
-    force_extract=True,
-)
+        
+    store_result = lightmem.add_memory(
+        messages=turn_messages,
+        force_segment=True,
+        force_extract=True
+    )
 ```
 
 ### Offline Update
@@ -264,19 +261,32 @@ print(related_memories)
 
 ### MCP Server
 
-LightMem also supports the Model Context Protocol (MCP) server, let's quick start:
+LightMem also supports the Model Context Protocol ([MCP](https://modelcontextprotocol.io/docs/getting-started/intro)) server:
 
 ```bash
-# running at root directory
+# Running at Root Directory
 cd LightMem
 
-# env
+# Environment
 pip install '.[mcp]'
 
-# start by STDIO
+# MCP Inspector [Optional]
 npx @modelcontextprotocol/inspector python mcp/server.py
-# start by HTTP (http://127.0.0.1:8000/mcp)
+
+# Start API by HTTP (http://127.0.0.1:8000/mcp)
 fastmcp run mcp/server.py:mcp --transport http --port 8000
+```
+
+The MCP config `json` file of your local client may looks like:
+
+```json
+{
+  "yourMcpServers": {
+    "LightMem": {
+      "url": "http://127.0.0.1:8000/mcp",
+      "otherParameters": "..."
+    }
+}
 ```
 
 ## 📁 Experimental Results
