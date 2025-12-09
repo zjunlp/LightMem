@@ -6,7 +6,8 @@ import tiktoken
 from datetime import datetime
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any, Union
-
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from transformers.tokenization_utils import PreTrainedTokenizer
 
 @dataclass
 class MemoryEntry:
@@ -136,27 +137,33 @@ def save_memory_entries(memory_entries, file_path="memory_entries.json"):
         json.dump(existing_data, f, ensure_ascii=False, indent=2)
 
 
-def resolve_tokenizer(tokenizer_or_name: Union[str, Any]):
-    if tokenizer_or_name is None:
-        raise ValueError("Tokenizer or model_name must be provided.")
-    
-    if isinstance(tokenizer_or_name, str):
-        patterns = [
-            (r"^gpt-4[o.]", "o200k_base"),      # gpt-4o* or gpt-4.*
-            (r"^gpt-3\.5", "cl100k_base"),      # gpt-3.5*
-            (r"^qwen3", "o200k_base"),          # qwen3*
-            (r"^deepseek", "cl100k_base"),      # deepseek*
-        ]
-        
-        for pattern, encoding_name in patterns:
-            if re.match(pattern, tokenizer_or_name):
-                print("DEBUG: resolved to encoding", encoding_name)
-                return tiktoken.get_encoding(encoding_name)
-        
-        raise ValueError(f"Unknown model_name '{tokenizer_or_name}'")
-    
-    raise TypeError(f"Unsupported tokenizer type: {type(tokenizer_or_name)}")
+# TODO：more support for any models
+def resolve_tokenizer(tokenizer_or_name: Union[str, Any]) -> Union[tiktoken.Encoding, Any]:
+    """
+    Resolve the tokenizer for a given model name or tokenizer instance.
+    """
 
+    # --- Case: already a tokenizer object (transformers local model) ---
+    if isinstance(tokenizer_or_name, (PreTrainedTokenizer, PreTrainedTokenizerFast)):
+        return tokenizer_or_name
+
+    # --- Case: OpenAI tiktoken model name ---
+    try:
+        return tiktoken.encoding_for_model(tokenizer_or_name)
+    except:
+        pass
+
+    # --- Case: user-defined patterns (Qwen etc.) ---
+    patterns = [
+        (r"^qwen3", "o200k_base"),
+        # Add more patterns as needed...
+    ]
+    for pattern, encoding_name in patterns:
+        if isinstance(tokenizer_or_name, str) and re.match(pattern, tokenizer_or_name):
+            return tiktoken.get_encoding(encoding_name)
+
+    # --- Case: fallback ---
+    return tiktoken.get_encoding("o200k_base")
 
 def convert_extraction_results_to_memory_entries(
     extracted_results: List[Optional[Dict]],
