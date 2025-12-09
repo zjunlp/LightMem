@@ -1,13 +1,14 @@
 import os
 import re
 import json
-import uuid
-import tiktoken
 from datetime import datetime
-from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any, Union
+import tiktoken
+import uuid
+from dataclasses import dataclass, field
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 from transformers.tokenization_utils import PreTrainedTokenizer
+
 
 @dataclass
 class MemoryEntry:
@@ -41,7 +42,8 @@ def clean_response(response: str) -> List[Dict[str, Any]]:
 
     try:
         parsed = json.loads(cleaned)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print(f"JSON decoding error: {str(e)}")
         return []
 
     if isinstance(parsed, dict) and "data" in parsed and isinstance(parsed["data"], list):
@@ -125,7 +127,8 @@ def save_memory_entries(memory_entries, file_path="memory_entries.json"):
         with open(file_path, "r", encoding="utf-8") as f:
             try:
                 existing_data = json.load(f)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                print(f"JSON decoding error: {str(e)}")
                 existing_data = []
     else:
         existing_data = []
@@ -135,7 +138,6 @@ def save_memory_entries(memory_entries, file_path="memory_entries.json"):
 
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(existing_data, f, ensure_ascii=False, indent=2)
-
 
 # TODO：more support for any models
 def resolve_tokenizer(tokenizer_or_name: Union[str, Any]) -> Union[tiktoken.Encoding, Any]:

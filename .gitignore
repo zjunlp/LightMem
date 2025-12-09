@@ -14,6 +14,8 @@
 
 # Distribution / packaging
 .Python
+.DS_Store
+__pypackages__/
 build/
 develop-eggs/
 dist/
@@ -104,7 +106,7 @@ Pipfile.lock
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
-#uv.lock
+uv.lock
 
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
@@ -125,13 +127,10 @@ pdm.toml
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
-#pixi.lock
+pixi.lock
 #   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
 #   in the .venv directory. It is recommended not to include this directory in version control.
 .pixi
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
 
 # Celery stuff
 celerybeat-schedule

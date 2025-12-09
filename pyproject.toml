@@ -78,9 +78,14 @@ dependencies = [
     "urllib3==2.5.0",
     "httpx==0.28.1",
     "pysocks==1.7.1",
+    "rank-bm25>=0.2.2",
 ]
 
 [project.optional-dependencies]
+llms = [
+    "ollama==0.6.0",
+    "vllm==0.11.0",
+]
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",

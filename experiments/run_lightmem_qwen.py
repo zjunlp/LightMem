@@ -91,6 +91,7 @@ class LLMModel:
                 print(response)
                 return response
             except Exception as e:
+                print(f"[Retry {attempt + 1}/{max_retries}]  {type(e).__name__}: {e}")
                 if attempt == max_retries - 1:
                     raise
 
