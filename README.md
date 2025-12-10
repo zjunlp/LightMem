@@ -66,6 +66,20 @@ We provide ready-to-use Jupyter notebooks corresponding to the demo and other us
 | **Code Assistant** | A complete guide to building a code agent with memory. | [LightMem_Example_code.ipynb](./tutorial-notebooks/LightMem_Example_code.ipynb) |
 | **LongMemEval** | A tutorial on how to run evaluations on LongMemEval benchmarks using LightMem. | [LightMem_Example_longmemeval.ipynb](./tutorial-notebooks/LightMem_Example_longmemeval.ipynb) |
 
+
+<span id='reproduction'/>
+
+## 🧪 Reproduction Scripts for LoCoMo & LongMemEval
+
+We provide lightweight, ready-to-run scripts for reproducing results on **LoCoMo**, **LongMemEval**, and their combined baselines.
+
+| Dataset                  | Description                                                                  | Script                                                                                                                                                                                                |
+| :----------------------- | :--------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LongMemEval**          | Run LightMem on LongMemEval, including evaluation and offline memory update. | [run_lightmem_gpt.py](https://github.com/zjunlp/LightMem/blob/main/experiments/run_lightmem_gpt.py) · [offline_update.py](https://github.com/zjunlp/LightMem/blob/main/experiments/offline_update.py) |
+| **LoCoMo**               | Scripts for reproducing LightMem results on LoCoMo.                          | [run_lightmem_locomo.md](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)                                                                                                   |
+| **LongMemEval & LoCoMo** | Unified baseline scripts for running both datasets.                          | [run_baselines.md](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md)                                                                                               |
+
+
 <span id='todo'/>
 
 ## ☑️ Todo List
