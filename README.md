@@ -409,7 +409,7 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-3
 #### Performance metrics
 backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 73.83 | 68.79 | 56.25 | 86.56 | 50.16 |
 | NaiveRAG         | 63.64 | 55.32 | 47.92 | 70.99 | 56.39 |
@@ -425,7 +425,7 @@ backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
 
 backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 73.18 | 68.09 | 54.17 | 86.21 | 49.22 |
 | NaiveRAG         | 63.12 | 53.55 | 50.00 | 71.34 | 53.89 |
@@ -441,7 +441,7 @@ backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 74.87 | 69.86 | 57.29 | 87.40 | 51.71 |
 | NaiveRAG         | 66.95 | 62.41 | 57.29 | 76.81 | 47.98 |
@@ -457,7 +457,7 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini`
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 74.35 | 68.09 | 63.54 | 86.33 | 51.71 |
 | NaiveRAG         | 64.68 | 60.28 | 52.08 | 75.62 | 43.61 |
