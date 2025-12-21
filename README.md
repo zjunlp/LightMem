@@ -1,4 +1,9 @@
-<div align=center><img src="./figs/lightmem_logo.png" width="60%" height="40%" /></div>
+<div align="center">
+  <picture>
+    <source srcset="./figs/lightmem_logo_dark.png" media="(prefers-color-scheme: dark)">
+    <img src="./figs/lightmem_logo_light.png" width="60%" height="40%" />
+  </picture>
+</div>
 <h1 align="center"> LightMem: Lightweight and Efficient Memory-Augmented Generation </h1>
 
 <p align="center">
@@ -39,9 +44,41 @@
 
 ## 📢 News
 
-- **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency!
+- **[2025-12-09]**: 🎬 Released a **[Demo Video](#demo)** showcasing long-context handling, along with comprehensive **[Tutorial Notebooks](./tutorial-notebooks/)** for various scenarios!
+- **[2025-11-30]**: 🚌 LightMem now supports calling multiple tools provided by its [**MCP Server**](https://github.com/zjunlp/LightMem/blob/main/mcp/server.py).
+- **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency! Here is the [**reproduction script**](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)!
 - **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
+
+
+<span id='demo'/>
+
+## 🎥 Demo & Tutorials
+
+**Watch Demo:** [YouTube](https://www.youtube.com/watch?v=r7sk_7Yv66I) | [Bilibili](https://www.bilibili.com/video/BV1a7mJBbEVM/)
+
+### 📚 Hands-on Tutorials
+We provide ready-to-use Jupyter notebooks corresponding to the demo and other use cases. You can find them in the [`tutorial-notebooks`](./tutorial-notebooks/) directory.
+
+| Scenario | Description | Notebook Link |
+| :--- | :--- | :--- |
+| **Travel Planning** | A complete guide to building a travel agent with memory. | [LightMem_Example_travel.ipynb](./tutorial-notebooks/LightMem_Example_travel.ipynb) |
+| **Code Assistant** | A complete guide to building a code agent with memory. | [LightMem_Example_code.ipynb](./tutorial-notebooks/LightMem_Example_code.ipynb) |
+| **LongMemEval** | A tutorial on how to run evaluations on LongMemEval benchmarks using LightMem. | [LightMem_Example_longmemeval.ipynb](./tutorial-notebooks/LightMem_Example_longmemeval.ipynb) |
+
+
+<span id='reproduction'/>
+
+## 🧪 Reproduction Scripts for LoCoMo & LongMemEval
+
+We provide lightweight, ready-to-run scripts for reproducing results on **LoCoMo**, **LongMemEval**, and their combined baselines.
+
+| Dataset                  | Description                                                                  | Script                                                                                                                                                                                                |
+| :----------------------- | :--------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LongMemEval**          | Run LightMem on LongMemEval, including evaluation and offline memory update. | [run_lightmem_gpt.py](https://github.com/zjunlp/LightMem/blob/main/experiments/run_lightmem_gpt.py) · [offline_update.py](https://github.com/zjunlp/LightMem/blob/main/experiments/offline_update.py) |
+| **LoCoMo**               | Scripts for reproducing LightMem results on LoCoMo.                          | [run_lightmem_locomo.md](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)                                                                                                   |
+| **LongMemEval & LoCoMo** | Unified baseline scripts for running both datasets.                          | [run_baselines.md](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md)                                                                                               |
+
 
 <span id='todo'/>
 
@@ -60,6 +97,7 @@ LightMem is continuously evolving! Here's what's coming:
 ## 📑 Table of Contents
 
 * <a href='#news'>📢 News</a>
+* <a href='#demo'>🎥 Demo & Tutorials</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
 * <a href='#quickstart'>⚡ Quick Start</a>
@@ -96,6 +134,13 @@ pip install lightmem  # Coming soon
 ```
 
 ## ⚡ Quick Start
+
+1. Modify the `JUDGE_MODEL`, `LLM_MODEL`, and their respective `API_KEY` and `BASE_URL` in `API Configuration`.
+
+2. Download `LLMLINGUA_MODEL` from [microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank](https://huggingface.co/microsoft/llmlingua-2-bert-base-multilingual-cased-meetingbank) and `EMBEDDING_MODEL` from [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) and modify their paths in `Model Paths`.
+
+3. Download the dataset from [longmemeval-cleaned](https://huggingface.co/datasets/xiaowu0162/longmemeval-cleaned), and modidy the path in `Data Configuration`.
+
 ```python
 cd experiments
 python run_lightmem_qwen.py
@@ -116,6 +161,7 @@ LightMem/
 │   ├── factory/             # Factory methods
 │   ├── memory/              # Core memory management
 │   └── memory_toolkits/     # Memory toolkits
+├── mcp/                     # LightMem MCP server
 ├── experiments/             # Experiment scripts
 ├── datasets/                # Datasets files
 └── examples/                # Examples
@@ -140,17 +186,13 @@ The following table lists the backends values currently recognized by each confi
 
 ### Initialize LightMem
 ```python
-"""
-Start at root directory or anywhere
-"""
-
 import os
-import datetime
+from datetime import datetime
 from lightmem.memory.lightmem import LightMemory
 
 
 LOGS_ROOT = "./logs"
-RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+RUN_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
 os.makedirs(RUN_LOG_DIR, exist_ok=True)
 
@@ -221,8 +263,6 @@ lightmem = LightMemory.from_config(config_dict)
 
 ### Add Memory
 ```python
-
-### Add Memory
 session = {
 "timestamp": "2025-01-10",
 "turns": [
@@ -257,6 +297,37 @@ question = "What is the name of my dog?"
 related_memories = lightmem.retrieve(question, limit=5)
 print(related_memories)
 ``` 
+
+### MCP Server
+
+LightMem also supports the Model Context Protocol ([MCP](https://modelcontextprotocol.io/docs/getting-started/intro)) server:
+
+```bash
+# Running at Root Directory
+cd LightMem
+
+# Environment
+pip install '.[mcp]'
+
+# MCP Inspector [Optional]
+npx @modelcontextprotocol/inspector python mcp/server.py
+
+# Start API by HTTP (http://127.0.0.1:8000/mcp)
+fastmcp run mcp/server.py:mcp --transport http --port 8000
+```
+
+The MCP config `json` file of your local client may looks like:
+
+```json
+{
+  "yourMcpServers": {
+    "LightMem": {
+      "url": "http://127.0.0.1:8000/mcp",
+      "otherParameters": "..."
+    }
+  }
+}
+```
 
 ## 📁 Experimental Results
 
@@ -338,7 +409,7 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-3
 #### Performance metrics
 backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 73.83 | 68.79 | 56.25 | 86.56 | 50.16 |
 | NaiveRAG         | 63.64 | 55.32 | 47.92 | 70.99 | 56.39 |
@@ -354,7 +425,7 @@ backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
 
 backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 73.18 | 68.09 | 54.17 | 86.21 | 49.22 |
 | NaiveRAG         | 63.12 | 53.55 | 50.00 | 71.34 | 53.89 |
@@ -370,7 +441,7 @@ backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 74.87 | 69.86 | 57.29 | 87.40 | 51.71 |
 | NaiveRAG         | 66.95 | 62.41 | 57.29 | 76.81 | 47.98 |
@@ -386,7 +457,7 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini`
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
 
-| Method | Overall ↑ | Single | Multi | Open | Temp |
+| Method | Overall ↑ | Multi | Open | Single | Temp |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | FullText         | 74.35 | 68.09 | 63.54 | 86.33 | 51.71 |
 | NaiveRAG         | 64.68 | 60.28 | 52.08 | 75.62 | 43.61 |
