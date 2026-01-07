@@ -51,6 +51,18 @@
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
 
 
+<span id='reproduction'/>
+
+## 🧪 Reproduction Scripts for LoCoMo & LongMemEval
+
+We provide lightweight, ready-to-run scripts for reproducing results on **LoCoMo**, **LongMemEval**, and their combined baselines.
+
+| Dataset                  | Description                                                                  | Script                                                                                                         | Result |
+| :----------------------- | :--------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------| :---------------------------------------------|
+| **LongMemEval**          | Run LightMem on LongMemEval, including evaluation and offline memory update. | [run_lightmem_longmemeval.md](https://github.com/zjunlp/LightMem/blob/main/experiments/longmemeval/readme.md)  |  [LongMemEval Results](https://github.com/zjunlp/LightMem/blob/main/experiments/longmemeval/readme.md#results) |
+| **LoCoMo**               | Scripts for reproducing LightMem results on LoCoMo.                          | [run_lightmem_locomo.md](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)            |  [LoCoMo Results](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md#results)      |
+| **LongMemEval & LoCoMo** | Unified baseline scripts for running both datasets.                          | [run_baselines.md](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md)        |  [Baseline Results](#experimental-results)    |
+
 <span id='demo'/>
 
 ## 🎥 Demo & Tutorials
@@ -65,19 +77,6 @@ We provide ready-to-use Jupyter notebooks corresponding to the demo and other us
 | **Travel Planning** | A complete guide to building a travel agent with memory. | [LightMem_Example_travel.ipynb](./tutorial-notebooks/LightMem_Example_travel.ipynb) |
 | **Code Assistant** | A complete guide to building a code agent with memory. | [LightMem_Example_code.ipynb](./tutorial-notebooks/LightMem_Example_code.ipynb) |
 | **LongMemEval** | A tutorial on how to run evaluations on LongMemEval benchmarks using LightMem. | [LightMem_Example_longmemeval.ipynb](./tutorial-notebooks/LightMem_Example_longmemeval.ipynb) |
-
-
-<span id='reproduction'/>
-
-## 🧪 Reproduction Scripts for LoCoMo & LongMemEval
-
-We provide lightweight, ready-to-run scripts for reproducing results on **LoCoMo**, **LongMemEval**, and their combined baselines.
-
-| Dataset                  | Description                                                                  | Script                                                                                                                                                                                                |
-| :----------------------- | :--------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **LongMemEval**          | Run LightMem on LongMemEval, including evaluation and offline memory update. | [run_lightmem_gpt.py](https://github.com/zjunlp/LightMem/blob/main/experiments/run_lightmem_gpt.py) · [offline_update.py](https://github.com/zjunlp/LightMem/blob/main/experiments/offline_update.py) |
-| **LoCoMo**               | Scripts for reproducing LightMem results on LoCoMo.                          | [run_lightmem_locomo.md](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)                                                                                                   |
-| **LongMemEval & LoCoMo** | Unified baseline scripts for running both datasets.                          | [run_baselines.md](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md)                                                                                               |
 
 
 <span id='todo'/>
@@ -97,12 +96,14 @@ LightMem is continuously evolving! Here's what's coming:
 ## 📑 Table of Contents
 
 * <a href='#news'>📢 News</a>
+* <a href='#reproduction'>🧪 Reproduction Scripts</a>
 * <a href='#demo'>🎥 Demo & Tutorials</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
 * <a href='#quickstart'>⚡ Quick Start</a>
 * <a href='#architecture'>🏗️ Architecture</a>
 * <a href='#examples'>💡 Examples</a>
+* <a href='#experimental-results'>📁 Experimental Results</a>
 * <a href='#configuration'>⚙️ Configuration</a>
 * <a href='#contributors'>👥 Contributors</a>
 * <a href='#related'>🔗 Related Projects</a>
@@ -329,6 +330,8 @@ The MCP config `json` file of your local client may looks like:
 }
 ```
 
+<span id='experimental-results'/>
+
 ## 📁 Experimental Results
 
 For transparency and reproducibility, we have shared the results of our experiments on Google Drive. This includes model outputs, evaluation logs, and predictions used in our study.
@@ -355,9 +358,6 @@ backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
 | Mem0              | 36.49              | 37.01                        | 24,304.872                  | 1,488.618           | 25,793.490   | 19,070 | 120,175         |
 | Mem0(api)         | 61.69              | 61.69                        | 68,347.720                  | 4,169.909           | 72,517.629   | 6,022  | 10,445          |
 | Mem0-g(api)       | 60.32              | 59.48                        | 69,684.818                  | 4,389.147           | 74,073.965   | 6,022  | 10,926          |
-| LightMem(512,0.7) | 71.95              | 73.90                        | 997.61                      | 4,008.243           | 5,005.851    | 415    | 12,831          |
-| LightMem(768,0.7) | 70.26              | 72.40                        | 764.78                      | 3,958.228           | 4,723.005    | 255    | 11,643          |
-| LightMem(768,0.8) | 72.99              | 74.35                        | 851.83                      | 4,012.034           | 4,863.900    | 298    | 12,423          |
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
 
@@ -369,9 +369,6 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-3
 | MemoryOS(eval)    | 61.04              | 59.81                        | 3,615.087                   | 9,703.169           | 11,946.442   | 4,147  | 13,710           |
 | MemoryOS(pypi)    | 51.30              | 51.95                        | 6,663.527                   | 7,764.991           | 14,428.518   | 10,046 | 20,830           |
 | Mem0              | 43.31              | 43.25                        | 17,994.035                  | 1,765.570           | 19,759.605   | 16,145 | 46,500           |
-| LightMem(768,0.4) | 64.09              | 60.84                        | 781.908                     | 5,151.393           | 5,878.075    | 174    | 9,638            |
-| LightMem(768,0.6) | 71.36              | 69.03                        | 998.728                     | 5,220.252           | 6,218.980    | 291    | 10,541           |
-| LightMem(1024,0.8)| 72.60              | 71.36                        | 1,084.465                   | 5,304.471           | 6,388.936    | 320    | 13,075           |
 
 
 #### Details
@@ -388,9 +385,6 @@ backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
 | Mem0              | 8,127.398             | 253.187                | 12,722.011           | 3,202.276             | 1,478.830        | 9.788             | 118,268              | 1,907          |
 | Mem0(api)         | \                     | \                      | \                    | \                     | 4,156.850        | 13.059            | 4,328                | 6,117          |
 | Mem0-g(api)       | \                     | \                      | \                    | \                     | 4,375.900        | 13.247            | 5,381                | 5,545          |
-| LightMem(512,0.7) | 731.89                | 201.29                 | 60.45                | 3.97                  | 3,997.984        | 10.259            | 8,484                | 4,347          |
-| LightMem(768,0.7) | 555.36                | 170.24                 | 36.85                | 2.32                  | 3,948.124        | 10.104            | 7,388                | 4,265          |
-| LightMem(768,0.8) | 628.20                | 179.53                 | 41.38                | 2.76                  | 4,001.759        | 10.275            | 8,153                | 4,270          |
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-32b-instruct`
 
@@ -402,9 +396,6 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini` & `qwen2.5-3
 | MemoryOS(eval)    | 1,222.139             | 531.157                | 1,044.307            | 817.484               | 9,679.996        | 23.173            | 12,697               | 1,012          |
 | MemoryOS(pypi)    | 2,288.533             | 516.024                | 2,422.693            | 1,436.277             | 7,743.391        | 21.600            | 19,822               | 1,007          |
 | Mem0              | 8,270.874             | 186.354                | 7,638.827            | 1,897.980             | 1,739.246        | 26.324            | 45,407               | 1,093          |
-| LightMem(768,0.4) | 430.572               | 296.110                | 51.026               | 4.200                 | 5,132.643        | 18.750            | 7,309                | 2,329          |
-| LightMem(768,0.6) | 566.803               | 341.381                | 83.135               | 7.409                 | 5,201.980        | 18.272            | 8,157                | 2,384          |
-| LightMem(1024,0.8)| 613.820               | 363.293                | 98.593               | 8.759                 | 5,288.685        | 15.786            | 10,794               | 2,281          |
 
 #### Performance metrics
 backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
@@ -419,9 +410,6 @@ backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`
 | Mem0             | 36.49 | 30.85 | 34.38 | 38.41 | 37.07 |
 | Mem0(api)        | 61.69 | 56.38 | 43.75 | 66.47 | 59.19 |
 | Mem0-g(api)      | 60.32 | 54.26 | 39.58 | 65.99 | 57.01 |
-| LightMem(512,0.7)| 71.95 | 62.41 | 44.79 | 77.41 | 74.14 |
-| LightMem(768,0.7)| 70.26 | 62.06 | 42.71 | 74.67 | 74.14 |
-| LightMem(768,0.8)| 72.99 | 67.02 | 45.83 | 76.81 | 76.32 |
 
 backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 
@@ -435,9 +423,6 @@ backbone: `gpt-4o-mini`, judge model: `qwen2.5-32b-instruct`
 | Mem0             | 37.01 | 31.91 | 37.50 | 38.53 | 37.38 |
 | Mem0(api)        | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
 | Mem0-g(api)      | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
-| LightMem(512,0.7)| 73.90 | 69.15 | 50.00 | 78.00 | 74.45 |
-| LightMem(768,0.7)| 72.40 | 64.54 | 43.75 | 77.17 | 75.39 |
-| LightMem(768,0.8)| 74.35 | 68.79 | 47.92 | 78.24 | 76.95 |
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini`
 
@@ -451,9 +436,6 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `gpt-4o-mini`
 | Mem0             | 43.31 | 42.91 | 46.88 | 46.37 | 34.58 |
 | Mem0(api)        | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
 | Mem0-g(api)      | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
-| LightMem(768,0.4)| 64.09 | 63.12 | 45.83 | 72.29 | 48.91 |
-| LightMem(768,0.6)| 71.36 | 70.57 | 60.42 | 79.19 | 54.83 |
-| LightMem(1024,0.8)|72.60 | 72.34 | 50.00 | 82.16 | 54.52 |
 
 backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
 
@@ -467,9 +449,6 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
 | Mem0             | 43.25 | 45.04 | 46.88 | 45.78 | 33.96 |
 | Mem0(api)        | 61.69 | 54.26 | 46.88 | 67.66 | 57.01 |
 | Mem0-g(api)      | 59.48 | 55.32 | 42.71 | 65.04 | 53.58 |
-| LightMem(768,0.4)| 60.84 | 59.22 | 42.68 | 69.92 | 42.68 |
-| LightMem(768,0.6)| 69.03 | 67.38 | 60.42 | 78.48 | 48.29 |
-| LightMem(1024,0.8)|71.36 | 68.09 | 52.08 | 82.76 | 50.16 |
 
 
 ## ⚙️ Configuration
