@@ -3,7 +3,7 @@ import json
 from tqdm import tqdm
 import datetime
 import time
-from ..memory.lightmem import LightMemory
+from lightmem.memory.lightmem import LightMemory
 
 def get_anscheck_prompt(task, question, answer, response, abstention=False):
     if not abstention:
