@@ -194,7 +194,7 @@ class LightMemory:
     def add_memory(
         self,
         messages,
-        METADATA_GENERATE_PROMPT,
+        METADATA_GENERATE_PROMPT = METADATA_GENERATE_PROMPT,
         *,
         force_segment: bool = False, 
         force_extract: bool = False
