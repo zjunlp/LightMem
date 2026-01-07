@@ -75,7 +75,20 @@ def assign_sequence_numbers_with_timestamps(extract_list, offset_ms: int = 500, 
         session_groups[sess_time].append(msg)
     
     for sess_time, messages in session_groups.items():
-        base_dt = datetime.strptime(sess_time, "%Y-%m-%d %H:%M:%S")
+        formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d"]
+        base_dt = None
+        for fmt in formats:
+            try:
+                base_dt = datetime.strptime(sess_time, fmt)
+                break
+            except ValueError:
+                continue
+        if base_dt is None:
+            try:
+                base_dt = datetime.fromisoformat(sess_time.replace('/', '-'))
+            except:
+                raise ValueError(f"Time format '{sess_time}' not supported. Expected YYYY-MM-DD or YYYY-MM-DD HH:MM:SS")
+            
         for i, msg in enumerate(messages):
             offset = timedelta(milliseconds=offset_ms * i)
             new_dt = base_dt + offset
