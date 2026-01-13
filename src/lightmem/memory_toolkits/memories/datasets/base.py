@@ -4,6 +4,7 @@ from pydantic import (
     Field, 
     model_validator,
     field_serializer,
+    field_validator,
     ConfigDict,
 )
 from abc import ABC, abstractmethod
@@ -23,26 +24,34 @@ from typing import (
 
 TIMESTAMP_FORMAT = "%Y-%m-%d (%a) %H:%M"
 
-def _parse_timestamp_input(value: Any) -> datetime:
-    """Coerce incoming value to datetime.
 
-    Accepts datetime, or string in either `TIMESTAMP_FORMAT` or ISO 8601.
+def _normalize_timestamp_to_iso(value: Any) -> str:
+    """Normalize input into an ISO 8601 string.
+
+    Accepts:
+        - datetime instance -> dt.isoformat()
+        - ISO string -> validate then normalize to dt.isoformat()
+        - legacy string in TIMESTAMP_FORMAT -> parse then convert to ISO
     """
     if isinstance(value, datetime):
-        return value
+        return value.isoformat()
+
     if isinstance(value, str):
-        # Try custom format first
         try:
-            return datetime.strptime(value, TIMESTAMP_FORMAT)
+            dt = datetime.fromisoformat(value)
+            return dt.isoformat()
         except Exception:
             pass
-        # Fallback: ISO 8601
+        
         try:
-            return datetime.fromisoformat(value)
+            dt = datetime.strptime(value, TIMESTAMP_FORMAT)
+            return dt.isoformat()
         except Exception:
             pass
+
     raise TypeError(
-        f"timestamp must be datetime or str; got {type(value).__name__}"
+        f"timestamp must be datetime or str in ISO 8601 / "
+        f"'{TIMESTAMP_FORMAT}' format; got {type(value).__name__}: {value!r}"
     )
 
 def _deep_freeze(value: Any) -> Any:
@@ -68,10 +77,16 @@ class _TimestampOrderingMixin:
     """
 
     def _timestamp_for_ordering(self) -> datetime:
-        raise NotImplementedError(
-            "Subclasses must implement `_timestamp_for_ordering()` returning a datetime."
+        ts = getattr(self, "timestamp")
+        if isinstance(ts, datetime):
+            return ts
+        if isinstance(ts, str):
+            # Assume the string is already ISO and parse directly
+            return datetime.fromisoformat(ts)
+        raise TypeError(
+            f"Unsupported timestamp type {type(ts).__name__}: {ts!r}"
         )
-
+    
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
@@ -82,8 +97,19 @@ class _TimestampOrderingMixin:
             return NotImplemented
         return self._timestamp_for_ordering() < other._timestamp_for_ordering()
     
+    # def get_string_timestamp(self) -> str:
+    #     return self.timestamp.strftime(TIMESTAMP_FORMAT)
+
     def get_string_timestamp(self) -> str:
-        return self.timestamp.strftime(TIMESTAMP_FORMAT)
+        """Return the ISO string form."""
+        ts = getattr(self, "timestamp")
+        if isinstance(ts, str):
+            return ts
+        if isinstance(ts, datetime):
+            return ts.isoformat()
+        raise TypeError(
+            f"Unsupported timestamp type {type(ts).__name__}: {ts!r}"
+        )
 
 @total_ordering
 class Message(_TimestampOrderingMixin, BaseModel):
@@ -91,7 +117,7 @@ class Message(_TimestampOrderingMixin, BaseModel):
     model_config = ConfigDict(frozen=True)
     role: str = Field(..., description="The role of the message.")
     content: str = Field(..., description="The content of the message.")
-    timestamp: datetime = Field(..., description="The timestamp of the message.")
+    timestamp: str = Field(..., description="The timestamp of the message in ISO 8601 format.")
     metadata: Mapping[str, Any] = Field(default_factory=dict, description="The metadata of the message.")
 
     @model_validator(mode="after")
@@ -103,19 +129,27 @@ class Message(_TimestampOrderingMixin, BaseModel):
     @model_validator(mode="before")
     def _coerce_timestamp_before(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if "timestamp" in values:
-            values["timestamp"] = _parse_timestamp_input(values["timestamp"])
+            values["timestamp"] = _normalize_timestamp_to_iso(values["timestamp"])
         return values
 
+    @field_validator("timestamp")
+    @classmethod
+    def _validate_timestamp(cls, v: str) -> str:
+        """Validate that `timestamp` is a valid ISO 8601 string."""
+        try:
+            _ = datetime.fromisoformat(v)
+        except ValueError:
+            raise ValueError(
+                f"The timestamp '{v}' is not in a valid format. "
+                "Please use the format YYYY-MM-DD HH:MM:SS, for example: "
+                "'2024-08-25 12:01:42'."
+            )
+        return v
+    
     @field_serializer("metadata")
     def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
         return dict(v)
 
-    @field_serializer("timestamp")
-    def _serialize_timestamp(self, v: datetime) -> str:
-        return v.strftime(TIMESTAMP_FORMAT)
-
-    def _timestamp_for_ordering(self) -> datetime:
-        return self.timestamp
 
 @total_ordering
 class QuestionAnswerPair(_TimestampOrderingMixin, BaseModel):
@@ -125,7 +159,7 @@ class QuestionAnswerPair(_TimestampOrderingMixin, BaseModel):
     role: str = Field(..., description="The role who asks the question.")
     question: str = Field(..., description="The question.")
     answer_list: Tuple[str, ...] = Field(..., description="The answer list.", min_length=1)
-    timestamp: datetime = Field(..., description="The timestamp of the question and answer pair.")
+    timestamp: str = Field(..., description="The timestamp of the question and answer pair in ISO 8601 format.")
     metadata: Mapping[str, Any] = Field(default_factory=dict, description="The metadata of the question and answer pair.")
 
     @model_validator(mode="after")
@@ -137,19 +171,26 @@ class QuestionAnswerPair(_TimestampOrderingMixin, BaseModel):
     @model_validator(mode="before")
     def _coerce_timestamp_before(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if "timestamp" in values:
-            values["timestamp"] = _parse_timestamp_input(values["timestamp"])
+            values["timestamp"] = _normalize_timestamp_to_iso(values["timestamp"])
         return values
 
+    @field_validator("timestamp")
+    @classmethod
+    def _validate_timestamp(cls, v: str) -> str:
+        """Validate that `timestamp` is a valid ISO 8601 string."""
+        try:
+            _ = datetime.fromisoformat(v)
+        except ValueError:
+            raise ValueError(
+                f"The timestamp '{v}' is not in a valid format. "
+                "Please use the format YYYY-MM-DD HH:MM:SS, for example: "
+                "'2024-08-25 12:01:42'."
+            )
+        return v
+    
     @field_serializer("metadata")
     def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
         return dict(v)
-
-    @field_serializer("timestamp")
-    def _serialize_timestamp(self, v: datetime) -> str:
-        return v.strftime(TIMESTAMP_FORMAT)
-
-    def _timestamp_for_ordering(self) -> datetime:
-        return self.timestamp
 
 @total_ordering
 class Session(_TimestampOrderingMixin, BaseModel):
@@ -160,13 +201,13 @@ class Session(_TimestampOrderingMixin, BaseModel):
         description="The messages in the session.",
         min_length=1,
     )
-    timestamp: datetime = Field(..., description="The timestamp of the session.")
+    timestamp: str = Field(..., description="The timestamp of the session in ISO 8601 format.")
     metadata: Mapping[str, Any] = Field(default_factory=dict, description="The metadata of the session.")
 
     @model_validator(mode="after")
     def _sort_messages_by_timestamp(self) -> Session:
         # Stable ascending sort; then freeze to tuple
-        sorted_msgs = sorted(self.messages, key=lambda m: m.timestamp)
+        sorted_msgs = sorted(self.messages, key=lambda m: m._timestamp_for_ordering())
         object.__setattr__(self, "messages", tuple(sorted_msgs))
         if self.metadata is not None:
             object.__setattr__(self, "metadata", _deep_freeze(self.metadata))
@@ -175,16 +216,26 @@ class Session(_TimestampOrderingMixin, BaseModel):
     @model_validator(mode="before")
     def _coerce_timestamp_before(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         if "timestamp" in values:
-            values["timestamp"] = _parse_timestamp_input(values["timestamp"])
+            values["timestamp"] = _normalize_timestamp_to_iso(values["timestamp"])
         return values
 
+    @field_validator("timestamp")
+    @classmethod
+    def _validate_timestamp(cls, v: str) -> str:
+        """Validate that `timestamp` is a valid ISO 8601 string."""
+        try:
+            _ = datetime.fromisoformat(v)
+        except ValueError:
+            raise ValueError(
+                f"The timestamp '{v}' is not in a valid format. "
+                "Please use the format YYYY-MM-DD HH:MM:SS, for example: "
+                "'2024-08-25 12:01:42'."
+            )
+        return v
+    
     @field_serializer("metadata")
     def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
         return dict(v)
-
-    @field_serializer("timestamp")
-    def _serialize_timestamp(self, v: datetime) -> str:
-        return v.strftime(TIMESTAMP_FORMAT)
 
     def __len__(self) -> int:
         return len(self.messages)
@@ -194,9 +245,6 @@ class Session(_TimestampOrderingMixin, BaseModel):
 
     def __getitem__(self, index: int) -> Message | QuestionAnswerPair:
         return self.messages[index]
-
-    def _timestamp_for_ordering(self) -> datetime:
-        return self.timestamp
 
 class Trajectory(BaseModel):
     """A trajectory."""
@@ -211,7 +259,7 @@ class Trajectory(BaseModel):
     @model_validator(mode="after")
     def _sort_sessions_by_timestamp(self) -> Trajectory:
         # Stable ascending sort; then freeze to tuple
-        sorted_sessions = sorted(self.sessions, key=lambda s: s.timestamp)
+        sorted_sessions = sorted(self.sessions, key=lambda s: s._timestamp_for_ordering())
         object.__setattr__(self, "sessions", tuple(sorted_sessions))
         if self.metadata is not None:
             object.__setattr__(self, "metadata", _deep_freeze(self.metadata))

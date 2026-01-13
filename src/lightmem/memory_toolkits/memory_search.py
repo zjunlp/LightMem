@@ -19,6 +19,36 @@ from typing import (
 
 _LOCK = threading.Lock()
 
+from collections.abc import Mapping
+from types import MappingProxyType
+from pydantic import BaseModel
+import sys
+
+def to_jsonable(obj):
+    """
+    Convert any Python object into a type acceptable by json.dump.
+    - Scalars/None: returned as-is
+    - list/tuple/set: processed recursively
+    - dict / Mapping / mappingproxy: processed recursively
+    - pydantic BaseModel: use model_dump() then process recursively
+    - Other complex types: convert to str(obj)
+    """
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    
+    if isinstance(obj, BaseModel):
+        return to_jsonable(obj.model_dump())
+    
+    if isinstance(obj, (list, tuple, set)):
+        return [to_jsonable(i) for i in obj]
+    
+    if isinstance(obj, (dict, Mapping, MappingProxyType)):
+        return {str(k): to_jsonable(v) for k, v in obj.items()}
+    
+    # Convert remaining types to string to avoid json.dump errors
+    return str(obj)
+
+
 def memory_search(
     layer_type: str,
     user_id: str,
@@ -26,11 +56,13 @@ def memory_search(
     config: Optional[Dict[str, Any]] = None,
     top_k: int = 10,
     strict: bool = True, 
+    dataset_type: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Search memories for a given user based on questions."""
     config = config or {}
+    llm_model = config["llm_model"]
     config["user_id"] = user_id
-    config["save_dir"] = f"{layer_type}/{user_id}"
+    config["save_dir"] = f"{layer_type}_{llm_model}/{user_id}"
     
     # Load memory layer configuration and class using lazy mapping
     config_cls = CONFIG_MAPPING[layer_type]
@@ -64,18 +96,88 @@ def memory_search(
                 ]
     
     # Perform retrieval for each question
+    # Ensure it supports len(), and convenient for logging total count
+    if dataset_type == "LoCoMo":
+        original_count = len(questions)
+        questions = [
+            qa for qa in questions 
+            if qa.metadata.get("category") != 5
+        ]
+        filtered_count = original_count - len(questions)
+        if filtered_count > 0:
+            print(f"[INFO] {user_id}: Filtered out {filtered_count} questions with category=5")
+            
+    questions = list(questions)
+    total_q = len(questions)
+    print(f"[INFO] {user_id}: {total_q} questions to search.")
+
     retrievals = []
-    for qa_pair in questions:
+    pbar = tqdm(
+        questions,
+        total=total_q,
+        desc=f"{user_id}",
+        leave=False,       # Avoid too many 100% progress remnants under nohup
+    )
+
+    for qa_pair in pbar:
         query = qa_pair.question
-        # Perform retrieval using the unified interface
-        retrieved_memories = layer.retrieve(query, k=top_k)
-        retrieval_result = {
-            "retrieved_memories": retrieved_memories,
-            "qa_pair": qa_pair,
-        }
+        if dataset_type == "LoCoMo":
+            speaker_names = qa_pair.metadata.get("speaker_names", [])
+            if len(speaker_names) != 2:
+                retrieved_memories = layer.retrieve(query, k=top_k)
+            else:
+                speaker_1_name, speaker_2_name = speaker_names
+                speaker_1_memories = layer.retrieve(
+                    query, k=top_k, name_filter=speaker_1_name
+                )
+                speaker_2_memories = layer.retrieve(
+                    query, k=top_k, name_filter=speaker_2_name
+                )
+                retrieved_memories = {
+                    "speaker_1": {
+                        "name": speaker_1_name,
+                        "memories": speaker_1_memories,
+                    },
+                    "speaker_2": {
+                        "name": speaker_2_name,
+                        "memories": speaker_2_memories,
+                    }
+                }
+        else:
+            retrieved_memories = layer.retrieve(query, k=top_k)
+            
+            # When MemZero enables Graph, the return is a dictionary
+        if isinstance(retrieved_memories, dict):
+            if "memories" in retrieved_memories and "relations" in retrieved_memories:
+                retrieval_result = {
+                    "retrieved_memories": retrieved_memories["memories"],
+                    "graph_relations": retrieved_memories["relations"],
+                    "qa_pair": qa_pair,
+                    "user_id": user_id,
+                }
+            elif "speaker_1" in retrieved_memories and "speaker_2" in retrieved_memories:
+                retrieval_result = {
+                    "retrieved_memories": retrieved_memories,  
+                    "qa_pair": qa_pair,
+                    "user_id": user_id,
+                    "dataset_type": "LoCoMo",  
+                }
+            else:
+                retrieval_result = {
+                    "retrieved_memories": retrieved_memories,
+                    "qa_pair": qa_pair,
+                    "user_id": user_id,
+                }
+        else:
+            retrieval_result = {
+                "retrieved_memories": retrieved_memories,
+                "qa_pair": qa_pair,
+                "user_id": user_id,
+            }
         retrievals.append(retrieval_result)
-    
+
     return retrievals
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -155,7 +257,7 @@ if __name__ == "__main__":
     dataset = ds_cls.read_raw_data(args.dataset_path)
     if args.sample_size is not None:
         dataset = dataset.sample(size=args.sample_size, seed=args.seed)
-    print("✅ The dataset is loaded successfully.")
+    print("The dataset is loaded successfully.")
     
     # Load configuration
     config = None
@@ -163,6 +265,7 @@ if __name__ == "__main__":
         with open(args.config_path, 'r', encoding="utf-8") as f:
             config = json.load(f)
     
+    llm_model = config["llm_model"]
     # Process index range
     if args.start_idx is None:
         args.start_idx = 0
@@ -173,7 +276,7 @@ if __name__ == "__main__":
         raise ValueError("The starting index must be less than the ending index.")
     
     # Perform memory 
-    print("🔍 Searching memories for each trajectory...")
+    print("Searching memories for each trajectory...")
     retrievals = []
     with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
         futures = []
@@ -187,23 +290,25 @@ if __name__ == "__main__":
                 config=deepcopy(config),
                 top_k=args.top_k,
                 strict=args.strict,
+                dataset_type=args.dataset_type,
             )
             futures.append(future)
         for future in tqdm(
-            as_completed(futures), total=len(futures), desc="🔍 Searching memories"
+            as_completed(futures), total=len(futures), desc="Searching memories"
         ):
             results = future.result()
             retrievals.extend(results)
 
     for item in retrievals:
         item["qa_pair"] = item["qa_pair"].model_dump()
-    output_path = f"{args.memory_type}_{args.dataset_type}_{args.top_k}_{args.start_idx}_{args.end_idx}.json"
+    output_path = f"{args.memory_type}_{llm_model}_{args.dataset_type}_{args.top_k}_{args.start_idx}_{args.end_idx}.json"
 
     with open(output_path, 'w', encoding="utf-8") as f:
         json.dump(
-            retrievals, 
+            # retrievals, 
+            to_jsonable(retrievals),
             f, 
             ensure_ascii=False, 
             indent=4,
         )
-    print(f"✅ Saved {len(retrievals)} results to {output_path}.")
+    print(f"Saved {len(retrievals)} results to {output_path}.")

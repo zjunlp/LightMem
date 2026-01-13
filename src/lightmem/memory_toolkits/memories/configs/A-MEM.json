@@ -1,0 +1,7 @@
+{
+  "user_id": "dummy",
+  "llm_backend": "openai",
+  "llm_model": "",
+  "retriever_name_or_path": "sentence-transformers/all-MiniLM-L6-v2",
+  "api_key": ""
+}

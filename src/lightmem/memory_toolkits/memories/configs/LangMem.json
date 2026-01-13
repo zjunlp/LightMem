@@ -1,0 +1,4 @@
+{
+    "user_id": "dummy",
+    "llm_model":"openai:gpt-4o-mini"
+}

@@ -8,6 +8,7 @@ import threading
 from importlib.util import find_spec
 from copy import deepcopy 
 import os
+from contextlib import nullcontext
 
 from token_monitor import (
     CostStateManager, 
@@ -33,7 +34,10 @@ from typing import (
     Optional, 
     Tuple, 
     List, 
+    Callable,
 )
+from memories.datasets.base import Trajectory, Message, QuestionAnswerPair, Session
+from importlib import import_module
 
 _LOCK = threading.Lock()
 
@@ -153,16 +157,22 @@ def memory_construction(
     trajectory: Trajectory, 
     config: Optional[Dict[str, Any]] = None, 
     rerun: bool = False,
+    message_preprocessor: Optional[
+        Callable[[Message | QuestionAnswerPair, Session], Dict[str, Any]]
+    ] = None,
+    **kwargs
 ) -> Dict[str, float]: 
     """Given a specific interaction trajectory, this function builds a memory."""
     config = config or {}
+    llm_model = config["llm_model"]
     # It overrides the user_id in the config. 
     config["user_id"] = user_id 
     # Each user has a distinct config directory. 
-    config["save_dir"] = f"{layer_type}/{user_id}" 
+    config["save_dir"] = f"{layer_type}_{llm_model}/{user_id}" 
     # Use lazy mapping to load config and layer classes.
     config_cls = CONFIG_MAPPING[layer_type]
     config = config_cls(**config)
+    dataset_type = kwargs["dataset_type"]
     with _LOCK:
         layer_cls = MEMORY_LAYERS_MAPPING[layer_type]
         layer = layer_cls(config)
@@ -175,7 +185,7 @@ def memory_construction(
     with _LOCK:
         # It includes I/O operations. 
         if not rerun and layer.load_memory(user_id):
-            print(f"🔄 The memory for user {user_id} is loaded successfully 😄.")
+            print(f"The memory for user {user_id} is loaded successfully.")
             return output
     
     if layer_type == "A-MEM":
@@ -213,7 +223,8 @@ def memory_construction(
                 },
             ),
         )
-        specs = [spec] 
+        specs = [spec]
+        patch_ctx = MonkeyPatcher(specs) 
     elif layer_type == "LangMem":
         getter, setter = make_attr_patch(layer.llm_model, "generate")
         spec = PatchSpec(
@@ -239,7 +250,8 @@ def memory_construction(
             )
         )
         specs = [spec]
-    elif layer_type == "MemZero":
+        patch_ctx = MonkeyPatcher(specs)
+    elif layer_type in ("MemZero", "MemZeroGraph"):
         getter, setter = make_attr_patch(layer.memory_layer.llm, "generate_response")
         spec = PatchSpec(
             name = f"{layer.memory_layer.llm.__class__.__name__}.generate_response",
@@ -261,22 +273,58 @@ def memory_construction(
             )
         )
         specs = [spec]
+        patch_ctx = MonkeyPatcher(specs)
+    elif layer_type == "FullContext":
+        # No need to patch any method for FullContext layer. 
+        patch_ctx = nullcontext()
+    elif layer_type == "NaiveRAG":
+        # No need to patch any method for NaiveRAG layer. 
+        patch_ctx = nullcontext()
     else:
         raise ValueError(f"Unsupported memory type: {layer_type}.")
 
-    with MonkeyPatcher(specs):
+    
+    with patch_ctx:
+        total_msgs = sum(len(session) for session in trajectory)
+
+        pbar_desc = f" {layer_type} | {user_id}"
+        pbar = tqdm(
+            total=total_msgs,
+            desc=pbar_desc,
+            leave=False,   
+        )
         # Start to construct the memory for a specific trajectory. 
         for session in trajectory:
             # TODO: take the case that the message is a question-answe pair into the consideration 
             for message in session:
                 start_time = datetime.now() 
+                msg_dict = {"role": message.role, "content": message.content}
+                if message_preprocessor is not None:
+                    msg_dict = message_preprocessor(message, session)
+                
+                if "name" not in msg_dict:
+                    if hasattr(message, 'metadata') and isinstance(message.metadata, dict):
+                        msg_dict["name"] = message.metadata.get("name", None)
+                    else:
+                        msg_dict["name"] = None
+                        
+                if dataset_type == "MobileBench":
+                    timestamp = message.timestamp
+                else:
+                    timestamp = session.get_string_timestamp()
                 layer.add_message(
-                    {"role": message.role, "content": message.content}, 
-                    timestamp=session.get_string_timestamp()
+                    msg_dict, 
+                    timestamp=timestamp
                 )
+
                 end_time = datetime.now() 
                 output["total_add_time"] += (end_time - start_time).total_seconds()
+
+                pbar.update(1)
+
                 time.sleep(0.2)
+        pbar.close()
+
     
     if layer_type == "A-MEM":
         # It includes I/O operations (loading a sentence embedding model).
@@ -367,14 +415,45 @@ if __name__ == "__main__":
         default=None, 
         help="The path to the tokenizer (only for backbone model)."
     )
+    parser.add_argument(
+    "--message-preprocessor",
+    type=str,
+    default=None,
+    help=(
+        "Dotted path to a message preprocessor function, in the form "
+        "'some_module:some_function'. The function should accept "
+        "(message, session) and return a dict with at least 'role' "
+        "and 'content' keys."
+        )
+    )
+    parser.add_argument(
+    "--use-gpt4o-caption",
+    action="store_true",
+    default=False,
+    help=(
+        "If set, use GPT-4o to generate image captions in datasets that support it "
+        "(e.g., LoCoMo)."
+        )
+    )
     args = parser.parse_args()
+
+    message_preprocessor = None
+    if args.message_preprocessor is not None:
+        module_path, func_name = args.message_preprocessor.split(":", 1)
+        module = import_module(module_path)
+        message_preprocessor = getattr(module, func_name)
+    
+    if args.use_gpt4o_caption:
+        os.environ["USE_GPT4O_CAPTION"] = "1"
+    else:
+        os.environ["USE_GPT4O_CAPTION"] = "0"
 
     # Prepare the dataset using lazy mapping
     ds_cls = DATASET_MAPPING[args.dataset_type]
     dataset = ds_cls.read_raw_data(args.dataset_path) 
     if args.sample_size is not None:
         dataset = dataset.sample(size=args.sample_size, seed=args.seed)
-    print("The dataset is loaded successfully 😄.")
+    print("The dataset is loaded successfully.")
     # print(dataset) calls the __str__ method defined by Pydantic's BaseModel
     print(repr(dataset))
     print()
@@ -436,7 +515,7 @@ if __name__ == "__main__":
         tokenizer = None 
     CostStateManager.register(llm_model, state=state, tokenizer=tokenizer)
     del dummy_config 
-    print(f"The LLM model 🤖 being used is {llm_model}. It has been registered in `CostStateManager`.")
+    print(f"The LLM model being used is {llm_model}. It has been registered in `CostStateManager`.")
     print()
 
     if args.start_idx is None:
@@ -459,20 +538,22 @@ if __name__ == "__main__":
                 user_id, 
                 trajectory, 
                 config=deepcopy(config), 
-                rerun=args.rerun 
+                rerun=args.rerun,
+                message_preprocessor=message_preprocessor,
+                dataset_type=args.dataset_type
             )
             futures.append(future)
         for future in tqdm(
-            as_completed(futures), total=len(futures), desc="📉 Processing trajectories"
+            as_completed(futures), total=len(futures), desc="Processing trajectories"
         ):
             try:
                 result = future.result()
                 results.append(result)
             except Exception as e:
-                print(f"❌ Error processing trajectory: {e}")
+                print(f"Error processing trajectory: {e}")
 
     if len(results) == args.end_idx - args.start_idx:
-        print("The memory construction process is completed successfully 😀.")
+        print("The memory construction process is completed successfully.")
 
     total_time = 0.0 
     avg_time_per_add_session = 0.0 

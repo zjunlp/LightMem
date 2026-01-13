@@ -1,0 +1,9 @@
+{
+  "user_id": "dummy",
+  "llm_backend": "openai",
+  "llm_model": "gpt-4o-mini",
+  "embedder_provider": "huggingface",
+  "retriever_name_or_path": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_model_dims": 384,
+  "use_gpu": "cuda"
+}

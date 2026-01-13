@@ -14,17 +14,81 @@ from typing import (
     Optional,
     Tuple,
 )
+from inference_utils.prompts import PROMPT_COLLECTIONS
+
+from collections.abc import Mapping
+from types import MappingProxyType
+from pydantic import BaseModel
+
+def to_jsonable(obj):
+    """
+    Convert any Python object into a type acceptable by json.dump.
+    - Scalars/None: returned as-is
+    - list/tuple/set: processed recursively
+    - dict / Mapping / mappingproxy: processed recursively
+    - pydantic BaseModel: use model_dump() then process recursively
+    - Other complex types: convert to str(obj)
+    """
+    if isinstance(obj, (str, int, float, bool)) or obj is None:
+        return obj
+    
+    if isinstance(obj, BaseModel):
+        return to_jsonable(obj.model_dump())
+    
+    if isinstance(obj, (list, tuple, set)):
+        return [to_jsonable(i) for i in obj]
+    
+    if isinstance(obj, (dict, Mapping, MappingProxyType)):
+        return {str(k): to_jsonable(v) for k, v in obj.items()}
+    
+    # Convert remaining types to string to avoid json.dump errors
+    return str(obj)
+
 
 def _build_context_text(retrieved_memories: List[Dict[str, Any]]) -> str:
     contents = []
     for i, mem in enumerate(retrieved_memories):
-        content = mem.get("used_content", '')
+        content = mem.get("used_content") or mem.get("content", '')
         if not isinstance(content, str):
             raise AssertionError("The used_content is not a string for the current memory unit.")
         if not content:
             raise AssertionError("The used_content is empty for the current memory unit.")
         contents.append(f"### Memory {i + 1}:\n{content}")
     return "\n\n".join(contents)
+
+def _build_locomo_context_text(retrieved_memories: Dict[str, Any]) -> Dict[str, Any]:
+    speaker_1_data = retrieved_memories["speaker_1"]
+    speaker_2_data = retrieved_memories["speaker_2"]
+    
+    speaker_1_contents = []
+    for i, mem in enumerate(speaker_1_data["memories"]):
+        content = mem.get("used_content", '')
+        if content:
+            speaker_1_contents.append(f"Memory {i + 1}: {content}")
+    
+    speaker_2_contents = []
+    for i, mem in enumerate(speaker_2_data["memories"]):
+        content = mem.get("used_content", '')
+        if content:
+            speaker_2_contents.append(f"Memory {i + 1}: {content}")
+    
+    return {
+        "speaker_1_name": speaker_1_data["name"],
+        "speaker_1_memories": "\n\n".join(speaker_1_contents) if speaker_1_contents else "[No memories]",
+        "speaker_2_name": speaker_2_data["name"],
+        "speaker_2_memories": "\n\n".join(speaker_2_contents) if speaker_2_contents else "[No memories]",
+    }
+
+def _build_graph_text(relations: Any) -> str:
+    if not relations:
+        return ""
+    # Expand according to mem0 return format if needed.
+    # The following is a very rough example:
+    lines = ["### Graph Relations:"]
+    for rel in relations:
+        # Inspect the structure of `rel` if necessary; placeholder here
+        lines.append(str(rel))
+    return "\n".join(lines)
 
 def answer_questions(
     retrievals: List[Dict[str, Any]],
@@ -36,6 +100,7 @@ def answer_questions(
     interface_kwargs = interface_kwargs or {}
     questions: List[str] = []
     contexts: List[str] = []
+    is_locomo = any(item.get("dataset_type") == "LoCoMo" for item in retrievals)
     for item in retrievals:
         qa_pair: QuestionAnswerPair = item["qa_pair"]
         if add_question_timestamp:
@@ -44,10 +109,26 @@ def answer_questions(
             )
         else:
             questions.append(qa_pair.question)
-        contexts.append(_build_context_text(item["retrieved_memories"]))
+        if item.get("dataset_type") == "LoCoMo":
+            context_dict = _build_locomo_context_text(item["retrieved_memories"])
+            contexts.append(context_dict)
+        else:
+            base_ctx = _build_context_text(item["retrieved_memories"])
+            rel_ctx = _build_graph_text(item.get("graph_relations"))
+            if rel_ctx:
+                contexts.append(base_ctx + "\n\n" + rel_ctx)
+            else:
+                contexts.append(base_ctx)
+
+    if is_locomo:
+        prompt_name = "locomo-question-answering-flat-memory-system"
+        if any(item.get("graph_relations") for item in retrievals):
+            prompt_name = "locomo-question-answering-graph-memory-system"
+    else:
+        prompt_name = "question-answering"
 
     qa_operator = QuestionAnsweringOperator(
-        prompt_name="question-answering",
+        prompt_name=prompt_name,
         model_name=qa_model,
         **interface_kwargs,
     )
@@ -69,7 +150,7 @@ def evaluate_answers(
     interface_kwargs: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     interface_kwargs = interface_kwargs or {}
-
+    is_locomo = any(item.get("dataset_type") == "LoCoMo" for item in retrievals)
     question_list: List[str] = []
     golden_answers_list: List[List[str]] = []
     prediction_list: List[str] = []
@@ -85,13 +166,23 @@ def evaluate_answers(
             raise ValueError(f"The prediction is None for the question {qa_pair.question}.")
         prediction_list.append(pred)
 
-        qtype = qa_pair.metadata.get("question_type", "normal")
-        if qtype == "normal":
-            prompt_name = "exact-match"
-        elif "_abs" in qa_pair.metadata.get("id", ''):
-            prompt_name = "longmemeval-abstention"
+        if is_locomo:
+            prompt_name = "locomo-judge"
+            qtype = "locomo"
         else:
-            prompt_name = f"longmemeval-{qtype}"
+            qtype = qa_pair.metadata.get("question_type", "normal")
+            if qtype == "normal":
+                prompt_name = "exact-match"
+            elif "_abs" in qa_pair.metadata.get("id", ''):
+                prompt_name = "longmemeval-abstention"
+            else:
+                candidate = f"longmemeval-{qtype}"
+                if candidate in PROMPT_COLLECTIONS:
+                    prompt_name = candidate
+                else:
+                    # Fallback to exact-match
+                    prompt_name = "exact-match"
+
         prompt_name_per_index.append((prompt_name, qtype))
 
     judge_operator = LLMExactMatch(
@@ -128,7 +219,16 @@ def evaluate_answers(
             content = out.get("processed_content")
             if content is None:
                 raise ValueError(f"The content is None for the question {batched_questions[local_pos]}.")
-            is_correct = "yes" in content.lower()
+            if is_locomo:
+                try:
+                    import json as json_lib
+                    result_json = json_lib.loads(content)
+                    is_correct = result_json.get("label", "").upper() == "CORRECT"
+                except:
+                    is_correct = "CORRECT" in content.upper() and "WRONG" not in content.upper()
+            else:
+                is_correct = "yes" in content.lower()
+
             correctness_flags[global_idx] = is_correct
         # Aggregate each group's results and print the average accuracy
         accuracy = np.mean(
@@ -208,10 +308,10 @@ if __name__ == "__main__":
         retrievals = json.load(f)
     for item in retrievals:
         item["qa_pair"] = QuestionAnswerPair(**item["qa_pair"])
-    print(f"✅ Loaded {len(retrievals)} search results from {args.search_results_path}.")
+    print(f"Loaded {len(retrievals)} search results from {args.search_results_path}.")
 
     # Answer questions
-    print("🧠 Generating answers with QA model...")
+    print("Generating answers with QA model...")
     qa_responses = answer_questions(
         retrievals,
         qa_model=args.qa_model,
@@ -220,7 +320,7 @@ if __name__ == "__main__":
     )
 
     # Evaluate answers
-    print("⚖️ Evaluating answers with judge model...")
+    print("Evaluating answers with judge model...")
     judge_results = evaluate_answers(
         retrievals,
         qa_responses,
@@ -242,6 +342,7 @@ if __name__ == "__main__":
                 "judge_response": judge_dict["judge_response"],
                 "is_correct": judge_dict["is_correct"],
                 "retrieved_memories": item["retrieved_memories"],
+                "user_id": item["user_id"],
             }
         )
 
@@ -252,9 +353,10 @@ if __name__ == "__main__":
         encoding="utf-8"
     ) as f:
         json.dump(
-            final_results, 
+            # final_results, 
+            to_jsonable(final_results),
             f, 
             ensure_ascii=False, 
             indent=4, 
         )
-    print(f"✅ Saved {len(final_results)} results to {output_path}.")
+    print(f"Saved {len(final_results)} results to {output_path}.")

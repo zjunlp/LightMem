@@ -13,6 +13,9 @@ MEMORY_LAYERS_MAPPING_NAMES = OrderedDict[str, str](
         ("A-MEM", "AMEMLayer"),
         ("LangMem", "LangMemLayer"),
         ("MemZero", "MemZeroLayer"),
+        ("MemZeroGraph", "MemZeroLayer"),
+        ("FullContext", "FullContextLayer"),
+        ("NaiveRAG", "NaiveRAGLayer"),
     ]
 )
 
@@ -22,6 +25,9 @@ CONFIG_MAPPING_NAMES = OrderedDict[str, str](
         ("A-MEM", "AMEMConfig"),
         ("LangMem", "LangMemConfig"),
         ("MemZero", "MemZeroConfig"),
+        ("MemZeroGraph", "MemZeroConfig"),
+        ("FullContext", "FullContextConfig"),
+        ("NaiveRAG", "NaiveRAGConfig"),
     ]
 )
 
@@ -29,6 +35,8 @@ CONFIG_MAPPING_NAMES = OrderedDict[str, str](
 DATASET_MAPPING_NAMES = OrderedDict[str, str](
     [
         ("LongMemEval", "LongMemEval"),
+        ("LoCoMo", "LoCoMo"),
+        ("MobileBench", "MobileBench"),
     ]
 )
 
@@ -57,10 +65,20 @@ def type_to_module_name(key: str, mapping_type: str) -> str:
                     return "layers.langmem"
                 case "MemZero":
                     return "layers.memzero"
+                case "MemZeroGraph":
+                    return "layers.memzero"
+                case "NaiveRAG":
+                    return "layers.naive_rag"
+                case "FullContext":
+                    return "layers.full_context"
         case "dataset":
             match key:
                 case "LongMemEval":
                     return "datasets.longmemeval"
+                case "LoCoMo":
+                    return "datasets.locomo"
+                case "MobileBench":
+                    return "datasets.mobilebench"
     # Default: convert key to module name
     return key.lower().replace("-", "_")
 
