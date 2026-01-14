@@ -234,3 +234,62 @@ class RetrievalErrorChecker(NonCachedLLMOperator):
                     }
                 )
         return results
+
+class LocomoQAOperator(NonCachedLLMOperator):
+    def _preprocess(
+        self, 
+        question_list: List[str], 
+        speaker_1_name_list: List[str],
+        speaker_1_memories_list: List[str],
+        speaker_2_name_list: List[str],
+        speaker_2_memories_list: List[str]
+    ) -> List[List[Dict[str, str]]]: 
+        messages_list = [] 
+        for i in range(len(question_list)):
+            messages = [
+                {
+                    "role": "system", 
+                    "content": self._prompt.substitute(
+                        question=question_list[i],
+                        speaker_1_name=speaker_1_name_list[i],
+                        speaker_1_memories=speaker_1_memories_list[i],
+                        speaker_2_name=speaker_2_name_list[i],
+                        speaker_2_memories=speaker_2_memories_list[i]
+                    )
+                }, 
+            ]
+            messages_list.append(messages)
+        return messages_list
+    
+
+class LocomoGraphQAOperator(NonCachedLLMOperator):
+    """Operator for LoCoMo QA with Knowledge Graph relations."""
+
+    def _preprocess(
+        self, 
+        question_list: List[str], 
+        speaker_1_user_id_list: List[str],
+        speaker_1_memories_list: List[str],
+        speaker_1_graph_memories_list: List[str],
+        speaker_2_user_id_list: List[str],
+        speaker_2_memories_list: List[str],
+        speaker_2_graph_memories_list: List[str]
+    ) -> List[List[Dict[str, str]]]: 
+        messages_list = [] 
+        for i in range(len(question_list)):
+            messages = [
+                {
+                    "role": "system", 
+                    "content": self._prompt.substitute(
+                        question=question_list[i],
+                        speaker_1_user_id=speaker_1_user_id_list[i],
+                        speaker_1_memories=speaker_1_memories_list[i],
+                        speaker_1_graph_memories=speaker_1_graph_memories_list[i],
+                        speaker_2_user_id=speaker_2_user_id_list[i],
+                        speaker_2_memories=speaker_2_memories_list[i],
+                        speaker_2_graph_memories=speaker_2_graph_memories_list[i]
+                    )
+                }, 
+            ]
+            messages_list.append(messages)
+        return messages_list

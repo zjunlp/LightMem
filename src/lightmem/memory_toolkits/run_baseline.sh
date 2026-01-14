@@ -3,28 +3,32 @@
 # ========================================================
 memory_type="FullContext"
 dataset_type="LoCoMo"
-llm_model_type="gpt-4.1"
+llm_model_type="gpt-4.1-mini"
 dataset_path="/your/path/to/dataset/locomo/locomo10.json"
 config_path="/your/path/to/LightMem/src/lightmem/memory_toolkits/memories/configs/FullContext.json"
 num_workers=1  # We suggest to set num_workers=1.
-tokenizer_path="gpt-4.1"
+tokenizer_path="gpt-4.1-mini"
+# log_dir="FullContext_${llm_model_type}_LoCoMo_construction_logs"
+# log_dir="FullContext_${llm_model_type}_LoCoMo_search_logs"
 log_dir="FullContext_${llm_model_type}_LoCoMo_eval_logs"
+
 token_cost_prefix="token_cost"
-pid_prefix="process_construction"
-# pid_prefix="process_eval"
+# pid_prefix="process_construction"
+# pid_prefix="process_search"
+pid_prefix="process_eval"
 # pid_prefix="process_analyze" 
 top_k=-1
 ranges=(
     "0 1"
-    "1 2"
-    "2 3"
-    "3 4"
-    "4 5"
-    "5 6"
-    "6 7"
-    "7 8"
-    "8 9"
-    "9 10"
+    # "1 2"
+    # "2 3"
+    # "3 4"
+    # "4 5"
+    # "5 6"
+    # "6 7"
+    # "7 8"
+    # "8 9"
+    # "9 10"
 )
 api_keys=(
     ""
@@ -124,10 +128,10 @@ for ((i=0; i<${#ranges[@]}; i++)); do
     
     nohup python memory_evaluation.py \
         --search-results-path "$search_results_file" \
-        --qa-model "gpt-4.1" \
-        --judge-model "gpt-4.1" \
-        --qa-batch-size 8 \
-        --judge-batch-size 8 \
+        --qa-model "gpt-4.1-mini" \
+        --judge-model "gpt-4.1-mini" \
+        --qa-batch-size 1 \
+        --judge-batch-size 1 \
         --api-config-path "/your/path/to/LightMem/src/lightmem/memory_toolkits/memories/configs/api_eval.json" \
         > "$log_file" 2>&1 &
 

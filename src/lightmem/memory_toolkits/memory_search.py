@@ -101,7 +101,7 @@ def memory_search(
         original_count = len(questions)
         questions = [
             qa for qa in questions 
-            if qa.metadata.get("category") != 5
+            if qa.metadata.get("category_id") != 5
         ]
         filtered_count = original_count - len(questions)
         if filtered_count > 0:
@@ -124,6 +124,7 @@ def memory_search(
         if dataset_type == "LoCoMo":
             speaker_names = qa_pair.metadata.get("speaker_names", [])
             if len(speaker_names) != 2:
+                print(f"[WARNING] Expected 2 speaker names, got {len(speaker_names)}, using standard retrieval")
                 retrieved_memories = layer.retrieve(query, k=top_k)
             else:
                 speaker_1_name, speaker_2_name = speaker_names
@@ -146,7 +147,7 @@ def memory_search(
         else:
             retrieved_memories = layer.retrieve(query, k=top_k)
             
-            # When MemZero enables Graph, the return is a dictionary
+        # When MemZero enables Graph, the return is a dictionary
         if isinstance(retrieved_memories, dict):
             if "memories" in retrieved_memories and "relations" in retrieved_memories:
                 retrieval_result = {

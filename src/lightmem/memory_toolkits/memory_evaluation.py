@@ -2,6 +2,9 @@ from memories.datasets.base import QuestionAnswerPair
 from inference_utils.operators import (
     QuestionAnsweringOperator,
     LLMExactMatch,
+    LocomoQAOperator,
+    LocomoGraphQAOperator,
+    _parse_json_response
 )
 import numpy as np
 import argparse
@@ -62,13 +65,13 @@ def _build_locomo_context_text(retrieved_memories: Dict[str, Any]) -> Dict[str, 
     
     speaker_1_contents = []
     for i, mem in enumerate(speaker_1_data["memories"]):
-        content = mem.get("used_content", '')
+        content = mem.get("used_content") or mem.get("content", '')
         if content:
             speaker_1_contents.append(f"Memory {i + 1}: {content}")
     
     speaker_2_contents = []
     for i, mem in enumerate(speaker_2_data["memories"]):
-        content = mem.get("used_content", '')
+        content = mem.get("used_content") or mem.get("content", '')
         if content:
             speaker_2_contents.append(f"Memory {i + 1}: {content}")
     
@@ -94,52 +97,68 @@ def answer_questions(
     retrievals: List[Dict[str, Any]],
     qa_model: str,
     qa_batch_size: int = 4,
-    add_question_timestamp: bool = True, 
+    add_question_timestamp: bool = False, 
     interface_kwargs: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     interface_kwargs = interface_kwargs or {}
     questions: List[str] = []
-    contexts: List[str] = []
     is_locomo = any(item.get("dataset_type") == "LoCoMo" for item in retrievals)
-    for item in retrievals:
-        qa_pair: QuestionAnswerPair = item["qa_pair"]
-        if add_question_timestamp:
-            questions.append(
-                f"{qa_pair.question}\nQuestion Timestamp: {qa_pair.get_string_timestamp()}"
+    has_graph = any(item.get("graph_relations") is not None for item in retrievals)
+    if is_locomo:
+        if has_graph:
+            s1_names, s1_mems, s1_graphs = [], [], []
+            s2_names, s2_mems, s2_graphs = [], [], []
+            prompt_name = "locomo-question-answering-graph-memory-system"
+            
+            for item in retrievals:
+                questions.append(item["qa_pair"].question)
+                ctx_dict = _build_locomo_context_text(item["retrieved_memories"])
+                graph_data = item.get("graph_relations", {})
+                
+                s1_names.append(ctx_dict["speaker_1_name"])
+                s1_mems.append(ctx_dict["speaker_1_memories"])
+                s1_graphs.append(_build_graph_text(graph_data.get("speaker_1", [])))
+                
+                s2_names.append(ctx_dict["speaker_2_name"])
+                s2_mems.append(ctx_dict["speaker_2_memories"])
+                s2_graphs.append(_build_graph_text(graph_data.get("speaker_2", [])))
+
+            qa_operator = LocomoGraphQAOperator(prompt_name=prompt_name, model_name=qa_model, **interface_kwargs)
+            responses = qa_operator(questions, s1_names, s1_mems, s1_graphs, s2_names, s2_mems, s2_graphs, 
+                                    batch_size=qa_batch_size, aggregate=False, temperature=0.0)
+        else:    
+            s1_names, s1_mems, s2_names, s2_mems = [], [], [], []
+            prompt_name = "locomo-question-answering-flat-memory-system"
+            
+            for item in retrievals:
+                qa_pair: QuestionAnswerPair = item["qa_pair"]
+                questions.append(qa_pair.question)
+                ctx_dict = _build_locomo_context_text(item["retrieved_memories"])
+                s1_names.append(ctx_dict["speaker_1_name"])
+                s1_mems.append(ctx_dict["speaker_1_memories"])
+                s2_names.append(ctx_dict["speaker_2_name"])
+                s2_mems.append(ctx_dict["speaker_2_memories"])
+
+            qa_operator = LocomoQAOperator(prompt_name=prompt_name, model_name=qa_model, **interface_kwargs)
+            
+            responses = qa_operator(
+                questions, s1_names, s1_mems, s2_names, s2_mems, 
+                batch_size=qa_batch_size, aggregate=False, temperature=0.0
             )
-        else:
-            questions.append(qa_pair.question)
-        if item.get("dataset_type") == "LoCoMo":
-            context_dict = _build_locomo_context_text(item["retrieved_memories"])
-            contexts.append(context_dict)
-        else:
+    else:
+        contexts: List[str] = []
+        for item in retrievals:
+            qa_pair: QuestionAnswerPair = item["qa_pair"]
+            questions.append(f"{qa_pair.question}\nQuestion Timestamp: {qa_pair.get_string_timestamp()}" if add_question_timestamp else qa_pair.question)
             base_ctx = _build_context_text(item["retrieved_memories"])
             rel_ctx = _build_graph_text(item.get("graph_relations"))
-            if rel_ctx:
-                contexts.append(base_ctx + "\n\n" + rel_ctx)
-            else:
-                contexts.append(base_ctx)
+            contexts.append(base_ctx + "\n\n" + rel_ctx if rel_ctx else base_ctx)
 
-    if is_locomo:
-        prompt_name = "locomo-question-answering-flat-memory-system"
-        if any(item.get("graph_relations") for item in retrievals):
-            prompt_name = "locomo-question-answering-graph-memory-system"
-    else:
-        prompt_name = "question-answering"
+        qa_operator = QuestionAnsweringOperator(prompt_name="question-answering", model_name=qa_model, **interface_kwargs)
+        responses = qa_operator(questions, contexts, batch_size=qa_batch_size, aggregate=False, temperature=0.0)
 
-    qa_operator = QuestionAnsweringOperator(
-        prompt_name=prompt_name,
-        model_name=qa_model,
-        **interface_kwargs,
-    )
-
-    responses = qa_operator(
-        questions,
-        contexts,
-        batch_size=qa_batch_size,
-        aggregate=False,
-        temperature=0.0,
-    )
+    print(f"Using prompt: {prompt_name} for QA generation.")
+    
     return responses
 
 def evaluate_answers(
@@ -155,7 +174,7 @@ def evaluate_answers(
     golden_answers_list: List[List[str]] = []
     prediction_list: List[str] = []
     prompt_name_per_index: List[Tuple[str, str]] = []
-
+    category_per_index: List[Any] = []  
     for i, item in enumerate(retrievals):
         qa_pair: QuestionAnswerPair = item["qa_pair"]
         question_list.append(qa_pair.question)
@@ -165,6 +184,9 @@ def evaluate_answers(
         if pred is None:
             raise ValueError(f"The prediction is None for the question {qa_pair.question}.")
         prediction_list.append(pred)
+
+        category = qa_pair.metadata.get("category", "unknown")
+        category_per_index.append(category)
 
         if is_locomo:
             prompt_name = "locomo-judge"
@@ -185,8 +207,9 @@ def evaluate_answers(
 
         prompt_name_per_index.append((prompt_name, qtype))
 
+    print(f"Using prompt: {prompt_name} for judgment.")
     judge_operator = LLMExactMatch(
-        prompt_name="exact-match",
+        prompt_name=prompt_name,
         model_name=judge_model,
         **interface_kwargs,
     )
@@ -221,8 +244,7 @@ def evaluate_answers(
                 raise ValueError(f"The content is None for the question {batched_questions[local_pos]}.")
             if is_locomo:
                 try:
-                    import json as json_lib
-                    result_json = json_lib.loads(content)
+                    result_json = _parse_json_response(content)
                     is_correct = result_json.get("label", "").upper() == "CORRECT"
                 except:
                     is_correct = "CORRECT" in content.upper() and "WRONG" not in content.upper()
@@ -230,15 +252,53 @@ def evaluate_answers(
                 is_correct = "yes" in content.lower()
 
             correctness_flags[global_idx] = is_correct
+        
         # Aggregate each group's results and print the average accuracy
         accuracy = np.mean(
             [correctness_flags[global_idx] for global_idx in idx_list]
         ).item()
         print(f"The accuracy for {qtype} (prompt name: {prompt_name}) is {accuracy:.4f}.")
     
+    category_stats = {}
+    for idx, (category, is_correct) in enumerate(zip(category_per_index, correctness_flags)):
+        if category not in category_stats:
+            category_stats[category] = {"correct": 0, "total": 0}
+        category_stats[category]["total"] += 1
+        if is_correct:
+            category_stats[category]["correct"] += 1
+    
+    for category in sorted(category_stats.keys()):
+        stats = category_stats[category]
+        accuracy = stats["correct"] / stats["total"] if stats["total"] > 0 else 0.0
+        print(f"  Category {category}: {accuracy:.4f} ({stats['correct']}/{stats['total']})")
+    
+    if is_locomo:
+        print("\n" + "="*60)
+        print("Question Type Accuracy (LoCoMo):")
+        print("="*60)
+        
+        qtype_stats = {}
+        for i, item in enumerate(retrievals):
+            qa_pair = item["qa_pair"]
+            qtype = qa_pair.metadata.get("question_type", "unknown")
+            is_correct = correctness_flags[i]
+            
+            if qtype not in qtype_stats:
+                qtype_stats[qtype] = {"correct": 0, "total": 0}
+            qtype_stats[qtype]["total"] += 1
+            if is_correct:
+                qtype_stats[qtype]["correct"] += 1
+        
+        for qtype in sorted(qtype_stats.keys()):
+            stats = qtype_stats[qtype]
+            accuracy = stats["correct"] / stats["total"] if stats["total"] > 0 else 0.0
+            print(f"  {qtype}: {accuracy:.4f} ({stats['correct']}/{stats['total']})")
+    
     # Print the overall accuracy
+    print("\n" + "="*60)
     accuracy = np.mean(correctness_flags).item()
-    print(f"The overall accuracy is {accuracy:.4f}.")
+    print(f"Overall Accuracy: {accuracy:.4f}")
+    print("="*60 + "\n")
 
     finalized = []
     for i in range(len(retrievals)):
@@ -246,10 +306,10 @@ def evaluate_answers(
             {
                 "judge_response": judge_outputs[i],
                 "is_correct": correctness_flags[i],
+                "category": category_per_index[i],  
             }
         )
     return finalized
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

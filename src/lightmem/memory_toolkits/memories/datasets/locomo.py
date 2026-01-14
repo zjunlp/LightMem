@@ -249,6 +249,8 @@ class LoCoMo(MemoryDataset):
                 sessions=sessions,
                 metadata={
                     "id": f"locomo_{sample_idx}",
+                    "speaker_a": speaker_a, 
+                    "speaker_b": speaker_b,  
                 },
             )
             trajectories.append(trajectory)
@@ -280,6 +282,7 @@ class LoCoMo(MemoryDataset):
                     "category": category_type,
                     "category_id": category,
                     "evidence": qa.get("evidence", []),
+                    "speaker_names": [speaker_a, speaker_b],
                 }
                 if "adversarial_answer" in qa:
                     metadata["adversarial_answer"] = qa["adversarial_answer"]
