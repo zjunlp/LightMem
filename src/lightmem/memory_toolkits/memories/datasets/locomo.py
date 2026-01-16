@@ -358,12 +358,10 @@ class LoCoMo(MemoryDataset):
     
     @classmethod
     def get_qa_prompt_name(cls, has_graph: bool = False) -> str:
-        """
-        Get the QA prompt name for this dataset.
-        Default implementation returns the standard prompt.
-        Subclasses can override to provide dataset-specific prompts.
-        """
-        return "question-answering"
+        """Get LoCoMo-specific QA prompt based on whether graph relations exist."""
+        if has_graph:
+            return "locomo-question-answering-graph-memory-system"
+        return "locomo-question-answering-flat-memory-system"
     
     @classmethod
     def get_judge_prompt_info(cls, qa_pair: QuestionAnswerPair) -> Tuple[str, str]:
