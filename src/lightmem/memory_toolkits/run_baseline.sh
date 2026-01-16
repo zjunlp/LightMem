@@ -97,7 +97,6 @@ for ((i=0; i<${#ranges[@]}; i++)); do
     #     --token-cost-save-filename "$token_cost_file" \
     #     --tokenizer-path "$tokenizer_path" \
     #     --rerun \
-    #     --message-preprocessor "memories.datasets.locomo_preprocessor:NaiveRAG_style_message_for_LoCoMo" \
     #     > "$log_file" 2>&1 &
 
     # nohup python memory_construction.py \

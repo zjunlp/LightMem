@@ -28,14 +28,6 @@ def _build_context_text(retrieved_memories: List[Dict[str, Any]]) -> str:
         contents.append(f"### Memory {i + 1}:\n{content}")
     return "\n\n".join(contents)
 
-def _build_graph_text(relations: Any) -> str:
-    if not relations:
-        return ""
-    lines = ["### Graph Relations:"]
-    for rel in relations:
-        lines.append(str(rel))
-    return "\n".join(lines)
-
 
 def answer_questions(
     retrievals: List[Dict[str, Any]],
@@ -56,11 +48,14 @@ def answer_questions(
             question_text = f"{question_text}\nQuestion Timestamp: {qa_pair.get_string_timestamp()}"
         questions.append(question_text)
         base_ctx = _build_context_text(item["retrieved_memories"])
-        rel_ctx = _build_graph_text(item.get("graph_relations"))
-        contexts.append(base_ctx + ("\n\n" + rel_ctx if rel_ctx else ""))
+        contexts.append(base_ctx)
     
     
-    has_graph = any(item.get("graph_relations") is not None for item in retrievals)
+    has_graph = any(
+        mem.get("metadata", {}).get("has_graph_relations", False)
+        for item in retrievals
+        for mem in item["retrieved_memories"]
+    )
     if dataset_type is not None:
         dataset_cls = DATASET_MAPPING[dataset_type]
         prompt_name = dataset_cls.get_qa_prompt_name(has_graph) 

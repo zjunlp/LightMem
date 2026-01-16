@@ -86,19 +86,11 @@ def memory_search(
         # Perform retrieval using the unified interface
         retrieved_memories = layer.retrieve(query, k=top_k)
         # MemZeroGraph return a dict with "memories" and "relations"
-        if isinstance(retrieved_memories, dict):
-            retrieval_result = {
-                "retrieved_memories": retrieved_memories["memories"],
-                "graph_relations": retrieved_memories["relations"],
-                "qa_pair": qa_pair,
-                "user_id": user_id, 
-            }
-        else:
-            retrieval_result = {
-                "retrieved_memories": retrieved_memories,
-                "qa_pair": qa_pair,
-                "user_id": user_id, 
-            }
+        retrieval_result = {
+            "retrieved_memories": retrieved_memories,
+            "qa_pair": qa_pair,
+            "user_id": user_id, 
+        }
         retrievals.append(retrieval_result)
     
     return retrievals
