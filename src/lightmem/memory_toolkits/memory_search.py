@@ -9,7 +9,7 @@ from memories import (
     MEMORY_LAYERS_MAPPING,
     DATASET_MAPPING,
 )
-from memories.datasets.base import QuestionAnswerPair
+from memories.datasets.base import QuestionAnswerPair, MemoryDataset
 from typing import (
     Dict,
     Any,
@@ -19,35 +19,6 @@ from typing import (
 
 _LOCK = threading.Lock()
 
-from collections.abc import Mapping
-from types import MappingProxyType
-from pydantic import BaseModel
-import sys
-
-def to_jsonable(obj):
-    """
-    Convert any Python object into a type acceptable by json.dump.
-    - Scalars/None: returned as-is
-    - list/tuple/set: processed recursively
-    - dict / Mapping / mappingproxy: processed recursively
-    - pydantic BaseModel: use model_dump() then process recursively
-    - Other complex types: convert to str(obj)
-    """
-    if isinstance(obj, (str, int, float, bool)) or obj is None:
-        return obj
-    
-    if isinstance(obj, BaseModel):
-        return to_jsonable(obj.model_dump())
-    
-    if isinstance(obj, (list, tuple, set)):
-        return [to_jsonable(i) for i in obj]
-    
-    if isinstance(obj, (dict, Mapping, MappingProxyType)):
-        return {str(k): to_jsonable(v) for k, v in obj.items()}
-    
-    # Convert remaining types to string to avoid json.dump errors
-    return str(obj)
-
 
 def memory_search(
     layer_type: str,
@@ -56,7 +27,7 @@ def memory_search(
     config: Optional[Dict[str, Any]] = None,
     top_k: int = 10,
     strict: bool = True, 
-    dataset_type: Optional[str] = None,
+    dataset: Optional[MemoryDataset] = None,
 ) -> List[Dict[str, Any]]:
     """Search memories for a given user based on questions."""
     config = config or {}
@@ -96,17 +67,8 @@ def memory_search(
                 ]
     
     # Perform retrieval for each question
-    # Ensure it supports len(), and convenient for logging total count
-    if dataset_type == "LoCoMo":
-        original_count = len(questions)
-        questions = [
-            qa for qa in questions 
-            if qa.metadata.get("category_id") != 5
-        ]
-        filtered_count = original_count - len(questions)
-        if filtered_count > 0:
-            print(f"[INFO] {user_id}: Filtered out {filtered_count} questions with category=5")
-            
+    original_count = len(questions)
+    questions = dataset.filter_questions(questions)
     questions = list(questions)
     total_q = len(questions)
     print(f"[INFO] {user_id}: {total_q} questions to search.")
@@ -121,62 +83,24 @@ def memory_search(
 
     for qa_pair in pbar:
         query = qa_pair.question
-        if dataset_type == "LoCoMo":
-            speaker_names = qa_pair.metadata.get("speaker_names", [])
-            if len(speaker_names) != 2:
-                print(f"[WARNING] Expected 2 speaker names, got {len(speaker_names)}, using standard retrieval")
-                retrieved_memories = layer.retrieve(query, k=top_k)
-            else:
-                speaker_1_name, speaker_2_name = speaker_names
-                speaker_1_memories = layer.retrieve(
-                    query, k=top_k, name_filter=speaker_1_name
-                )
-                speaker_2_memories = layer.retrieve(
-                    query, k=top_k, name_filter=speaker_2_name
-                )
-                retrieved_memories = {
-                    "speaker_1": {
-                        "name": speaker_1_name,
-                        "memories": speaker_1_memories,
-                    },
-                    "speaker_2": {
-                        "name": speaker_2_name,
-                        "memories": speaker_2_memories,
-                    }
-                }
-        else:
-            retrieved_memories = layer.retrieve(query, k=top_k)
-            
-        # When MemZero enables Graph, the return is a dictionary
+        # Perform retrieval using the unified interface
+        retrieved_memories = layer.retrieve(query, k=top_k)
+        # MemZeroGraph return a dict with "memories" and "relations"
         if isinstance(retrieved_memories, dict):
-            if "memories" in retrieved_memories and "relations" in retrieved_memories:
-                retrieval_result = {
-                    "retrieved_memories": retrieved_memories["memories"],
-                    "graph_relations": retrieved_memories["relations"],
-                    "qa_pair": qa_pair,
-                    "user_id": user_id,
-                }
-            elif "speaker_1" in retrieved_memories and "speaker_2" in retrieved_memories:
-                retrieval_result = {
-                    "retrieved_memories": retrieved_memories,  
-                    "qa_pair": qa_pair,
-                    "user_id": user_id,
-                    "dataset_type": "LoCoMo",  
-                }
-            else:
-                retrieval_result = {
-                    "retrieved_memories": retrieved_memories,
-                    "qa_pair": qa_pair,
-                    "user_id": user_id,
-                }
+            retrieval_result = {
+                "retrieved_memories": retrieved_memories["memories"],
+                "graph_relations": retrieved_memories["relations"],
+                "qa_pair": qa_pair,
+                "user_id": user_id, 
+            }
         else:
             retrieval_result = {
                 "retrieved_memories": retrieved_memories,
                 "qa_pair": qa_pair,
-                "user_id": user_id,
+                "user_id": user_id, 
             }
         retrievals.append(retrieval_result)
-
+    
     return retrievals
 
 
@@ -291,7 +215,7 @@ if __name__ == "__main__":
                 config=deepcopy(config),
                 top_k=args.top_k,
                 strict=args.strict,
-                dataset_type=args.dataset_type,
+                dataset=dataset,
             )
             futures.append(future)
         for future in tqdm(
@@ -306,8 +230,7 @@ if __name__ == "__main__":
 
     with open(output_path, 'w', encoding="utf-8") as f:
         json.dump(
-            # retrievals, 
-            to_jsonable(retrievals),
+            retrievals, 
             f, 
             ensure_ascii=False, 
             indent=4,

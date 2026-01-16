@@ -337,9 +337,6 @@ class NaiveRAGLayer(BaseMemoryLayer):
     def retrieve(
         self, query: str, k: int = 10, **kwargs
     ) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
-        name_filter = kwargs.get("name_filter", None)
-        if name_filter is not None and isinstance(name_filter, str):
-            name_filter = [name_filter]
         res = self.memory_layer.search(
             query=query,
             user_id=self.config.user_id,
@@ -357,20 +354,13 @@ class NaiveRAGLayer(BaseMemoryLayer):
         for item in results:
             content = item.get("memory", "")
             metadata = {kk: vv for kk, vv in item.items() if kk != "memory"}
-            name = metadata.get("name")
-            if name_filter is not None and name not in name_filter:
-                continue
             out: Dict[str, Union[str, Dict[str, Any]]] = {
                 "content": content,
                 "metadata": metadata,
             }
-
             used_content = {
-                "memory": content,
-                "score": metadata.get("score"),
-                "created_at": metadata.get("created_at"),
-                "updated_at": metadata.get("updated_at"),
-                "name": name,
+                "Time": item.get("timestamp"),
+                "Memory": item.get("memory"), 
             }
             out["used_content"] = "\n".join(
                 f"{kk}: {vv}" for kk, vv in used_content.items() if vv is not None

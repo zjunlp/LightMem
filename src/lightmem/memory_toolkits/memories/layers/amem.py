@@ -12,7 +12,6 @@ from .baselines.agentic_memory.memory_system import (
 import pickle 
 import os
 import json
-import re
 from typing import (
     Literal, 
     List, 
@@ -151,8 +150,7 @@ class AMEMLayer(BaseMemoryLayer):
         timestamp = kwargs["timestamp"]
         
         # See https://github.com/WujiangXu/A-mem/blob/main/test_advanced.py#L296 
-        name = message.get("name", message["role"]) 
-        text = f"Speaker {message['role']} (name: {name}) says: {message['content']}"
+        text = f"Speaker {message['role']} says: {message['content']}"
         self.memory_layer.add_note(text, time=timestamp)
 
     def add_messages(self, messages: List[Dict[str, str]], **kwargs) -> None:
@@ -160,23 +158,11 @@ class AMEMLayer(BaseMemoryLayer):
         for message in messages: 
             self.add_message(message, **kwargs)
     
-    def retrieve(
-            self, 
-            query: str, 
-            k: int = 10,
-            **kwargs,
-    ) -> List[Dict[str, str | Dict[str, Any]]]:
+    def retrieve(self, query: str, k: int = 10, **kwargs) -> List[Dict[str, str | Dict[str, Any]]]:
         """Retrieve the memories."""
         memories = self.memory_layer.search_agentic(query, k=k)
-        name_filter = kwargs.get("name_filter", None)
-        if name_filter is not None and isinstance(name_filter, str):
-            name_filter = [name_filter]
         outputs = [] 
         for memory in memories:
-            name_match = re.search(r'\(name:\s*([^)]+)\)', memory["content"])
-            extracted_name = name_match.group(1).strip() if name_match else None
-            if name_filter is not None and extracted_name not in name_filter:
-                continue
             used_content = {
                 "memory content": memory["content"], 
                 "memory context": memory["context"],
@@ -184,15 +170,13 @@ class AMEMLayer(BaseMemoryLayer):
                 "memory tags": str(memory["tags"]),
                 "talk start time": memory["timestamp"],
             }
-            metadata = {
-                key: value
-                for key, value in memory.items() if key != "content"
-            }
-            metadata["name"] = extracted_name
             outputs.append(
                 {
                     "content": memory["content"], 
-                    "metadata": metadata,
+                    "metadata": {
+                        key: value
+                        for key, value in memory.items() if key != "content"
+                    },
                     # See https://github.com/WujiangXu/A-mem/blob/main/memory_layer.py#L690. 
                     "used_content": '\n'.join(
                         [f"{key}: {value}" for key, value in used_content.items()]

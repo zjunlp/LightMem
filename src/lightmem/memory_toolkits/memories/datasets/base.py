@@ -397,3 +397,31 @@ class MemoryDataset(BaseModel, ABC):
 
         return header + "\n" + bar + ("\n" + "\n".join(body_lines) if body_lines else "")
     
+    @classmethod
+    def filter_questions(cls, questions: List[QuestionAnswerPair]) -> List[QuestionAnswerPair]:
+        """
+        Filter questions based on dataset-specific criteria.
+        Default implementation returns all questions unchanged.
+        Subclasses can override this method to implement custom filtering logic.
+        """
+        return questions
+    
+    @classmethod
+    def get_qa_prompt_name(cls, has_graph: bool = False) -> str:
+        """
+        Get the QA prompt name for this dataset.
+        Default implementation returns the standard prompt.
+        Subclasses can override to provide dataset-specific prompts.
+        """
+        return "question-answering"
+    
+    @classmethod
+    def get_judge_prompt_info(cls, qa_pair: QuestionAnswerPair) -> Tuple[str, str]:
+        """
+        Get judge prompt name and question type for a QA pair.
+        Returns (prompt_name, question_type).
+        Default implementation returns exact-match for all questions.
+        Subclasses can override to provide dataset-specific logic.
+        """
+        qtype = qa_pair.metadata.get("question_type", "normal")
+        return "exact-match", qtype

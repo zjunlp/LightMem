@@ -128,6 +128,7 @@ for ((i=0; i<${#ranges[@]}; i++)); do
     
     # nohup python memory_evaluation.py \
     #     --search-results-path "$search_results_file" \
+    #     --dataset-type "$dataset_type" \
     #     --qa-model "gpt-4.1-mini" \
     #     --judge-model "gpt-4.1-mini" \
     #     --qa-batch-size 1 \

@@ -288,15 +288,12 @@ class MemZeroLayer(BaseMemoryLayer):
         if "timestamp" not in kwargs: 
             raise KeyError("timestamp is required in `kwargs`")
         timestamp = kwargs["timestamp"] 
-        name = message.get("name")
-        metadata={"timestamp": timestamp}
-        if name is not None:
-            metadata["name"] = name
+        timestamp = kwargs["timestamp"] 
         try:
             self.memory_layer.add(
                 messages=message["content"],
                 user_id=self.config.user_id,
-                metadata=metadata
+                metadata={"timestamp": timestamp}
             )
         except KeyError as e:
             # Specifically handle KeyErrors from graph paths missing source/destination
@@ -311,7 +308,7 @@ class MemZeroLayer(BaseMemoryLayer):
             is_content_filter_error = (
                 "content management policy" in msg or 
                 "content_filter" in msg or
-                "'messages' must be list[dict]" in msg  # mem0在遇到content filter时可能抛出的格式错误
+                "'messages' must be list[dict]" in msg  
             )
             
             if is_content_filter_error:
@@ -343,9 +340,6 @@ class MemZeroLayer(BaseMemoryLayer):
         List[Dict[str, Union[str, Dict[str, Any]]]],
         Dict[str, Any],
     ]:
-        name_filter = kwargs.get("name_filter", None)
-        if name_filter is not None and isinstance(name_filter, str):
-            name_filter = [name_filter]
         try:
             res = self.memory_layer.search(
                 query=query,
@@ -400,8 +394,6 @@ class MemZeroLayer(BaseMemoryLayer):
             content = item.get("memory", "")
             metadata = {kk: vv for kk, vv in item.items() if kk != "memory"}
             name = metadata.get("name")
-            if name_filter is not None and name not in name_filter:
-                continue
             out: Dict[str, Union[str, Dict[str, Any]]] = {
                 "content": content,
                 "metadata": metadata,
