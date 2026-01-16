@@ -2,47 +2,6 @@ import string
 from typing import Dict
 
 _INCOMPLETE_PROMPT_COLLECTIONS = {
-    # Prompts for error attribution algorithm
-    "memory-construction-error-check": (
-        "You are an expert evaluator for memory-based question answering systems. "
-        "Your task is to determine whether the essential information from a source evidence "
-        "is present within a set of retrieved memory units.\n\n"
-        "## Question\n$question\n\n"
-        "## Golden Answers\n$golden_answers\n\n"
-        "## Source Evidence\n$source_evidence\n\n"
-        "## Retrieved Memory Units\n$retrieved_memory_units\n\n"
-        "## Task\n"
-        "Analyze whether the key information from the source evidence (that is necessary to answer "
-        "the question with the golden answers) is present in the retrieved memory units. "
-        "Consider semantic equivalence, not just exact text matching.\n\n"
-        "Please provide:\n"
-        "1. A brief explanation of your reasoning.\n"
-        "2. A final judgment: whether the essential information is present (true) or missing (false).\n\n"
-        "Respond in the following JSON format:\n"
-        "```json\n"
-        '{"explanation": "<your reasoning>", "is_present": <true or false>}\n'
-        "```"
-    ),
-    "retrieval-error-check": (
-        "You are an expert evaluator for memory-based question answering systems. "
-        "Your task is to determine whether the retrieval results sufficiently cover the key contents "
-        "of the source evidences needed to answer the question.\n\n"
-        "## Question\n$question\n\n"
-        "## Golden Answers\n$golden_answers\n\n"
-        "## Source Evidences\n$source_evidences\n\n"
-        "## Retrieval Results\n$retrieval_results\n\n"
-        "## Task\n"
-        "Analyze whether the retrieval results contain sufficient information from the source evidences "
-        "to answer the question correctly. The retrieval results should cover the key contents of all "
-        "source evidences. Consider semantic equivalence, not just exact text matching.\n\n"
-        "Please provide:\n"
-        "1. A brief explanation of your reasoning.\n"
-        "2. A final judgment: whether the retrieval sufficiently covers the source evidences (true) or not (false).\n\n"
-        "Respond in the following JSON format:\n"
-        "```json\n"
-        '{"explanation": "<your reasoning>", "is_sufficient": <true or false>}\n'
-        "```"
-    ),
     # LongMemEval prompts #
     # See https://arxiv.org/abs/2410.10813 and https://github.com/xiaowu0162/LongMemEval/blob/main/src/evaluation/evaluate_qa.py. 
     "longmemeval-single-session-user": (

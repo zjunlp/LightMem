@@ -36,7 +36,6 @@ DATASET_MAPPING_NAMES = OrderedDict[str, str](
     [
         ("LongMemEval", "LongMemEval"),
         ("LoCoMo", "LoCoMo"),
-        ("MobileBench", "MobileBench"),
     ]
 )
 
@@ -77,8 +76,6 @@ def type_to_module_name(key: str, mapping_type: str) -> str:
                     return "datasets.longmemeval"
                 case "LoCoMo":
                     return "datasets.locomo"
-                case "MobileBench":
-                    return "datasets.mobilebench"
     # Default: convert key to module name
     return key.lower().replace("-", "_")
 

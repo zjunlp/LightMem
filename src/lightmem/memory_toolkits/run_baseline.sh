@@ -126,24 +126,13 @@ for ((i=0; i<${#ranges[@]}; i++)); do
     #     --top-k -1 \
     #     > "$log_file" 2>&1 &
     
-    nohup python memory_evaluation.py \
-        --search-results-path "$search_results_file" \
-        --qa-model "gpt-4.1-mini" \
-        --judge-model "gpt-4.1-mini" \
-        --qa-batch-size 1 \
-        --judge-batch-size 1 \
-        --api-config-path "/your/path/to/LightMem/src/lightmem/memory_toolkits/memories/configs/api_eval.json" \
-        > "$log_file" 2>&1 &
-
-    # nohup python error_attribution.py \
-    #     --evaluation-results-path "$evaluation_results_file" \
-    #     --memory-type "$memory_type" \
-    #     --memory-config-path "$config_path" \
-    #     --judge-model "gpt-4o-mini" \
-    #     --top-k 20 \
-    #     --batch-size 8 \
-    #     --num-workers 1 \
-    #     --api-config-path "/disk/disk_4T_2/chenyijun/LightMem/src/lightmem/memory_toolkits/memories/configs/api_qwen.json" \
+    # nohup python memory_evaluation.py \
+    #     --search-results-path "$search_results_file" \
+    #     --qa-model "gpt-4.1-mini" \
+    #     --judge-model "gpt-4.1-mini" \
+    #     --qa-batch-size 1 \
+    #     --judge-batch-size 1 \
+    #     --api-config-path "/your/path/to/LightMem/src/lightmem/memory_toolkits/memories/configs/api_eval.json" \
     #     > "$log_file" 2>&1 &
 
     echo $! > "$pid_file"
