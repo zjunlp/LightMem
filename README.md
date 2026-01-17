@@ -63,6 +63,12 @@ We provide lightweight, ready-to-run scripts for reproducing results on **LoCoMo
 | **LoCoMo**               | Scripts for reproducing LightMem results on LoCoMo.                          | [run_lightmem_locomo.md](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)            |  [LoCoMo Results](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md#results)      |
 | **LongMemEval & LoCoMo** | Unified baseline scripts for running both datasets.                          | [run_baselines.md](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md)        |  [Baseline Results](#experimental-results)    |
 
+<span id='baseline-evaluation'/>
+
+## 🧪 Baseline Evaluation
+
+See [here](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md).
+
 <span id='demo'/>
 
 ## 🎥 Demo & Tutorials
@@ -97,6 +103,7 @@ LightMem is continuously evolving! Here's what's coming:
 
 * <a href='#news'>📢 News</a>
 * <a href='#reproduction'>🧪 Reproduction Scripts</a>
+* <a href='#baseline-evaluation'>🧪 Baseline Evaluation</a>
 * <a href='#demo'>🎥 Demo & Tutorials</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
