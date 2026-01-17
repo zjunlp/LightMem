@@ -1,8 +1,6 @@
 from openai import OpenAI 
 import warnings 
 from concurrent.futures import ThreadPoolExecutor
-from transformers import AutoTokenizer
-from vllm import LLM, SamplingParams 
 from typing import (
     Optional,  
     Dict, 
@@ -129,6 +127,8 @@ class NativeLLMClient:
     """A client for native LLM inference. Powered by vLLM."""
 
     def __init__(self, model: str, **kwargs) -> None:
+        from transformers import AutoTokenizer
+        from vllm import LLM
         self.model = LLM(model=model, **kwargs)
         self.tokenizer = AutoTokenizer.from_pretrained(model)
 
@@ -155,8 +155,9 @@ class NativeLLMClient:
                 # Generate a system response instead of continuing a users message
                 add_generation_prompt=True,  
             )
-
+        
         if len(kwargs) > 0:
+            from vllm import SamplingParams 
             sampling_params = SamplingParams(**kwargs)
             outputs = self.model.generate(texts, sampling_params)
         else: 

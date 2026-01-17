@@ -254,10 +254,10 @@ def memory_construction(
     elif layer_type in ("MemZero", "MemZeroGraph"):
         getter, setter = make_attr_patch(layer.memory_layer.llm, "generate_response")
         spec = PatchSpec(
-            name = f"{layer.memory_layer.llm.__class__.__name__}.generate_response",
-            getter = getter,
-            setter = setter,
-            wrapper = token_monitor(
+            name=f"{layer.memory_layer.llm.__class__.__name__}.generate_response",
+            getter=getter,
+            setter=setter,
+            wrapper=token_monitor(
                 extract_model_name = lambda *args, **kwargs: (config.llm_model, {}),
                 extract_input_dict = lambda *args, **kwargs: {
                     # keyword arguments
@@ -407,23 +407,23 @@ if __name__ == "__main__":
         help="The path to the tokenizer (only for backbone model)."
     )
     parser.add_argument(
-    "--message-preprocessor",
-    type=str,
-    default=None,
-    help=(
-        "Dotted path to a message preprocessor function, in the form "
-        "'some_module:some_function'. The function should accept "
-        "(message, session) and return a dict with at least 'role' "
-        "and 'content' keys."
+        "--message-preprocessor",
+        type=str,
+        default=None,
+        help=(
+            "Dotted path to a message preprocessor function, in the form "
+            "'some_module:some_function'. The function should accept "
+            "(message, session) and return a dict with at least 'role' "
+            "and 'content' keys."
         )
     )
     parser.add_argument(
-    "--use-gpt4o-caption",
-    action="store_true",
-    default=False,
-    help=(
-        "If set, use GPT-4o to generate image captions in datasets that support it "
-        "(e.g., LoCoMo)."
+        "--use-gpt4o-caption",
+        action="store_true",
+        default=False,
+        help=(
+            "If set, use GPT-4o to generate image captions in datasets that support it "
+            "(e.g., LoCoMo)."
         )
     )
     args = parser.parse_args()
