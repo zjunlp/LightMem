@@ -348,13 +348,11 @@ class LoCoMo(MemoryDataset):
         return dataset_metadata
 
     @classmethod
-    def filter_questions(cls, questions: List[QuestionAnswerPair]) -> List[QuestionAnswerPair]:
+    def filter_questions(self, questions: List[QuestionAnswerPair]) -> List[QuestionAnswerPair]:
         """
-        Filter questions based on dataset-specific criteria.
-        Default implementation returns all questions unchanged.
-        Subclasses can override this method to implement custom filtering logic.
+        Filter out adversarial questions (category_id=5) for LoCoMo dataset.
         """
-        return questions
+        return [qa for qa in questions if qa.metadata.get("category_id") != 5]
     
     @classmethod
     def get_qa_prompt_name(cls, has_graph: bool = False) -> str:
@@ -365,11 +363,6 @@ class LoCoMo(MemoryDataset):
     
     @classmethod
     def get_judge_prompt_info(cls, qa_pair: QuestionAnswerPair) -> Tuple[str, str]:
-        """
-        Get judge prompt name and question type for a QA pair.
-        Returns (prompt_name, question_type).
-        Default implementation returns exact-match for all questions.
-        Subclasses can override to provide dataset-specific logic.
-        """
-        qtype = qa_pair.metadata.get("question_type", "normal")
-        return "exact-match", qtype
+        """LoCoMo uses a unified judge prompt for all question types."""
+        qtype = qa_pair.metadata.get("question_type", "unknown")
+        return "locomo-judge", qtype

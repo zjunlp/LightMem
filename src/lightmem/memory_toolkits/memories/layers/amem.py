@@ -24,9 +24,18 @@ class AMEMConfig(BaseModel):
     """The default configuration for A-MEM."""
 
     user_id: str = Field(..., description="The user id of the memory system.")
+    embedder_provider: Literal["sentence-transformers", "openai"] = Field(
+        default="sentence-transformers",
+        description="The provider for the embedding model.",
+    )
     retriever_name_or_path: str = Field(
         default="all-MiniLM-L6-v2",
         description="The name or path of the retriever model to use.",
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for OpenAI API. If not provided, uses official OpenAI endpoint. "
+                   "Useful for proxies or OpenAI-compatible services.",
     )
     llm_backend: Literal["openai", "ollama"] = Field(
         default="openai",
@@ -71,6 +80,8 @@ class AMEMLayer(BaseMemoryLayer):
         [official implementation](https://github.com/WujiangXu/A-mem-sys)."""
         self.memory_layer = AgenticMemorySystem(
             model_name=config.retriever_name_or_path,
+            embedder_provider=config.embedder_provider,
+            base_url=config.base_url,
             llm_backend=config.llm_backend,
             llm_model=config.llm_model,
             evo_threshold=config.evo_threshold,
@@ -98,6 +109,8 @@ class AMEMLayer(BaseMemoryLayer):
         self.config = AMEMConfig(**config_dict)
         self.memory_layer = AgenticMemorySystem(
             model_name=self.config.retriever_name_or_path,
+            embedder_provider=self.config.embedder_provider,
+            base_url=self.config.base_url,  
             llm_backend=self.config.llm_backend,
             llm_model=self.config.llm_model,
             evo_threshold=self.config.evo_threshold,
@@ -201,7 +214,9 @@ class AMEMLayer(BaseMemoryLayer):
         config_path = os.path.join(self.config.save_dir, "config.json")
         config_dict = {
             "layer_type": self.layer_type,
+            "embedder_provider": self.config.embedder_provider,
             "retriever_name_or_path": self.config.retriever_name_or_path,
+            "base_url": self.config.base_url, 
             "llm_backend": self.config.llm_backend,
             "llm_model": self.config.llm_model,
             "evo_threshold": self.config.evo_threshold,

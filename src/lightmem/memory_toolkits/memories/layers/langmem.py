@@ -41,6 +41,17 @@ class LangMemConfig(BaseModel):
         "If you changes the value of `retriever_name_or_path`, "
         "you need to change the value of `retriever_dim` to the dimension of the new model.",
     )
+    embedding_api_key: Optional[str] = Field(
+        default=None,
+        description="API key for the embedding model (required for OpenAI embeddings). "
+        "If not provided, will try to use environment variable OPENAI_API_KEY.",
+    )
+    embedding_base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the embedding API (optional). "
+        "Useful for proxies or OpenAI-compatible services. "
+        "If not provided, uses the official endpoint.",
+    )
     llm_model: str = Field(
         default="openai:gpt-4o-mini",
         description="The base backbone model to use. "
@@ -116,6 +127,13 @@ class LangMemLayer(BaseMemoryLayer):
             if config.query_model is None
             else init_chat_model(config.query_model)
         )
+        provider = config.retriever_name_or_path.split(':')[0]
+        if provider == "openai":
+            if config.embedding_api_key:
+                os.environ["OPENAI_API_KEY"] = config.embedding_api_key
+            if config.embedding_base_url:
+                os.environ["OPENAI_API_BASE"] = config.embedding_base_url
+
         self._store = InMemoryStore(
             index={
                 "dims": config.retriever_dim, 
@@ -241,6 +259,12 @@ class LangMemLayer(BaseMemoryLayer):
             if config.query_model is None
             else init_chat_model(config.query_model)
         )
+        provider = config.retriever_name_or_path.split(':')[0]
+        if provider == "openai":
+            if config.embedding_api_key:
+                os.environ["OPENAI_API_KEY"] = config.embedding_api_key
+            if config.embedding_base_url:
+                os.environ["OPENAI_API_BASE"] = config.embedding_base_url
         self._store = InMemoryStore(
             index={
                 "dims": config.retriever_dim, 

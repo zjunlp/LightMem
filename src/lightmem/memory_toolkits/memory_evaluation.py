@@ -62,6 +62,8 @@ def answer_questions(
     else:
         prompt_name = "question-answering"
 
+    print(f"Using prompt: {prompt_name} for question answering.")
+    
     qa_operator = QuestionAnsweringOperator(
         prompt_name=prompt_name,
         model_name=qa_model,
@@ -148,7 +150,7 @@ def evaluate_answers(
             content = out.get("processed_content")
             if content is None:
                 raise ValueError(f"The content is None for the question {batched_questions[local_pos]}.")
-            is_correct = "yes" in content.lower()
+            is_correct = "yes" in content.lower() or "correct" in content.lower()
             correctness_flags[global_idx] = is_correct
         # Aggregate each group's results and print the average accuracy
         accuracy = np.mean(

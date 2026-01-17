@@ -1,4 +1,7 @@
 {
-    "user_id": "dummy",
-    "llm_model":"openai:gpt-4o-mini"
+  "user_id": "dummy",
+  "retriever_name_or_path": "openai:text-embedding-3-small",
+  "retriever_dim": 1536,
+  "llm_model": "openai:gpt-4.1-mini",
+  "query_limit": 40
 }
