@@ -92,6 +92,8 @@ class AgenticMemorySystem:
     
     def __init__(self, 
                  model_name: str = 'all-MiniLM-L6-v2',
+                 embedder_provider: str = "sentence-transformers",
+                 base_url: Optional[str] = None,  
                  llm_backend: str = "openai",
                  llm_model: str = "gpt-4o-mini",
                  evo_threshold: int = 100,
@@ -108,18 +110,34 @@ class AgenticMemorySystem:
         """
         self.memories = {}
         self.model_name = model_name
+        self.embedder_provider = embedder_provider
+        self.base_url = base_url 
+        self.user_id = user_id
+
         # Initialize ChromaDB retriever with empty collection
 
         self.user_id = user_id 
         try:
             # First try to reset the collection if it exists
             if user_id is None:
-                temp_retriever = ChromaRetriever(collection_name="memories", model_name=self.model_name)
+                temp_retriever = ChromaRetriever(
+                    collection_name="memories", 
+                    model_name=self.model_name,
+                    embedder_provider=embedder_provider,
+                    api_key=api_key,
+                    base_url=base_url  
+                )
                 temp_retriever.client.reset()
             else:
                 # To support multiple users in parallel, we use different collections for each user.
                 # And we don't reset the client as it may delete previous created collections.  
-                temp_retriever = ChromaRetriever(collection_name=f"memories_{user_id}", model_name=self.model_name)
+                temp_retriever = ChromaRetriever(
+                    collection_name=f"memories_{user_id}", 
+                    model_name=self.model_name,
+                    embedder_provider=embedder_provider,
+                    api_key=api_key,
+                    base_url=base_url  
+                )
                 # We just delete a specific collection. 
                 temp_retriever.client.delete_collection(f"memories_{user_id}")
         except Exception as e:
@@ -127,9 +145,21 @@ class AgenticMemorySystem:
             
         # Create a fresh retriever instance
         if user_id is None:
-            self.retriever = ChromaRetriever(collection_name="memories", model_name=self.model_name)
+            self.retriever = ChromaRetriever(
+                collection_name="memories", 
+                model_name=self.model_name,
+                embedder_provider=embedder_provider,
+                api_key=api_key,
+                base_url=base_url  
+            )
         else:
-            self.retriever = ChromaRetriever(collection_name=f"memories_{user_id}", model_name=self.model_name)
+            self.retriever = ChromaRetriever(
+                collection_name=f"memories_{user_id}", 
+                model_name=self.model_name,
+                embedder_provider=embedder_provider,
+                api_key=api_key,
+                base_url=base_url  
+            )
         
         # Initialize LLM controller
         self.llm_controller = LLMController(llm_backend, llm_model, api_key)
@@ -302,10 +332,21 @@ class AgenticMemorySystem:
         """Consolidate memories: update retriever with new documents"""
         # Reset ChromaDB collection
         if self.user_id is None:
-            self.retriever = ChromaRetriever(collection_name="memories",model_name=self.model_name)
+            self.retriever = ChromaRetriever(
+                collection_name="memories",
+                model_name=self.model_name,
+                embedder_provider=self.embedder_provider,
+                api_key=self.llm_controller.llm.api_key if hasattr(self.llm_controller.llm, 'api_key') else None,
+                base_url=self.base_url 
+            )
         else:
-            self.retriever = ChromaRetriever(collection_name=f"memories_{self.user_id}",model_name=self.model_name)
-        
+            self.retriever = ChromaRetriever(
+                collection_name=f"memories_{self.user_id}",
+                model_name=self.model_name,
+                embedder_provider=self.embedder_provider,
+                api_key=self.llm_controller.llm.api_key if hasattr(self.llm_controller.llm, 'api_key') else None,
+                base_url=self.base_url  
+            )
         # Re-add all memory documents with their complete metadata
         for memory in self.memories.values():
             metadata = {

@@ -163,26 +163,23 @@ class FullContextLayer(BaseMemoryLayer):
         results: List[Dict[str, Union[str, Dict[str, Any]]]] = []
 
         count = 0
-        name_filter = kwargs.get("name_filter", None)
-        if name_filter is not None and isinstance(name_filter, str):
-            name_filter = [name_filter]
         # Scan in reverse order to prioritize latest content
         for mid in reversed(self._ordered_ids):
             mem = self._memories[mid]
-            if name_filter is not None:
-                mem_name = mem.get("name")
-                if mem_name not in name_filter:
-                    continue
+            used_content = {
+                "Time": mem["timestamp"],
+                "Memory": mem["content"], 
+            }
             results.append(
                 {
                     "content": mem["content"],
                     "metadata": {
-                        "id": mem["id"],
-                        "role": mem["role"],
-                        "name": mem.get("name"),  
-                        "timestamp": mem["timestamp"],
-                        **mem.get("metadata", {}),
+                        key: value
+                        for key, value in mem.items() if key != "content"
                     },
+                    "used_content": '\n'.join(
+                        [f"{key}: {value}" for key, value in used_content.items()]
+                    )
                 }
             )
             count += 1
@@ -215,10 +212,8 @@ class FullContextLayer(BaseMemoryLayer):
             old_tokens = self._token_per_id.get(memory_id, 0)
             new_tokens = self._count_tokens(new_content)
 
-            # 更新内容
             mem["content"] = new_content
 
-            # 更新 token 统计
             self._token_per_id[memory_id] = new_tokens
             self._total_tokens += new_tokens - old_tokens
 

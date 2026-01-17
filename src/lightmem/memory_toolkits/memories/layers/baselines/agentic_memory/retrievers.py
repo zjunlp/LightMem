@@ -10,21 +10,52 @@ import pickle
 from nltk.tokenize import word_tokenize
 import os
 import json
-from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
+from chromadb.utils.embedding_functions import (
+    SentenceTransformerEmbeddingFunction,
+    OpenAIEmbeddingFunction  
+)
 
 def simple_tokenize(text):
     return word_tokenize(text)
 
 class ChromaRetriever:
     """Vector database retrieval using ChromaDB"""
-    def __init__(self, collection_name: str = "memories",model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(
+        self, 
+        collection_name: str = "memories",
+        model_name: str = "all-MiniLM-L6-v2",
+        embedder_provider: str = "sentence-transformers", 
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None
+    ):
         """Initialize ChromaDB retriever.
-        
         Args:
             collection_name: Name of the ChromaDB collection
+            model_name: Name of the embedding model
+            embedder_provider: Provider for embeddings ("sentence-transformers" or "openai")
+            api_key: API key for OpenAI (required if embedder_provider is "openai")
+            base_url: Base URL for OpenAI API (optional, defaults to official OpenAI endpoint)
+                     Useful for using proxies or OpenAI-compatible services
         """
         self.client = chromadb.Client(Settings(allow_reset=True))
-        self.embedding_function = SentenceTransformerEmbeddingFunction(model_name=model_name)
+        self.embedder_provider = embedder_provider
+        if embedder_provider == "openai":
+            if api_key is None:
+                api_key = os.environ.get("OPENAI_API_KEY")
+                base_url = os.getenv('OPENAI_API_BASE')
+                if api_key is None:
+                    raise ValueError(
+                        "API key is required for OpenAI embeddings. "
+                        "Please provide it via api_key parameter or OPENAI_API_KEY environment variable."
+                    )
+            openai_params = {
+                "api_key": api_key,
+                "model_name": model_name,
+                "api_base": base_url
+            }
+            self.embedding_function = OpenAIEmbeddingFunction(**openai_params)
+        else:  
+            self.embedding_function = SentenceTransformerEmbeddingFunction(model_name=model_name)
         self.collection = self.client.get_or_create_collection(name=collection_name,embedding_function=self.embedding_function)
         
     def add_document(self, document: str, metadata: Dict, doc_id: str):

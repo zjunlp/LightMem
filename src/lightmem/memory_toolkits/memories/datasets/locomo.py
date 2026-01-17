@@ -9,7 +9,7 @@ import openai
 
 import json
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 from .base import (
     MemoryDataset,
@@ -346,3 +346,23 @@ class LoCoMo(MemoryDataset):
             dataset_metadata["avg_question_per_trajectory"] = 0.0
 
         return dataset_metadata
+
+    @classmethod
+    def filter_questions(self, questions: List[QuestionAnswerPair]) -> List[QuestionAnswerPair]:
+        """
+        Filter out adversarial questions (category_id=5) for LoCoMo dataset.
+        """
+        return [qa for qa in questions if qa.metadata.get("category_id") != 5]
+    
+    @classmethod
+    def get_qa_prompt_name(cls, has_graph: bool = False) -> str:
+        """Get LoCoMo-specific QA prompt based on whether graph relations exist."""
+        if has_graph:
+            return "locomo-question-answering-graph-memory-system"
+        return "locomo-question-answering-flat-memory-system"
+    
+    @classmethod
+    def get_judge_prompt_info(cls, qa_pair: QuestionAnswerPair) -> Tuple[str, str]:
+        """LoCoMo uses a unified judge prompt for all question types."""
+        qtype = qa_pair.metadata.get("question_type", "unknown")
+        return "locomo-judge", qtype

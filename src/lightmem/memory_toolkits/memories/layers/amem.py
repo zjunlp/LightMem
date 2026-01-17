@@ -12,7 +12,6 @@ from .baselines.agentic_memory.memory_system import (
 import pickle 
 import os
 import json
-import re
 from typing import (
     Literal, 
     List, 
@@ -25,9 +24,18 @@ class AMEMConfig(BaseModel):
     """The default configuration for A-MEM."""
 
     user_id: str = Field(..., description="The user id of the memory system.")
+    embedder_provider: Literal["sentence-transformers", "openai"] = Field(
+        default="sentence-transformers",
+        description="The provider for the embedding model.",
+    )
     retriever_name_or_path: str = Field(
         default="all-MiniLM-L6-v2",
         description="The name or path of the retriever model to use.",
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for OpenAI API. If not provided, uses official OpenAI endpoint. "
+                   "Useful for proxies or OpenAI-compatible services.",
     )
     llm_backend: Literal["openai", "ollama"] = Field(
         default="openai",
@@ -72,6 +80,8 @@ class AMEMLayer(BaseMemoryLayer):
         [official implementation](https://github.com/WujiangXu/A-mem-sys)."""
         self.memory_layer = AgenticMemorySystem(
             model_name=config.retriever_name_or_path,
+            embedder_provider=config.embedder_provider,
+            base_url=config.base_url,
             llm_backend=config.llm_backend,
             llm_model=config.llm_model,
             evo_threshold=config.evo_threshold,
@@ -99,6 +109,8 @@ class AMEMLayer(BaseMemoryLayer):
         self.config = AMEMConfig(**config_dict)
         self.memory_layer = AgenticMemorySystem(
             model_name=self.config.retriever_name_or_path,
+            embedder_provider=self.config.embedder_provider,
+            base_url=self.config.base_url,  
             llm_backend=self.config.llm_backend,
             llm_model=self.config.llm_model,
             evo_threshold=self.config.evo_threshold,
@@ -151,8 +163,7 @@ class AMEMLayer(BaseMemoryLayer):
         timestamp = kwargs["timestamp"]
         
         # See https://github.com/WujiangXu/A-mem/blob/main/test_advanced.py#L296 
-        name = message.get("name", message["role"]) 
-        text = f"Speaker {message['role']} (name: {name}) says: {message['content']}"
+        text = f"Speaker {message['role']} says: {message['content']}"
         self.memory_layer.add_note(text, time=timestamp)
 
     def add_messages(self, messages: List[Dict[str, str]], **kwargs) -> None:
@@ -160,23 +171,11 @@ class AMEMLayer(BaseMemoryLayer):
         for message in messages: 
             self.add_message(message, **kwargs)
     
-    def retrieve(
-            self, 
-            query: str, 
-            k: int = 10,
-            **kwargs,
-    ) -> List[Dict[str, str | Dict[str, Any]]]:
+    def retrieve(self, query: str, k: int = 10, **kwargs) -> List[Dict[str, str | Dict[str, Any]]]:
         """Retrieve the memories."""
         memories = self.memory_layer.search_agentic(query, k=k)
-        name_filter = kwargs.get("name_filter", None)
-        if name_filter is not None and isinstance(name_filter, str):
-            name_filter = [name_filter]
         outputs = [] 
         for memory in memories:
-            name_match = re.search(r'\(name:\s*([^)]+)\)', memory["content"])
-            extracted_name = name_match.group(1).strip() if name_match else None
-            if name_filter is not None and extracted_name not in name_filter:
-                continue
             used_content = {
                 "memory content": memory["content"], 
                 "memory context": memory["context"],
@@ -184,15 +183,13 @@ class AMEMLayer(BaseMemoryLayer):
                 "memory tags": str(memory["tags"]),
                 "talk start time": memory["timestamp"],
             }
-            metadata = {
-                key: value
-                for key, value in memory.items() if key != "content"
-            }
-            metadata["name"] = extracted_name
             outputs.append(
                 {
                     "content": memory["content"], 
-                    "metadata": metadata,
+                    "metadata": {
+                        key: value
+                        for key, value in memory.items() if key != "content"
+                    },
                     # See https://github.com/WujiangXu/A-mem/blob/main/memory_layer.py#L690. 
                     "used_content": '\n'.join(
                         [f"{key}: {value}" for key, value in used_content.items()]
@@ -217,7 +214,9 @@ class AMEMLayer(BaseMemoryLayer):
         config_path = os.path.join(self.config.save_dir, "config.json")
         config_dict = {
             "layer_type": self.layer_type,
+            "embedder_provider": self.config.embedder_provider,
             "retriever_name_or_path": self.config.retriever_name_or_path,
+            "base_url": self.config.base_url, 
             "llm_backend": self.config.llm_backend,
             "llm_model": self.config.llm_model,
             "evo_threshold": self.config.evo_threshold,

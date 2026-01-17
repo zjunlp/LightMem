@@ -17,7 +17,9 @@ token_cost_prefix="token_cost"
 # pid_prefix="process_search"
 pid_prefix="process_eval"
 # pid_prefix="process_analyze" 
-top_k=-1
+
+top_k=-1 
+
 ranges=(
     "0 1"
     # "1 2"
@@ -86,19 +88,6 @@ for ((i=0; i<${#ranges[@]}; i++)); do
     pid_file="${log_dir}/${pid_prefix}_$((i+1)).pid"
 
     [ ! -f "$log_file" ] && touch "$log_file"
-    # nohup python memory_construction.py \
-    #     --memory-type "$memory_type" \
-    #     --dataset-type "$dataset_type" \
-    #     --dataset-path "$dataset_path" \
-    #     --config-path "$config_path" \
-    #     --num-workers "$num_workers" \
-    #     --start-idx "$start_idx" \
-    #     --end-idx "$end_idx" \
-    #     --token-cost-save-filename "$token_cost_file" \
-    #     --tokenizer-path "$tokenizer_path" \
-    #     --rerun \
-    #     --message-preprocessor "memories.datasets.locomo_preprocessor:NaiveRAG_style_message_for_LoCoMo" \
-    #     > "$log_file" 2>&1 &
 
     # nohup python memory_construction.py \
     #     --memory-type "$memory_type" \
@@ -128,6 +117,7 @@ for ((i=0; i<${#ranges[@]}; i++)); do
     
     # nohup python memory_evaluation.py \
     #     --search-results-path "$search_results_file" \
+    #     --dataset-type "$dataset_type" \
     #     --qa-model "gpt-4.1-mini" \
     #     --judge-model "gpt-4.1-mini" \
     #     --qa-batch-size 1 \

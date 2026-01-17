@@ -1,7 +1,11 @@
 {
   "user_id": "dummy",
+  "embedder_provider": "openai",
+  "retriever_name_or_path": "text-embedding-3-small",
+  "base_url": "",
   "llm_backend": "openai",
-  "llm_model": "",
-  "retriever_name_or_path": "sentence-transformers/all-MiniLM-L6-v2",
-  "api_key": ""
+  "llm_model": "gpt-4.1-mini",
+  "evo_threshold": 100,
+  "api_key": "",
+  "query_limit": 40
 }

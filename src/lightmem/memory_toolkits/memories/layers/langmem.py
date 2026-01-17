@@ -15,7 +15,6 @@ from copy import deepcopy
 import pickle 
 import os
 import json
-import re
 from typing import (
     List, 
     Dict, 
@@ -41,6 +40,17 @@ class LangMemConfig(BaseModel):
         "The default value is 384, which is the dimension of the all-MiniLM-L6-v2 model on Hugging Face. "
         "If you changes the value of `retriever_name_or_path`, "
         "you need to change the value of `retriever_dim` to the dimension of the new model.",
+    )
+    embedding_api_key: Optional[str] = Field(
+        default=None,
+        description="API key for the embedding model (required for OpenAI embeddings). "
+        "If not provided, will try to use environment variable OPENAI_API_KEY.",
+    )
+    embedding_base_url: Optional[str] = Field(
+        default=None,
+        description="Base URL for the embedding API (optional). "
+        "Useful for proxies or OpenAI-compatible services. "
+        "If not provided, uses the official endpoint.",
     )
     llm_model: str = Field(
         default="openai:gpt-4o-mini",
@@ -117,6 +127,13 @@ class LangMemLayer(BaseMemoryLayer):
             if config.query_model is None
             else init_chat_model(config.query_model)
         )
+        provider = config.retriever_name_or_path.split(':')[0]
+        if provider == "openai":
+            if config.embedding_api_key:
+                os.environ["OPENAI_API_KEY"] = config.embedding_api_key
+            if config.embedding_base_url:
+                os.environ["OPENAI_API_BASE"] = config.embedding_base_url
+
         self._store = InMemoryStore(
             index={
                 "dims": config.retriever_dim, 
@@ -148,7 +165,6 @@ class LangMemLayer(BaseMemoryLayer):
         if "timestamp" not in kwargs: 
             raise KeyError("timestamp is required in `kwargs`")
         timestamp = kwargs["timestamp"] 
-        name = message.get("name")
         message_copy = deepcopy(message)
         message_copy["content"] = f"{message_copy['content']}\nTimestamp: {timestamp}"
         # See https://langchain-ai.github.io/langmem/background_quickstart/
@@ -156,10 +172,7 @@ class LangMemLayer(BaseMemoryLayer):
         final_puts = self.memory_layer.invoke({"messages": [message_copy]}, **kwargs)
         # Some operations update contents of previous memory units. 
         for final_put in final_puts: 
-            self._memory_ids[final_put["key"]] = {
-                "value": final_put["value"],
-                "name": name  
-            }
+            self._memory_ids[final_put["key"]] = final_put["value"]
 
     def add_messages(self, messages: List[Dict[str, str]], **kwargs) -> None:
         """Add a list of messages to the memory layer."""    
@@ -176,35 +189,21 @@ class LangMemLayer(BaseMemoryLayer):
         else:
             final_puts = self.memory_layer.invoke({"messages": messages}, **kwargs)
             for final_put in final_puts: 
-                self._memory_ids[final_put["key"]] = {
-                    "value": final_put["value"],
-                    "name": None 
-                }
+                self._memory_ids[final_put["key"]] = final_put["value"]
     
     def retrieve(self, query: str, k: int = 10, **kwargs) -> List[Dict[str, str | Dict[str, Any]]]:
         """Retrieve the memories."""
         memories = self.memory_layer.search(query=query, limit=k, **kwargs)
-        name_filter = kwargs.get("name_filter", None)
-        if name_filter is not None and isinstance(name_filter, str):
-            name_filter = [name_filter]
         outputs = [] 
         for memory in memories:
             memory_dict = memory.dict()
-            key = memory_dict["key"]
-            name = None
-            if key in self._memory_ids:
-                name = self._memory_ids[key].get("name")
-            if name_filter is not None and name not in name_filter:
-                continue
-            metadata = {
-                key: value
-                for key, value in memory_dict.items() if key != "value"
-            }
-            metadata["name"] = name
             outputs.append(
                 {
                     "content": memory_dict["value"]["content"], 
-                    "metadata": metadata, 
+                    "metadata": {
+                        key: value
+                        for key, value in memory_dict.items() if key != "value"
+                    }, 
                     "used_content": memory_dict["value"]["content"]
                 }
             )
@@ -226,18 +225,12 @@ class LangMemLayer(BaseMemoryLayer):
         if "content" not in kwargs:
             raise KeyError("`content` is required in `kwargs`.")
         content = kwargs.pop("content")
-        name = kwargs.pop("name", None)
-    
         try:
             self.memory_layer.put(
                 memory_id, 
                 {"content": content}, 
                 **kwargs
             )
-            if memory_id in self._memory_ids:
-                self._memory_ids[memory_id]["value"] = {"content": content}
-                if name is not None:
-                    self._memory_ids[memory_id]["name"] = name
             return True
         except Exception as e:
             print(f"Error in update method in LangMemLayer: \n\t{e.__class__.__name__}: {e}")
@@ -266,6 +259,12 @@ class LangMemLayer(BaseMemoryLayer):
             if config.query_model is None
             else init_chat_model(config.query_model)
         )
+        provider = config.retriever_name_or_path.split(':')[0]
+        if provider == "openai":
+            if config.embedding_api_key:
+                os.environ["OPENAI_API_KEY"] = config.embedding_api_key
+            if config.embedding_base_url:
+                os.environ["OPENAI_API_BASE"] = config.embedding_base_url
         self._store = InMemoryStore(
             index={
                 "dims": config.retriever_dim, 
@@ -289,14 +288,9 @@ class LangMemLayer(BaseMemoryLayer):
         self._memory_ids.clear()   
 
         for memory_unit in predefined_memory_units:
-            self.memory_layer.put(
-                key=memory_unit["key"],
-                value=memory_unit["value"]
-            ) 
-            self._memory_ids[memory_unit["key"]] = {
-                "value": memory_unit["value"],
-                "name": memory_unit.get("name") 
-            }
+            self.memory_layer.put(**memory_unit) 
+            self._memory_ids[memory_unit["key"]] = memory_unit["value"]
+
         return True 
 
     def save_memory(self) -> None:
@@ -314,13 +308,12 @@ class LangMemLayer(BaseMemoryLayer):
 
         # In LangMem, we don't store the vector embeddings. 
         preserved_memory_units = [] 
-        for key, data in self._memory_ids.items(): 
+        for key, value in self._memory_ids.items(): 
             # Note that some memory units have been deleted. 
             if self.memory_layer.get(key) is not None:
                 memory_unit = {
                     "key": key,
-                    "value": data["value"],
-                    "name": data.get("name")
+                    "value": value,
                 }
                 preserved_memory_units.append(memory_unit)
 

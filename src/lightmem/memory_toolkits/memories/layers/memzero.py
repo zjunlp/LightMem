@@ -288,15 +288,12 @@ class MemZeroLayer(BaseMemoryLayer):
         if "timestamp" not in kwargs: 
             raise KeyError("timestamp is required in `kwargs`")
         timestamp = kwargs["timestamp"] 
-        name = message.get("name")
-        metadata={"timestamp": timestamp}
-        if name is not None:
-            metadata["name"] = name
+        timestamp = kwargs["timestamp"] 
         try:
             self.memory_layer.add(
                 messages=message["content"],
                 user_id=self.config.user_id,
-                metadata=metadata
+                metadata={"timestamp": timestamp}
             )
         except KeyError as e:
             # Specifically handle KeyErrors from graph paths missing source/destination
@@ -311,7 +308,7 @@ class MemZeroLayer(BaseMemoryLayer):
             is_content_filter_error = (
                 "content management policy" in msg or 
                 "content_filter" in msg or
-                "'messages' must be list[dict]" in msg  # mem0在遇到content filter时可能抛出的格式错误
+                "'messages' must be list[dict]" in msg  
             )
             
             if is_content_filter_error:
@@ -337,15 +334,10 @@ class MemZeroLayer(BaseMemoryLayer):
         )
 
     
+
     def retrieve(
         self, query: str, k: int = 10, **kwargs
-    ) -> Union[
-        List[Dict[str, Union[str, Dict[str, Any]]]],
-        Dict[str, Any],
-    ]:
-        name_filter = kwargs.get("name_filter", None)
-        if name_filter is not None and isinstance(name_filter, str):
-            name_filter = [name_filter]
+    ) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
         try:
             res = self.memory_layer.search(
                 query=query,
@@ -355,7 +347,6 @@ class MemZeroLayer(BaseMemoryLayer):
         except Exception as e:
             msg = str(e)
 
-            # Specifically detect content management / content_filter related errors
             is_content_filter_error = (
                 "content management policy" in msg
                 or "content_filter" in msg
@@ -367,19 +358,10 @@ class MemZeroLayer(BaseMemoryLayer):
                     "[MemZeroLayer] search skipped due to content filter: %r",
                     query[:120],
                 )
-                # For graph-related scenarios, keep return structure compatible
-                if self.config.enable_graph:
-                    return {
-                        "memories": [],
-                        "relations": [],
-                    }
-                # For non-graph cases, treat as no results
-                return []
+                return [] 
 
-            # Return empty for other errors
             return []
 
-        # ====== Original parsing logic ======
         if isinstance(res, dict):
             results = (
                 res.get("results")
@@ -396,37 +378,44 @@ class MemZeroLayer(BaseMemoryLayer):
             relations = None
 
         outputs: List[Dict[str, Union[str, Dict[str, Any]]]] = []
+        
+        graph_text = ""
+        if self.config.enable_graph and relations:
+            relation_lines = ["### Graph Relations:"]
+            for rel in relations:
+                relation_lines.append(str(rel))
+            graph_text = "\n".join(relation_lines)
+        
         for item in results:
             content = item.get("memory", "")
             metadata = {kk: vv for kk, vv in item.items() if kk != "memory"}
             name = metadata.get("name")
-            if name_filter is not None and name not in name_filter:
-                continue
+            
             out: Dict[str, Union[str, Dict[str, Any]]] = {
                 "content": content,
                 "metadata": metadata,
             }
 
-            used_content = {
+            used_content_dict = {
                 "memory": content,
                 "score": metadata.get("score"),
                 "created_at": metadata.get("created_at"),
                 "updated_at": metadata.get("updated_at"),
                 "name": name,
             }
-            out["used_content"] = "\n".join(
-                f"{kk}: {vv}" for kk, vv in used_content.items() if vv is not None
+            
+            used_content_str = "\n".join(
+                f"{kk}: {vv}" for kk, vv in used_content_dict.items() if vv is not None
             )
-
+            
+            if graph_text:
+                used_content_str = f"{used_content_str}\n\n{graph_text}"
+            
+            out["used_content"] = used_content_str
+            out["metadata"]["has_graph_relations"] = bool(self.config.enable_graph and relations)
             outputs.append(out)
-
-        if self.config.enable_graph and relations is not None:
-            return {
-                "memories": outputs,
-                "relations": relations,
-            }
+    
         return outputs
-
 
     def delete(self, memory_id: str) -> bool:
         """Delete a memory from the memory layer."""

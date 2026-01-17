@@ -8,7 +8,7 @@ from .base import (
     Message, 
 )
 from datetime import datetime
-from typing import Dict, Any 
+from typing import Dict, Any, Tuple
 
 
 class LongMemEval(MemoryDataset):
@@ -106,3 +106,22 @@ class LongMemEval(MemoryDataset):
         dataset_metadata["avg_question_per_trajectory"] = dataset_metadata["total_questions"] / len(self)
 
         return dataset_metadata
+
+    @classmethod  
+    def get_judge_prompt_info(cls, qa_pair: QuestionAnswerPair) -> Tuple[str, str]:
+        """Get judge prompt based on question type for LongMemEval."""
+        qtype = qa_pair.metadata.get("question_type", "normal")
+        
+        if "_abs" in qa_pair.metadata.get("id", ''):
+            return "longmemeval-abstention", qtype
+        
+        QTYPE_TO_PROMPT = {
+            "normal": "exact-match",
+            "single-session-user": "longmemeval-single-session-user",
+            "temporal-reasoning": "longmemeval-temporal-reasoning",
+            "knowledge-update": "longmemeval-knowledge-update",
+            "single-session-preference": "longmemeval-single-session-preference",
+        }
+        
+        prompt_name = QTYPE_TO_PROMPT.get(qtype, "exact-match")
+        return prompt_name, qtype

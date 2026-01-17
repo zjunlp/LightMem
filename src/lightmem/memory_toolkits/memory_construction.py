@@ -302,16 +302,7 @@ def memory_construction(
                 if message_preprocessor is not None:
                     msg_dict = message_preprocessor(message, session)
                 
-                if "name" not in msg_dict:
-                    if hasattr(message, 'metadata') and isinstance(message.metadata, dict):
-                        msg_dict["name"] = message.metadata.get("name", None)
-                    else:
-                        msg_dict["name"] = None
-                        
-                if dataset_type == "MobileBench":
-                    timestamp = message.timestamp
-                else:
-                    timestamp = session.get_string_timestamp()
+                timestamp = session.get_string_timestamp()
                 layer.add_message(
                     msg_dict, 
                     timestamp=timestamp
