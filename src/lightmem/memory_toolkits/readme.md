@@ -300,7 +300,7 @@ python memory_evaluation.py \
     --qa-batch-size 4 \
     --judge-batch-size 4 \
     --dataset-type LongMemEval \
-    --api-config-path /path/to/api_eval.json
+    --api-config-path /path/to/api_config.json
 ```
 
 **Arguments**:
