@@ -54,9 +54,11 @@ def clean_response(response: str) -> List[Dict[str, Any]]:
 
     return []
 
+
 def assign_sequence_numbers_with_timestamps(extract_list, offset_ms: int = 500, topic_id_mapping: List[List[int]] = None):
     from datetime import datetime, timedelta
     from collections import defaultdict
+    import re
     
     current_index = 0
     timestamps_list = []
@@ -71,23 +73,34 @@ def assign_sequence_numbers_with_timestamps(extract_list, offset_ms: int = 500, 
                 message_refs.append((message, session_time))
     
     session_groups = defaultdict(list)
-    for msg, sess_time in message_refs:
+    for msg, sess_time in session_groups:
         session_groups[sess_time].append(msg)
     
     for sess_time, messages in session_groups.items():
-        formats = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y/%m/%d %H:%M:%S", "%Y/%m/%d"]
+        cleaned_time = re.sub(r'\s*\([A-Za-z]+\)\s*', ' ', sess_time).strip()
+        
+        formats = [
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",      
+            "%Y-%m-%d",
+            "%Y/%m/%d %H:%M:%S",
+            "%Y/%m/%d %H:%M",      
+            "%Y/%m/%d"
+        ]
+        
         base_dt = None
         for fmt in formats:
             try:
-                base_dt = datetime.strptime(sess_time, fmt)
+                base_dt = datetime.strptime(cleaned_time, fmt)
                 break
             except ValueError:
                 continue
+                
         if base_dt is None:
             try:
-                base_dt = datetime.fromisoformat(sess_time.replace('/', '-'))
+                base_dt = datetime.fromisoformat(cleaned_time.replace('/', '-'))
             except:
-                raise ValueError(f"Time format '{sess_time}' not supported. Expected YYYY-MM-DD or YYYY-MM-DD HH:MM:SS")
+                raise ValueError(f"Time format '{sess_time}' not supported. Expected formats: YYYY-MM-DD, YYYY/MM/DD, with optional HH:MM or HH:MM:SS")
             
         for i, msg in enumerate(messages):
             offset = timedelta(milliseconds=offset_ms * i)
