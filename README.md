@@ -67,7 +67,7 @@ We provide lightweight, ready-to-run scripts for reproducing results on **LoCoMo
 
 ## 🧪 Baseline Evaluation
 
-See [here](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md).
+We provide a comprehensive [baseline evaluation framework](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md), supporting the benchmarking of memory layers such as Mem0, A-MEM, and LangMem on multiple datasets like LoCoMo and LongMemEval.
 
 <span id='demo'/>
 
