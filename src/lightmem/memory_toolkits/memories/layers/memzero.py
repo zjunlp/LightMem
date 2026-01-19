@@ -389,19 +389,15 @@ class MemZeroLayer(BaseMemoryLayer):
         for item in results:
             content = item.get("memory", "")
             metadata = {kk: vv for kk, vv in item.items() if kk != "memory"}
-            name = metadata.get("name")
-            
+            nested_metadata = metadata.get("metadata", {})            
             out: Dict[str, Union[str, Dict[str, Any]]] = {
                 "content": content,
                 "metadata": metadata,
             }
 
             used_content_dict = {
-                "memory": content,
-                "score": metadata.get("score"),
-                "created_at": metadata.get("created_at"),
-                "updated_at": metadata.get("updated_at"),
-                "name": name,
+                "Memory": content,
+                "Time": nested_metadata.get("timestamp"),
             }
             
             used_content_str = "\n".join(
