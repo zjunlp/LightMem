@@ -550,6 +550,13 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
         <sub><b>Norah-Feathertail</b></sub>
       </a>
     </td>
+    <td align="center" width="120">
+      <a href="https://github.com/TongjiCst">
+        <img src="https://avatars.githubusercontent.com/TongjiCst?v=4" width="80" style="border-radius:50%" alt="TongjiCst"/>
+        <br />
+        <sub><b>TongjiCst</b></sub>
+      </a>
+    </td>
   </tr>
 </table>
 We welcome contributions from the community! If you'd like to contribute, please fork the repository and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
