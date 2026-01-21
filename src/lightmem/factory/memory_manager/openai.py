@@ -105,9 +105,12 @@ class OpenaiManager:
 
         if os.getenv("OPENROUTER_API_KEY"):
             openrouter_params = {}
-            if self.config.models:
-                openrouter_params["models"] = self.config.models
-                openrouter_params["route"] = self.config.route
+            
+            models = getattr(self.config, 'models', None)    
+            route = getattr(self.config, 'route', 'fallback') 
+            if models:
+                openrouter_params["models"] = models
+                openrouter_params["route"] = route
                 params.pop("model")
 
             if self.config.site_url and self.config.app_name:
