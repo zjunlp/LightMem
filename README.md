@@ -44,8 +44,8 @@
 
 ## 📢 News
 
-- **[2026-01-26]**: 🎉 Our paper has been accepted by **ICLR 2026**!
-- **[2026-01-17]**: 🚀We provide a comprehensive [baseline evaluation framework](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md), supporting the benchmarking of memory layers such as Mem0, A-MEM, and LangMem on multiple datasets like LoCoMo and LongMemEval.
+- **[2026-01-26]**: 🎉🎉🎉 [**LightMem: Lightweight and Efficient Memory-Augmented Generation**](https://arxiv.org/abs/2510.18866) has been accepted by **ICLR 2026**!
+- **[2026-01-17]**: 🚀 We provide a comprehensive [baseline evaluation framework](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md), supporting the benchmarking of memory layers such as Mem0, A-MEM, and LangMem on multiple datasets like LoCoMo and LongMemEval.
 - **[2025-12-09]**: 🎬 Released a **[Demo Video](#demo)** showcasing long-context handling, along with comprehensive **[Tutorial Notebooks](./tutorial-notebooks/)** for various scenarios!
 - **[2025-11-30]**: 🚌 LightMem now supports calling multiple tools provided by its [**MCP Server**](https://github.com/zjunlp/LightMem/blob/main/mcp/server.py).
 - **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency! Here is the [**reproduction script**](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)!
