@@ -117,7 +117,4 @@ class LlmLingua2Segmenter:
             if outer[k-1] < outer[k] > outer[k+1]:
                 boundaries.append(k)
 
-        if not boundaries:
-            boundaries = sorted(set(b for b in boundaries if 0 <= b <= n))
-
         return boundaries
