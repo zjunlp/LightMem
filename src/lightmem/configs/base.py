@@ -87,6 +87,10 @@ class BaseMemoryConfigs(BaseModel):
         description="Configuration for the embedding-based retriever (active only if retrieve_strategy is 'embedding' or 'hybrid')",
         default=None,
     )
+    summary_retriever: Optional[EmbeddingRetrieverConfig] = Field(
+        description="Configuration for the summary retriever (optional, for storing and retrieving memory summaries)",
+        default=None,
+    )
     update: Optional[Literal["online","offline"]] = Field(
         description="'online'=immediate during execution, 'offline'=scheduled updates",
         default="offline",
@@ -110,5 +114,11 @@ class BaseMemoryConfigs(BaseModel):
     logging: Optional[LoggingConfig] = Field(
         default=None,
         description="Logging configuration for the LightMem system."
+    )
+    extraction_mode: Optional[Literal["flat", "event"]] = Field(
+        default="flat",
+        description="Memory extraction mode:\n"
+                    "- 'flat': Extract factual entries only (independent units)\n"
+                    "- 'event': Extract event-level structure (factual + relational, temporally bound)"
     )
 

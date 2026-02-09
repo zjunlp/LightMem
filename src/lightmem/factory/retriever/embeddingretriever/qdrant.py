@@ -12,9 +12,10 @@ from qdrant_client.models import (
     PointStruct,
     Range,
     VectorParams,
+    MatchAny,
 )
 from lightmem.configs.retriever.embeddingretriever.qdrant import QdrantConfig
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +128,7 @@ class Qdrant:
         query_vector: list,
         limit: int = 5,
         filters: dict = None,
+        exclude_ids: list = None,  
         return_full: bool = False,
     ) -> list:
         """
@@ -136,13 +138,34 @@ class Qdrant:
             query_vector (list): Query vector.
             limit (int, optional): Number of results to return. Defaults to 5.
             filters (dict, optional): Filters to apply to the search. Defaults to None.
-            return_full (bool, optional): If True, return full ScoredPoint info (id, score, payload, vector).
-                                        If False, return simplified dict with id and score. Defaults to False.
+            exclude_ids (list, optional): List of IDs to exclude from results. Defaults to None.
+            return_full (bool, optional): If True, return full info (id, score, payload, vector).
+                                        If False, return simplified dict. Defaults to False.
 
         Returns:
             list: Search results.
         """
         query_filter = self._create_filter(filters) if filters else None
+        if exclude_ids:
+            if query_filter:
+                if not hasattr(query_filter, 'must_not'):
+                    query_filter.must_not = []
+                query_filter.must_not.append(
+                    FieldCondition(
+                        key="id",
+                        match=MatchAny(any=exclude_ids)
+                    )
+                )
+            else:
+                query_filter = Filter(
+                    must_not=[
+                        FieldCondition(
+                            key="id",
+                            match=MatchAny(any=exclude_ids)
+                        )
+                    ]
+                )
+        
         hits = self.client.query_points(
             collection_name=self.collection_name,
             query=query_vector,
@@ -181,27 +204,24 @@ class Qdrant:
             ),
         )
 
-    def update(self, vector_id: int, vector: list = None, payload: dict = None):
-        """
-        Update a vector and its payload.
-
-        Args:
-            vector_id (int): ID of the vector to update.
-            vector (list, optional): Updated vector. Defaults to None.
-            payload (dict, optional): Updated payload. Defaults to None.
-        """
-        update_data = {}
+    def update(self, vector_id: Any, vector: list = None, payload: dict = None):
         if vector is not None:
-            update_data["vector"] = vector
-        if payload is not None:
-            update_data["payload"] = payload
-
-        if not update_data:
-            return
-
-        point = PointStruct(id=vector_id, **update_data)
-        self.client.upsert(collection_name=self.collection_name, points=[point])
-
+            point = PointStruct(
+                id=vector_id, 
+                vector=vector, 
+                payload=payload if payload is not None else {}
+            )
+            self.client.upsert(collection_name=self.collection_name, points=[point])
+        elif payload is not None:
+            self.client.set_payload(
+                collection_name=self.collection_name,
+                payload=payload,
+                points=[vector_id],
+                wait=True
+            )
+        else:
+            logger.debug(f"Update called for ID {vector_id} with no data. Skipping.")
+    
     def get(self, vector_id: int) -> dict:
         """
         Retrieve a vector by ID.
@@ -258,6 +278,40 @@ class Qdrant:
         )
         return result
 
+    def scroll(
+        self,
+        scroll_filter = None, 
+        limit: int = 100,
+        offset: Any = None,
+        with_payload: bool = True,
+        with_vectors: bool = False,
+    ) -> tuple:
+        """
+        Scroll through points in the collection with pagination support.
+
+        Args:
+            scroll_filter (dict or Filter, optional): Filter to apply. Can be a dict or Filter object. Defaults to None.
+            limit (int, optional): Number of points to return per page. Defaults to 100.
+            offset (Any, optional): Offset for pagination. Defaults to None.
+            with_payload (bool, optional): Whether to include payload. Defaults to True.
+            with_vectors (bool, optional): Whether to include vectors. Defaults to False.
+
+        Returns:
+            tuple: (points, next_offset) - List of points and offset for next page
+        """
+        if isinstance(scroll_filter, dict):
+            scroll_filter = self._create_filter(scroll_filter)
+        
+        result, next_offset = self.client.scroll(
+            collection_name=self.collection_name,
+            scroll_filter=scroll_filter,
+            limit=limit,
+            offset=offset,
+            with_payload=with_payload,
+            with_vectors=with_vectors,
+        )
+        return result, next_offset
+    
     def reset(self):
         """Reset the index by deleting and recreating it."""
         logger.warning(f"Resetting index {self.collection_name}...")
