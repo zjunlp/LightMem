@@ -16,8 +16,9 @@ SPACY_AVAILABLE = True
 logger = logging.getLogger(__name__)
 
 class QdrantEntryLoader:
-    def __init__(self, qdrant_path: str):
+    def __init__(self, qdrant_path: str, summary_suffix: str = "_summaries"):
         self.qdrant_path = qdrant_path
+        self.summary_suffix = summary_suffix
 
     def _get_qdrant(self, collection_name: str):
         if Qdrant is None or QdrantConfig is None:
@@ -25,22 +26,37 @@ class QdrantEntryLoader:
         cfg = QdrantConfig(collection_name=collection_name, path=self.qdrant_path, embedding_model_dims=384, on_disk=True)
         return Qdrant(cfg)
 
-    def load_entries(self, collection_name: str, with_vectors: bool = False) -> List[Dict[str, Any]]:
+    def _load_from_collection(self, collection_name: str, with_vectors: bool = False) -> List[Dict[str, Any]]:
         q = self._get_qdrant(collection_name)
-        logger.info(f"Loading entries from collection: {collection_name} (with_vectors={with_vectors})")
+        logger.debug(f"Loading from collection: {collection_name} (with_vectors={with_vectors})")
+        
         points = []
         if q is not None:
             try:
                 points = q.get_all(with_vectors=with_vectors, with_payload=True)
+                logger.debug(f"Loaded {len(points)} points via Qdrant API")
             except Exception as e:
                 logger.warning(f"Qdrant API get_all failed: {e}")
 
         if not points:
-            logger.info("Trying SQLite fallback for collection: %s" % collection_name)
+            logger.debug(f"Trying SQLite fallback for: {collection_name}")
             points = self._fallback_sqlite_read(collection_name, with_vectors=with_vectors)
 
-        logger.info(f"Loaded {len(points)} entries")
         return points
+
+    def load_entries(self, collection_name: str, with_vectors: bool = False) -> List[Dict[str, Any]]:
+        logger.info(f"Loading ENTRIES from collection: {collection_name}")
+        entries = self._load_from_collection(collection_name, with_vectors=with_vectors)
+        logger.info(f"✓ Loaded {len(entries)} entries")
+        return entries
+
+    def load_summaries(self, collection_name: str, with_vectors: bool = False) -> List[Dict[str, Any]]:
+        summary_collection = collection_name + self.summary_suffix
+        logger.info(f"Loading SUMMARIES from collection: {summary_collection}")
+        
+        summaries = self._load_from_collection(summary_collection, with_vectors=with_vectors)
+        logger.info(f"✓ Loaded {len(summaries)} summaries")
+        return summaries
 
     def _fallback_sqlite_read(self, collection_name: str, with_vectors: bool = True) -> List[Dict[str, Any]]:
         storage_sqlite = os.path.join(self.qdrant_path, collection_name, 'collection', collection_name, 'storage.sqlite')
