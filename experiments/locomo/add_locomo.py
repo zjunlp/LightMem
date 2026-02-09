@@ -21,19 +21,22 @@ RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
 os.makedirs(RUN_LOG_DIR, exist_ok=True)
 
-# API Configuration
 API_KEYS = [
-    'sk-PQ5XCaxOduG0hgm98UGmPVwbAt8WEpqwIw2Q5FNIFCzD1hzs',
+    'your-api-key-1',
+    'your-api-key-2',
+    'your-api-key-3',
+    'your-api-key-4',
+    'your-api-key-5',
 ]
-API_BASE_URL = 'https://www.dmxapi.cn/v1'
+API_BASE_URL = ''
 LLM_MODEL = 'gpt-4o-mini'
 
 # Model Paths
-LLMLINGUA_MODEL_PATH = '/mnt/20t/xubuqiang/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
-EMBEDDING_MODEL_PATH = '/mnt/20t/xubuqiang/models/all-MiniLM-L6-v2'
+LLMLINGUA_MODEL_PATH = '/path/to/llmlingua-model'
+EMBEDDING_MODEL_PATH = '/path/to/embedding-model'
 
 # Data Configuration
-DATA_PATH = '/mnt/20t/xubuqiang/LightMem/dataset/locomo10_small.json'
+DATA_PATH = '/path/to/locomo10.json'
 DATASET_TYPE = 'locomo'
 
 # Qdrant Storage Directories
