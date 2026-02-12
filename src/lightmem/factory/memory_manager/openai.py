@@ -30,7 +30,6 @@ class OpenaiManager:
 
         http_client = httpx.Client(verify=False)
         
-        # 新增：初始化离线更新的记录容器
         self.update_records = {
             "update_input_prompt": [],   
             "update_output_prompt": [],  
