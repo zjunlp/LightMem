@@ -4,12 +4,14 @@ from openai import OpenAI
 from typing import List, Dict, Optional, Literal, Any
 import json, os, warnings
 import httpx
+import threading
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
 model_name_context_windows = {
     "gpt-4o-mini": 128000,
     "qwen3-30b-a3b-instruct-2507": 128000,
+    "glm-4.6": 200000,
     "DEFAULT": 128000,  # Recommended default context window
 }
 
@@ -27,6 +29,14 @@ class OpenaiManager:
             self.context_windows = model_name_context_windows["DEFAULT"]
 
         http_client = httpx.Client(verify=False)
+        
+        # 新增：初始化离线更新的记录容器
+        self.update_records = {
+            "update_input_prompt": [],   
+            "update_output_prompt": [],  
+            "api_call_nums": 0          
+        }
+        self.update_records_lock = threading.Lock()  
 
         if os.environ.get("OPENROUTER_API_KEY"):  # Use OpenRouter
             self.client = OpenAI(
@@ -266,6 +276,18 @@ class OpenaiManager:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
+
+        input_prompt = messages.copy() 
+
+        response_text = self.generate_response(
+            messages=messages,
+            response_format={"type": "json_object"}
+        )
+
+        with self.update_records_lock:
+            self.update_records["update_input_prompt"].append(input_prompt)
+            self.update_records["update_output_prompt"].append(response_text)
+            self.update_records["api_call_nums"] += 1  
 
         response_text, usage_info = self.generate_response(
             messages=messages,
