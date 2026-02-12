@@ -191,7 +191,7 @@ class Qdrant:
             payload (dict, optional): Updated payload. Defaults to None.
         """
 
-        # Case 1：只有 payload
+        # Case 1：only payload
         if vector is None and payload is not None:
             self.client.set_payload(
                 collection_name=self.collection_name,
@@ -200,7 +200,7 @@ class Qdrant:
             )
             return
 
-        # Case 2：只有 vector
+        # Case 2：only vector
         if vector is not None and payload is None:
             self.client.update_vectors(
                 collection_name=self.collection_name,
