@@ -43,6 +43,7 @@
 <span id='news'/>
 
 ## 📢 News
+- **[2026-02-15]**: 🚀 **[StructMem](./StructMem.md)** is released: A hierarchical memory framework that preserves event-level memory bindings and cross-event memory connections. 
 - **[2026-01-26]**: 🎉🎉🎉 [**LightMem: Lightweight and Efficient Memory-Augmented Generation**](https://arxiv.org/abs/2510.18866) has been accepted by **ICLR 2026**!
 - **[2026-01-17]**: 🚀 We provide a comprehensive [baseline evaluation framework](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md), supporting the benchmarking of memory layers such as Mem0, A-MEM, and LangMem on multiple datasets like LoCoMo and LongMemEval.
 - **[2025-12-09]**: 🎬 Released a **[Demo Video](#demo)** showcasing long-context handling, along with comprehensive **[Tutorial Notebooks](./tutorial-notebooks/)** for various scenarios!
