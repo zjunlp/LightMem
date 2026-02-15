@@ -180,3 +180,16 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
 | LightMem(768,0.6)| 69.03 | 67.38 | 60.42 | 78.48 | 48.29 | 43.18    | 35.37    |
 | LightMem(1024,0.8)|71.36 | 68.09 | 52.08 | 82.76 | 50.16 | 44.78    | 37.06    |
 
+<span id='structmem-results'/>
+
+### StructMem Results
+
+Comparison of different extraction modes and summarization on the same configuration.
+
+**Configuration**: `(512, 0.8)`, backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`, embedding model: `text-embedding-3-small`
+
+| Extraction Mode | Summary | Multi | Open | Single | Temp |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| flat | ✗ | 66.31 | 46.88 | 78.83 | 78.50 |
+| event | ✗ | 66.31 | 46.88 | 80.86 | 79.44 |
+| event | ✓ | 68.77 | 46.88 | 81.09 | 81.62 |
