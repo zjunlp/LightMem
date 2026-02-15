@@ -4,7 +4,7 @@ from openai import OpenAI
 from typing import List, Dict, Optional, Literal, Any
 import json, os, warnings
 import httpx
-import threading
+from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.utils import clean_response
 
@@ -29,13 +29,6 @@ class OpenaiManager:
             self.context_windows = model_name_context_windows["DEFAULT"]
 
         http_client = httpx.Client(verify=False)
-        
-        self.update_records = {
-            "update_input_prompt": [],   
-            "update_output_prompt": [],  
-            "api_call_nums": 0          
-        }
-        self.update_records_lock = threading.Lock()  
 
         if os.environ.get("OPENROUTER_API_KEY"):  # Use OpenRouter
             self.client = OpenAI(
@@ -149,19 +142,21 @@ class OpenaiManager:
 
     def meta_text_extract(
         self,
-        system_prompt: str,
         extract_list: List[List[List[Dict]]],
         messages_use: Literal["user_only", "assistant_only", "hybrid"] = "user_only",
-        topic_id_mapping: Optional[List[List[int]]] = None
+        topic_id_mapping: Optional[List[List[int]]] = None,
+        extraction_mode: Literal["flat", "event"] = "flat",
+        custom_prompts: Optional[Dict[str, str]] = None  
     ) -> List[Optional[Dict]]:
         """
         Extract metadata from text segments using parallel processing.
 
         Args:
-            system_prompt: The system prompt for metadata generation
             extract_list: List of message segments to process
             messages_use: Strategy for which messages to use
             topic_id_mapping: For each API call, the global topic IDs
+            extraction_mode: "flat" or "event"
+            custom_prompts: Optional custom prompts. If None, use defaults from EXTRACTION_PROMPTS
 
         Returns:
             List of extracted metadata results, None for failed segments
@@ -169,6 +164,120 @@ class OpenaiManager:
         if not extract_list:
             return []
         
+        default_prompts = EXTRACTION_PROMPTS.get(extraction_mode, {})
+        
+        if custom_prompts is None:
+            prompts = default_prompts
+        else:
+            prompts = {**default_prompts, **custom_prompts}
+        
+        if extraction_mode == "flat":
+            return self._extract_with_prompt(
+                system_prompt=prompts.get("factual", METADATA_GENERATE_PROMPT),
+                extract_list=extract_list,
+                messages_use=messages_use,
+                topic_id_mapping=topic_id_mapping,
+                entry_type="factual"
+            )
+        
+        elif extraction_mode == "event":
+            factual_results = self._extract_with_prompt(
+                system_prompt=prompts["factual"],
+                extract_list=extract_list,
+                messages_use=messages_use,
+                topic_id_mapping=topic_id_mapping,
+                entry_type="factual"
+            )
+            
+            relational_results = self._extract_with_prompt(
+                system_prompt=prompts["relational"],
+                extract_list=extract_list,
+                messages_use=messages_use,
+                topic_id_mapping=topic_id_mapping,
+                entry_type="relational"
+            )
+            
+            return self._merge_dual_perspective_results(
+                factual_results, 
+                relational_results
+            )
+        
+        else:
+            raise ValueError(f"Unknown extraction_mode: {extraction_mode}")
+    
+    def _merge_dual_perspective_results(
+        self,
+        factual_results: List[Optional[Dict]],
+        relational_results: List[Optional[Dict]]
+    ) -> List[Optional[Dict]]:
+        """
+        Args:
+            factual_results: Factual extraction results
+            relational_results: Relational extraction results
+        
+        Returns:
+            Merged results with combined cleaned_result and accumulated usage
+        """
+        merged_results = []
+        
+        for factual, relational in zip(factual_results, relational_results):
+            if factual is None and relational is None:
+                merged_results.append(None)
+                continue
+            
+            merged = {
+                "input_prompt": [],
+                "output_prompt": "",
+                "cleaned_result": [],
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0
+                }
+            }
+            
+            if factual is not None:
+                merged["input_prompt"].extend(factual.get("input_prompt", []))
+                merged["cleaned_result"].extend(factual.get("cleaned_result", []))
+                if factual.get("usage"):
+                    for key in merged["usage"]:
+                        merged["usage"][key] += factual["usage"].get(key, 0)
+            
+            if relational is not None:
+                merged["input_prompt"].extend(relational.get("input_prompt", []))
+                merged["cleaned_result"].extend(relational.get("cleaned_result", []))
+                if relational.get("usage"):
+                    for key in merged["usage"]:
+                        merged["usage"][key] += relational["usage"].get(key, 0)
+            
+            merged["output_prompt"] = (
+                f"Factual: {factual.get('output_prompt', 'N/A') if factual else 'N/A'}\n"
+                f"Relational: {relational.get('output_prompt', 'N/A') if relational else 'N/A'}"
+            )
+            
+            merged_results.append(merged)
+        
+        return merged_results
+
+    def _extract_with_prompt(
+        self,
+        system_prompt: str,
+        extract_list: List[List[List[Dict]]],
+        messages_use: str,
+        topic_id_mapping: Optional[List[List[int]]],
+        entry_type: str = "factual"
+    ) -> List[Optional[Dict]]:
+        """
+        Args:
+            system_prompt: System prompt for extraction
+            extract_list: List of message segments
+            messages_use: Message filtering strategy
+            topic_id_mapping: Global topic IDs
+            entry_type: "factual" or "relational"
+        
+        Returns:
+            List of extraction results
+        """
         def concatenate_messages(segment: List[Dict], messages_use: str) -> str:
             """Concatenate messages based on usage strategy"""
             role_filter = {
@@ -236,12 +345,16 @@ class OpenaiManager:
                     response_format={"type": "json_object"},
                 )
                 metadata_facts = clean_response(raw_response)
+                
+                for entry in metadata_facts:
+                    entry["entry_type"] = entry_type
 
                 return {
                     "input_prompt": metadata_messages,
                     "output_prompt": raw_response,
                     "cleaned_result": metadata_facts,
                     "usage": usage_info,
+                    "entry_type": entry_type
                 }
                 
             except Exception as e:
@@ -251,6 +364,7 @@ class OpenaiManager:
                     "output_prompt": "",
                     "cleaned_result": [],
                     "usage": None,
+                    "entry_type": entry_type
                 }
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -261,7 +375,7 @@ class OpenaiManager:
                 results = [None] * len(extract_list)
 
         return results
-    
+
     def _call_update_llm(self, system_prompt, target_entry, candidate_sources):
         target_memory = target_entry["payload"]["memory"]
         candidate_memories = [c["payload"]["memory"] for c in candidate_sources]
@@ -275,18 +389,6 @@ class OpenaiManager:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
-
-        input_prompt = messages.copy() 
-
-        response_text = self.generate_response(
-            messages=messages,
-            response_format={"type": "json_object"}
-        )
-
-        with self.update_records_lock:
-            self.update_records["update_input_prompt"].append(input_prompt)
-            self.update_records["update_output_prompt"].append(response_text)
-            self.update_records["api_call_nums"] += 1  
 
         response_text, usage_info = self.generate_response(
             messages=messages,

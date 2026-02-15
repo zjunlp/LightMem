@@ -5,9 +5,6 @@ import re
 import numpy as np
 from openai import OpenAI
 
-
-client = OpenAI()
-
 def extract_json(text):
     """
     Extracts JSON content from a string, removing enclosing triple backticks and optional 'json' tag if present.

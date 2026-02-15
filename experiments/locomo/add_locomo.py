@@ -8,9 +8,10 @@ import logging
 from lightmem.memory.lightmem import LightMemory
 from lightmem.configs.retriever.embeddingretriever.qdrant import QdrantConfig
 from lightmem.factory.retriever.embeddingretriever.qdrant import Qdrant
-from prompts import METADATA_GENERATE_PROMPT_locomo
+from prompts import METADATA_GENERATE_PROMPT_locomo, LoCoMo_Event_Binding_factual, LoCoMo_Event_Binding_relational
 import sqlite3
 import shutil
+import argparse
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import multiprocessing as mp
 
@@ -20,7 +21,6 @@ RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 RUN_LOG_DIR = os.path.join(LOGS_ROOT, RUN_TIMESTAMP)
 os.makedirs(RUN_LOG_DIR, exist_ok=True)
 
-# API Configuration
 API_KEYS = [
     'your-api-key-1',
     'your-api-key-2',
@@ -50,7 +50,22 @@ os.makedirs(QDRANT_POST_UPDATE_DIR, exist_ok=True)
 MAX_WORKERS = 5
 USE_PROCESS_POOL = True
 
-
+# ============ Arguments ============
+def parse_args():
+    parser = argparse.ArgumentParser(description="Parallel Memory Building with LightMem")
+    parser.add_argument('--extraction_mode', type=str, default='flat', 
+                       choices=['flat', 'event'], 
+                       help='Extraction mode for LightMem')
+    parser.add_argument('--enable_summary', action='store_true', 
+                       help='Whether to generate summaries')
+    parser.add_argument('--summary_time_window', type=int, default=3600, 
+                       help='Time window for summarization (in seconds)')
+    parser.add_argument('--summary_top_k_seeds', type=int, default=15, 
+                       help='Top K seeds for summarization')
+    parser.add_argument('--workers', type=int, default=MAX_WORKERS, 
+                       help='Max parallel workers')
+    
+    return parser.parse_args()
 # ============ Utility Functions ============
 
 def get_process_logger(sample_id):
@@ -139,7 +154,7 @@ def extract_locomo_sessions(conversation_dict):
     return sessions, timestamps, speaker_a, speaker_b
 
 
-def load_lightmem(collection_name, api_key):
+def load_lightmem(collection_name, api_key, args, base_dir=QDRANT_POST_UPDATE_DIR):
     config = {
         "pre_compress": True,
         "pre_compressor": {
@@ -187,10 +202,20 @@ def load_lightmem(collection_name, api_key):
         "retrieve_strategy": "embedding",
         "embedding_retriever": {
             "model_name": "qdrant",
-            "configs": {
+            "configs": { 
                 "collection_name": collection_name,
                 "embedding_model_dims": 384,
-                "path": f'{QDRANT_POST_UPDATE_DIR}/{collection_name}',
+                "path": f'{base_dir}/{collection_name}',  
+                "on_disk": True,
+            },
+        },
+        "summary_retriever": { 
+            "model_name": "qdrant",
+            "configs": { 
+                "collection_name": f"{collection_name}_summary",
+                "embedding_model_dims": 384,
+                "path": f'{base_dir}/{collection_name}_summary',  
+                "on_disk": True,
             }
         },
         "update": "offline",
@@ -198,7 +223,8 @@ def load_lightmem(collection_name, api_key):
             "level": "DEBUG",
             "file_enabled": True,
             "log_dir": RUN_LOG_DIR,
-        }
+        },
+        "extraction_mode": args.extraction_mode
     }
     
     lightmem = LightMemory.from_config(config)
@@ -257,10 +283,16 @@ def collection_entry_count(collection_name, base_dir):
 
 # ============ Core Processing Function ============
 
-def process_single_sample(sample, api_key):
+def process_single_sample(sample, api_key, args):
     sample_id = sample['sample_id']
     logger = get_process_logger(sample_id)
-    
+    if args.extraction_mode == "event":
+        prompt_arg = {
+            "factual": LoCoMo_Event_Binding_factual,
+            "relational": LoCoMo_Event_Binding_relational
+        }
+    else:
+        prompt_arg = METADATA_GENERATE_PROMPT_locomo
     try:
         logger.info(f"{'='*70}")
         logger.info(f"[Worker {mp.current_process().name}] Processing: {sample_id}")
@@ -276,8 +308,8 @@ def process_single_sample(sample, api_key):
         logger.info("Phase 1: Building memory (add_memory)")
         logger.info(f"{'─'*70}")
         
-        lightmem = load_lightmem(collection_name=sample_id, api_key=api_key)
-        
+        lightmem = load_lightmem(collection_name=sample_id, api_key=api_key, args=args)
+
         initial_stats = lightmem.get_token_statistics()
         case_start_time = time.time()
         add_memory_start_time = time.time()
@@ -299,7 +331,7 @@ def process_single_sample(sample, api_key):
                 is_last_turn = (session is sessions[-1] and turn_idx == num_turns - 1)
                 lightmem.add_memory(
                     messages=turn_messages,
-                    METADATA_GENERATE_PROMPT=METADATA_GENERATE_PROMPT_locomo,
+                    METADATA_GENERATE_PROMPT=prompt_arg,
                     force_segment=is_last_turn,
                     force_extract=is_last_turn,
                 )
@@ -337,6 +369,69 @@ def process_single_sample(sample, api_key):
         pre_update_count = collection_entry_count(sample_id, QDRANT_PRE_UPDATE_DIR)
         logger.info(f"✓ Backup completed: {pre_update_count} entries in {backup_duration:.2f}s")
         
+        # ============ Phase 2.5: Generate Summaries (Optional) ============
+        summarize_duration = 0.0
+        case_summarize_tokens = 0
+        case_summarize_calls = 0
+        case_summarize_prompt = 0
+        case_summarize_completion = 0
+        num_summaries = 0
+        
+        if args.enable_summary:
+            logger.info(f"\n{'─'*70}")
+            logger.info("Phase 2.5: Generating summaries")
+            logger.info(f"{'─'*70}")
+            logger.info(f"  Time window: {args.summary_time_window}s")
+            logger.info(f"  Top K Seeds: {args.summary_top_k_seeds}")
+            
+            summarize_start_time = time.time()
+            initial_summarize_stats = lightmem.get_token_statistics()
+            initial_summarize_tokens = initial_summarize_stats['llm']['summarize']['total_tokens']
+            initial_summarize_calls = initial_summarize_stats['llm']['summarize']['calls']
+            
+            logger.info(f"  Creating LightMemory instance for summarization (using pre_update)")
+            lightmem_for_summary = load_lightmem(
+                collection_name=sample_id, 
+                api_key=api_key,
+                args=args,
+                base_dir=QDRANT_PRE_UPDATE_DIR  
+            )
+            
+            summary_result = lightmem_for_summary.summarize(
+                retrieval_scope="global",  
+                time_window=args.summary_time_window,  
+                top_k_seeds=args.summary_top_k_seeds,  
+                process_all=True   
+            )
+            
+            summarize_end_time = time.time()
+            summarize_duration = summarize_end_time - summarize_start_time
+            
+            summarize_stats = lightmem_for_summary.get_token_statistics()
+            case_summarize_tokens = summarize_stats['llm']['summarize']['total_tokens'] - initial_summarize_tokens
+            case_summarize_calls = summarize_stats['llm']['summarize']['calls'] - initial_summarize_calls
+            case_summarize_prompt = summarize_stats['llm']['summarize']['prompt_tokens'] - initial_summarize_stats['llm']['summarize']['prompt_tokens']
+            case_summarize_completion = summarize_stats['llm']['summarize']['completion_tokens'] - initial_summarize_stats['llm']['summarize']['completion_tokens']
+            
+            if summary_result and 'covered_entries' in summary_result:
+                num_summaries = 1
+            else:
+                try:
+                    summary_entries = lightmem_for_summary.retriever.scroll(
+                        scroll_filter={"type": "summary"},
+                        limit=1000
+                    )
+                    num_summaries = len(summary_entries) if summary_entries else 0
+                except:
+                    num_summaries = 0
+            
+            logger.info(f"✓ Summary generation completed: {num_summaries} summaries in {summarize_duration:.2f}s")
+            logger.info(f"  Tokens used: {case_summarize_tokens:,} ({case_summarize_calls} API calls)")
+        else:
+            logger.info(f"\n{'─'*70}")
+            logger.info("Phase 2.5: Skipping summary generation (disabled)")
+            logger.info(f"{'─'*70}")
+        
         logger.info(f"\n{'─'*70}")
         logger.info("Phase 3: Performing offline update")
         logger.info(f"{'─'*70}")
@@ -372,10 +467,13 @@ def process_single_sample(sample, api_key):
         logger.info(f"  Pre-update:  {QDRANT_PRE_UPDATE_DIR}/{sample_id} ({pre_update_count} entries)")
         logger.info(f"  Post-update: {QDRANT_POST_UPDATE_DIR}/{sample_id} ({post_update_count} entries)")
         logger.info(f"  Change:      {post_update_count - pre_update_count:+d} entries")
+        logger.info(f"  Summaries:   {num_summaries}")
         
         logger.info(f"\n[Time Statistics]")
         logger.info(f"  Total:       {case_total_duration:.2f}s")
         logger.info(f"  ├─ Add:      {add_memory_duration:.2f}s ({add_memory_duration/case_total_duration*100:.1f}%)")
+        if args.enable_summary:
+            logger.info(f"  ├─ Summary:  {summarize_duration:.2f}s ({summarize_duration/case_total_duration*100:.1f}%)")
         logger.info(f"  ├─ Backup:   {backup_duration:.2f}s ({backup_duration/case_total_duration*100:.1f}%)")
         logger.info(f"  └─ Update:   {update_duration:.2f}s ({update_duration/case_total_duration*100:.1f}%)")
         
@@ -385,6 +483,13 @@ def process_single_sample(sample, api_key):
         logger.info(f"  Completion:  {case_add_completion:,}")
         logger.info(f"  Total:       {case_add_tokens:,}")
         
+        if args.enable_summary:
+            logger.info(f"\n[Token Statistics - Summarize]")
+            logger.info(f"  Calls:       {case_summarize_calls}")
+            logger.info(f"  Prompt:      {case_summarize_prompt:,}")
+            logger.info(f"  Completion:  {case_summarize_completion:,}")
+            logger.info(f"  Total:       {case_summarize_tokens:,}")
+        
         logger.info(f"\n[Token Statistics - Update]")
         logger.info(f"  Calls:       {case_update_calls}")
         logger.info(f"  Prompt:      {case_update_prompt:,}")
@@ -392,8 +497,8 @@ def process_single_sample(sample, api_key):
         logger.info(f"  Total:       {case_update_tokens:,}")
         
         logger.info(f"\n[Total Usage]")
-        logger.info(f"  API Calls:   {case_add_calls + case_update_calls}")
-        logger.info(f"  Tokens:      {case_add_tokens + case_update_tokens:,}")
+        logger.info(f"  API Calls:   {case_add_calls + case_summarize_calls + case_update_calls}")
+        logger.info(f"  Tokens:      {case_add_tokens + case_summarize_tokens + case_update_tokens:,}")
         logger.info(f"{'='*70}\n")
         
         return {
@@ -401,12 +506,16 @@ def process_single_sample(sample, api_key):
             'status': 'success',
             'pre_update_count': pre_update_count,
             'post_update_count': post_update_count,
+            'num_summaries': num_summaries,
             'total_duration': case_total_duration,
             'add_memory_duration': add_memory_duration,
+            'summarize_duration': summarize_duration,
             'backup_duration': backup_duration,
             'update_duration': update_duration,
             'add_tokens': case_add_tokens,
             'add_calls': case_add_calls,
+            'summarize_tokens': case_summarize_tokens,
+            'summarize_calls': case_summarize_calls,
             'update_tokens': case_update_tokens,
             'update_calls': case_update_calls,
         }
@@ -423,6 +532,9 @@ def process_single_sample(sample, api_key):
 # ============ Main Execution ============
 
 def main():
+    args = parse_args()
+    global MAX_WORKERS
+    MAX_WORKERS = args.workers
     main_logger = logging.getLogger("lightmem.parallel.main")
     main_logger.setLevel(logging.INFO)
     
@@ -521,7 +633,7 @@ def main():
             api_key_idx = idx % len(API_KEYS)
             api_key = API_KEYS[api_key_idx]
             
-            future = executor.submit(process_single_sample, sample, api_key)
+            future = executor.submit(process_single_sample, sample, api_key, args)
             future_to_sample[future] = sample
         
         # Process results as they complete
@@ -561,14 +673,16 @@ def main():
     
     if successful:
         avg_duration = sum(r['total_duration'] for r in successful) / len(successful)
-        total_tokens = sum(r['add_tokens'] + r['update_tokens'] for r in successful)
-        total_calls = sum(r['add_calls'] + r['update_calls'] for r in successful)
+        total_tokens = sum(r['add_tokens'] + r.get('summarize_tokens', 0) + r['update_tokens'] for r in successful)
+        total_calls = sum(r['add_calls'] + r.get('summarize_calls', 0) + r['update_calls'] for r in successful)
+        total_summaries = sum(r.get('num_summaries', 0) for r in successful)
         
         main_logger.info(f"\n[Performance Metrics]")
         main_logger.info(f"  Avg per sample:  {avg_duration:.2f}s")
         main_logger.info(f"  Speedup:         {avg_duration * len(successful) / total_duration:.2f}x")
         main_logger.info(f"  Total API calls: {total_calls}")
         main_logger.info(f"  Total tokens:    {total_tokens:,}")
+        main_logger.info(f"  Total summaries: {total_summaries}")
     
     if failed_samples:
         main_logger.info(f"\n[Failed Samples]")
