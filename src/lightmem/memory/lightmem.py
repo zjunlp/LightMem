@@ -6,7 +6,7 @@ import logging
 import json
 import threading
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, Literal, Optional, List, Tuple, Union
 from pydantic import ValidationError
 from lightmem.configs.base import BaseMemoryConfigs
 from lightmem.factory.pre_compressor.factory import PreCompressorFactory
@@ -15,14 +15,15 @@ from lightmem.factory.memory_manager.factory import MemoryManagerFactory
 from lightmem.factory.text_embedder.factory import TextEmbedderFactory
 from lightmem.factory.retriever.contextretriever.factory import ContextRetrieverFactory
 from lightmem.factory.retriever.embeddingretriever.factory import EmbeddingRetrieverFactory
+from lightmem.factory.retriever.embeddingretriever.qdrant import QdrantConfig
 from lightmem.factory.memory_buffer.sensory_memory import SenMemBufferManager
 from lightmem.factory.memory_buffer.short_term_memory import ShortMemBufferManager
-from lightmem.memory.utils import MemoryEntry, assign_sequence_numbers_with_timestamps, save_memory_entries, convert_extraction_results_to_memory_entries
-from lightmem.memory.prompts import METADATA_GENERATE_PROMPT, UPDATE_PROMPT, METADATA_GENERATE_PROMPT_locomo
+from lightmem.memory.utils import MemoryEntry, assign_sequence_numbers_with_timestamps, save_memory_entries,convert_extraction_results_to_memory_entries,normalize_extraction_prompts,process_extraction_results
+from lightmem.memory.prompts import METADATA_GENERATE_PROMPT, UPDATE_PROMPT
 from lightmem.configs.logging.utils import get_logger
 
 GLOBAL_TOPIC_IDX = 0
-
+GLOBAL_LAST_SUMMARY_TIME = None
 
 class MessageNormalizer:
 
@@ -150,6 +151,12 @@ class LightMemory:
             "update_total_tokens": 0,
             "embedding_calls": 0,
             "embedding_total_tokens": 0,
+            "summarize_calls": 0,
+            "summarize_prompt_tokens": 0,
+            "summarize_completion_tokens": 0,
+            "summarize_total_tokens": 0,
+            "embedding_calls": 0,
+            "embedding_total_tokens": 0,
         }
         self.logger.info("Token statistics tracking initialized")
         
@@ -175,6 +182,9 @@ class LightMemory:
         if self.retrieve_strategy in ["embedding", "hybrid"]:
             self.logger.info("Initializing embedding retriever")
             self.embedding_retriever = EmbeddingRetrieverFactory.from_config(self.config.embedding_retriever)
+            if hasattr(self.config, 'summary_retriever') and self.config.summary_retriever is not None:
+                self.logger.info("Initializing summary retriever")
+                self.summary_retriever = EmbeddingRetrieverFactory.from_config(self.config.summary_retriever)
         if self.config.graph_mem:
             from .graph import GraphMem
             self.logger.info("Initializing graph memory")
@@ -194,7 +204,7 @@ class LightMemory:
     def add_memory(
         self,
         messages,
-        METADATA_GENERATE_PROMPT: Optional[str] = None,
+        METADATA_GENERATE_PROMPT: Optional[Union[str, Dict[str, str]]] = None,
         *,
         force_segment: bool = False, 
         force_extract: bool = False
@@ -217,6 +227,13 @@ class LightMemory:
 
         Args:
             messages (dict or List[dict]): Input message(s) to process.
+            METADATA_GENERATE_PROMPT: Custom prompt(s) for extraction. Supports multiple formats:
+                - str: Legacy format for flat mode (single factual prompt)
+                    Example: METADATA_GENERATE_PROMPT="Your extraction prompt..."
+                - dict: New format supporting multiple perspectives
+                    For flat mode: {"factual": "..."}
+                    For event mode: {"factual": "...", "relational": "..."}
+                - None: Use default prompts based on self.config.extraction_mode
             force_segment (bool, optional): If True, forces segmentation regardless of buffer conditions.
             force_extract (bool, optional): If True, forces memory extraction even if thresholds are not met.
 
@@ -236,10 +253,12 @@ class LightMemory:
               weekdays, and extracted factual content.
             - Depending on `self.config.update`, the function triggers either online or offline memory updates.
         """
-        if METADATA_GENERATE_PROMPT is None:
-            from lightmem.memory.prompts import METADATA_GENERATE_PROMPT as DEFAULT_PROMPT
-            METADATA_GENERATE_PROMPT = DEFAULT_PROMPT
-            
+        extract_prompts = normalize_extraction_prompts(
+            prompts=METADATA_GENERATE_PROMPT,
+            extraction_mode=self.config.extraction_mode,
+            logger=self.logger
+        )
+        
         call_id = f"add_memory_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         self.logger.info(f"========== START {call_id} ==========")
         self.logger.info(f"force_segment={force_segment}, force_extract={force_extract}")
@@ -322,35 +341,21 @@ class LightMemory:
         self.logger.info(f"[{call_id}] Batch max_source_ids: {max_source_ids}")
         if self.config.metadata_generate and self.config.text_summary:
             self.logger.info(f"[{call_id}] Starting metadata generation")
-            extracted_results = self.manager.meta_text_extract(METADATA_GENERATE_PROMPT, extract_list, self.config.messages_use, topic_id_mapping)
-        
-            # =============API Consumption======================
-            for idx, item in enumerate(extracted_results):
-                if item is None:
-                    continue
-                
-                if "usage" in item:
-                    usage = item["usage"]
-                    self.token_stats["add_memory_calls"] += 1
-                    self.token_stats["add_memory_prompt_tokens"] += usage.get("prompt_tokens", 0)
-                    self.token_stats["add_memory_completion_tokens"] += usage.get("completion_tokens", 0)
-                    self.token_stats["add_memory_total_tokens"] += usage.get("total_tokens", 0)
-                    
-                    self.logger.info(
-                        f"[{call_id}] API Call {idx} tokens - "
-                        f"Prompt: {usage.get('prompt_tokens', 0)}, "
-                        f"Completion: {usage.get('completion_tokens', 0)}, "
-                        f"Total: {usage.get('total_tokens', 0)}"
-                    )
-                    
-                self.logger.debug(f"[{call_id}] API Call {idx} raw output: {item['output_prompt']}")
-                self.logger.debug(f"[{call_id}] API Call {idx} cleaned result: {item['cleaned_result']}")
-                result["add_input_prompt"].append(item["input_prompt"])
-                result["add_output_prompt"].append(item["output_prompt"])
-                result["api_call_nums"] += 1
-
-            # =======================================
-            
+            extracted_results = self.manager.meta_text_extract(
+                extract_list=extract_list,
+                messages_use=self.config.messages_use,
+                topic_id_mapping=topic_id_mapping,
+                extraction_mode=self.config.extraction_mode,
+                custom_prompts=extract_prompts  
+            )
+            # ============ API token Consumption ============
+            process_extraction_results(
+                extracted_results=extracted_results,
+                token_stats=self.token_stats,
+                result_dict=result,
+                call_id=call_id,
+                logger=self.logger
+            )
             self.logger.info(f"[{call_id}] Metadata generation completed with {result['api_call_nums']} API calls")
 
         memory_entries = convert_extraction_results_to_memory_entries(
@@ -414,6 +419,7 @@ class LightMemory:
                     "compressed_memory": mem_obj.compressed_memory,
                     "speaker_id": mem_obj.speaker_id,
                     "speaker_name": mem_obj.speaker_name,
+                    "consolidated": mem_obj.consolidated,
                 }
                 self.embedding_retriever.insert(
                     vectors = [embedding_vector],
@@ -672,8 +678,8 @@ class LightMemory:
         
         stats = {
             "summary": {
-                "total_llm_calls": self.token_stats["add_memory_calls"] + self.token_stats["update_calls"],
-                "total_llm_tokens": self.token_stats["add_memory_total_tokens"] + self.token_stats["update_total_tokens"],
+                "total_llm_calls": self.token_stats["add_memory_calls"] + self.token_stats["update_calls"] + self.token_stats["summarize_calls"],
+                "total_llm_tokens": self.token_stats["add_memory_total_tokens"] + self.token_stats["update_total_tokens"] + self.token_stats["summarize_total_tokens"],
                 "total_embedding_calls": embedder_stats["total_calls"],
                 "total_embedding_tokens": embedder_stats["total_tokens"],
             },
@@ -690,6 +696,12 @@ class LightMemory:
                     "completion_tokens": self.token_stats["update_completion_tokens"],
                     "total_tokens": self.token_stats["update_total_tokens"],
                 },
+                "summarize": {
+                "calls": self.token_stats["summarize_calls"],
+                "prompt_tokens": self.token_stats["summarize_prompt_tokens"],
+                "completion_tokens": self.token_stats["summarize_completion_tokens"],
+                "total_tokens": self.token_stats["summarize_total_tokens"],
+                },
             },
             "embedding": {
                 "total_calls": embedder_stats["total_calls"],
@@ -699,3 +711,132 @@ class LightMemory:
         }
         
         return stats
+    
+    def summarize(
+        self,
+        SUMMARY_PROMPT: Optional[str] = None,
+        *,
+        time_window: int = 3600,
+        process_all: bool = False,
+        enable_cross_event: bool = True,
+        retrieval_scope: Literal["global", "historical"] = "global",
+        top_k_seeds: int = 15,
+    ) -> Dict:
+        from lightmem.memory.utils import (
+            initialize_time_pointer,
+            get_window_entries,
+            mark_entries_and_get_next_time,
+            check_has_more_entries,
+            retrieve_supplementary_entries,
+            format_entries_for_prompt,
+            call_summary_llm,
+            store_summary,
+            build_summary_item,
+            build_single_result,
+            build_batch_result,
+            build_empty_result
+        )
+        global GLOBAL_LAST_SUMMARY_TIME
+        
+        call_id = f"summarize_{'all' if process_all else 'once'}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        self.logger.info(f"========== START {call_id} ==========")
+        if not self.summary_retriever:
+            raise ValueError("Summarization not enabled. Set 'summary_collection_name' in config.")
+        summaries = [] if process_all else None
+        total_entries = 0 if process_all else None
+        iteration = 0
+        while True:
+            iteration += 1
+            self.logger.info(f"[{call_id}] Iteration {iteration}")
+            if GLOBAL_LAST_SUMMARY_TIME is None:
+                GLOBAL_LAST_SUMMARY_TIME = initialize_time_pointer(
+                    retriever=self.embedding_retriever,
+                    call_id=call_id,
+                    logger=self.logger
+                )
+                if GLOBAL_LAST_SUMMARY_TIME is None:
+                    return build_empty_result(process_all)
+            Cbuf, has_more, new_time = get_window_entries(
+                retriever=self.embedding_retriever,
+                current_time=GLOBAL_LAST_SUMMARY_TIME,
+                time_window=time_window,
+                call_id=call_id,
+                logger=self.logger
+            )
+            if Cbuf is None:
+                if new_time is not None:
+                    GLOBAL_LAST_SUMMARY_TIME = new_time
+                if process_all:
+                    if has_more:
+                        continue
+                    else:
+                        break
+                else:
+                    return build_empty_result(process_all, has_more=has_more)
+            self.logger.info(f"[{call_id}] Processing {len(Cbuf)} entries")
+            Sk = []
+            if enable_cross_event:
+                retrieval_filters = None
+                if retrieval_scope == "historical":
+                    retrieval_filters = {
+                        "float_time_stamp": {"lt": Cbuf[0]["payload"]["float_time_stamp"]}
+                    }
+                Sk = retrieve_supplementary_entries(
+                    buffer_entries=Cbuf,
+                    retriever=self.embedding_retriever,
+                    text_embedder=self.text_embedder,
+                    top_k=top_k_seeds,
+                    retrieval_scope=retrieval_scope,
+                    additional_filters=retrieval_filters,
+                    logger=self.logger
+                )
+                self.logger.debug(f"[{call_id}] Retrieved {len(Sk)} seeds")
+            has_entry_type = any(e["payload"].get("entry_type") for e in Cbuf)
+            buffer_text = format_entries_for_prompt(Cbuf, include_type_tag=has_entry_type)
+            supplementary_text = format_entries_for_prompt(Sk, include_type_tag=has_entry_type)
+            time_range_str = f"{Cbuf[0]['payload']['time_stamp']} - {Cbuf[-1]['payload']['time_stamp']}"
+            speakers = list(set(
+                e["payload"].get("speaker_name") or e["payload"].get("speaker_id") or "?"
+                for e in Cbuf
+            ))
+            summary_text = call_summary_llm(
+                manager=self.manager,
+                buffer_text=buffer_text,
+                supplementary_text=supplementary_text,
+                time_range=time_range_str,
+                speakers=speakers,
+                custom_prompt=SUMMARY_PROMPT,
+                token_stats=self.token_stats,
+                logger=self.logger
+            )
+            self.logger.debug(f"[{call_id}] Generated {len(summary_text)} chars")
+            summary_id = store_summary(
+                summary_text=summary_text,
+                buffer_entries=Cbuf,
+                seed_entries=Sk,
+                summary_retriever=self.summary_retriever,
+                text_embedder=self.text_embedder,
+                logger=self.logger
+            )
+            GLOBAL_LAST_SUMMARY_TIME = mark_entries_and_get_next_time(
+                retriever=self.embedding_retriever,
+                entries=Cbuf,
+                call_id=call_id,
+                logger=self.logger
+            )
+            has_more = check_has_more_entries(
+                retriever=self.embedding_retriever,
+                current_time=GLOBAL_LAST_SUMMARY_TIME
+            )
+            if process_all:
+                summaries.append(build_summary_item(summary_text, summary_id, Cbuf, Sk))
+                total_entries += len(Cbuf)
+                if not has_more:
+                    break
+            else:
+                result = build_single_result(summary_text, summary_id, Cbuf, Sk, has_more)
+                self.logger.info(f"========== END {call_id} ==========")
+                return result
+        result = build_batch_result(summaries, total_entries, call_id, self.logger)
+        self.logger.info(f"========== END {call_id} ==========")
+        return result

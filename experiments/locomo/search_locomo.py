@@ -13,7 +13,7 @@ from lightmem.factory.text_embedder.huggingface import TextEmbedderHuggingface
 from lightmem.factory.text_embedder.openai import TextEmbedderOpenAI
 from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
 
-from prompts import ANSWER_PROMPT
+from prompts import ANSWER_PROMPT, ANSWER_PROMPT_StructMem
 from retrievers import QdrantEntryLoader, VectorRetriever, format_related_memories
 from llm_judge import evaluate_llm_judge
 
@@ -160,13 +160,55 @@ def retrieve_combined(
     return combined
 
 
+def retrieve_summaries(
+    summaries: List[Dict],
+    retriever: VectorRetriever,
+    question: str,
+    limit: int
+) -> List[Dict]:
+    """
+    Retrieve top-k summaries.
+    
+    Args:
+        summaries: Pre-loaded summary entries
+        retriever: VectorRetriever instance
+        question: Query string
+        limit: Number of summaries to retrieve
+        
+    Returns:
+        List of retrieved summaries
+    """
+    if not summaries:
+        logger.debug("No summaries available")
+        return []
+    
+    logger.debug(f"Retrieving top-{limit} from {len(summaries)} summaries")
+    retrieved = retriever.retrieve(summaries, question, limit=limit)
+    
+    return retrieved
+
+
 # ============ Prompt Construction ============
 
+def format_summaries(summaries: List[Dict]) -> str:
+    """Format summaries for inclusion in prompt."""
+    if not summaries:
+        return "No session summaries available."
+    
+    lines = []
+    for summary in summaries:
+        payload = summary.get('payload', {})
+        summary_text = payload.get('summary', payload.get('memory', ''))
+        lines.append(f"{summary_text}")
+    
+    return "\n".join(lines)
 
 
 def build_prompt_with_speaker_memories(
     question: str,
-    retrieved_entries: List[Dict]
+    retrieved_entries: List[Dict],
+    enable_summary: bool = False,
+    summaries: Optional[List[Dict]] = None
 ) -> str:
     """
     Build prompt with memories organized by speaker.
@@ -174,6 +216,8 @@ def build_prompt_with_speaker_memories(
     Args:
         question: The question to answer
         retrieved_entries: Retrieved memory entries with speaker annotations
+        enable_summary: Whether to include summaries in the prompt
+        summaries: Retrieved summary entries (only used if enable_summary=True)
         
     Returns:
         Formatted prompt string ready for LLM
@@ -211,14 +255,29 @@ def build_prompt_with_speaker_memories(
             f"{speaker_2_name}: {len(speaker_groups[speaker_2_name])}"
         )
     
-    # Fill prompt template
-    prompt = ANSWER_PROMPT.format(
-        speaker_1_name=speaker_1_name,
-        speaker_1_memories=speaker_1_memories,
-        speaker_2_name=speaker_2_name,
-        speaker_2_memories=speaker_2_memories,
-        question=question
-    )
+    # Choose prompt template based on whether summaries are enabled
+    if enable_summary:
+        # Format summaries
+        session_summaries = format_summaries(summaries) if summaries else "No session summaries available."
+        
+        # Fill StructMem prompt template
+        prompt = ANSWER_PROMPT_StructMem.format(
+            speaker_1_name=speaker_1_name,
+            speaker_1_memories=speaker_1_memories,
+            speaker_2_name=speaker_2_name,
+            speaker_2_memories=speaker_2_memories,
+            session_summaries=session_summaries,
+            question=question
+        )
+    else:
+        # Fill standard prompt template (no summaries)
+        prompt = ANSWER_PROMPT.format(
+            speaker_1_name=speaker_1_name,
+            speaker_1_memories=speaker_1_memories,
+            speaker_2_name=speaker_2_name,
+            speaker_2_memories=speaker_2_memories,
+            question=question
+        )
     
     return prompt
 
@@ -236,7 +295,9 @@ def process_sample(
     allow_categories: List[int],
     limit_per_speaker: int,
     total_limit: int,
-    retrieval_mode: str
+    retrieval_mode: str,
+    enable_summary: bool = False,
+    summary_limit: int = 5
 ) -> Dict:
     """
     Process a single sample with all its QA pairs.
@@ -253,6 +314,8 @@ def process_sample(
         limit_per_speaker: Retrieval limit per speaker (for per-speaker mode)
         total_limit: Total retrieval limit (for combined mode)
         retrieval_mode: 'per-speaker' or 'combined'
+        enable_summary: Whether to retrieve and use summaries
+        summary_limit: Retrieval limit for summaries
         
     Returns:
         Dictionary with sample results and statistics
@@ -273,6 +336,17 @@ def process_sample(
     # Load memory entries
     try:
         entries = entry_loader.load_entries(sample_id, with_vectors=True)
+        
+        # Load summaries if enabled
+        summaries = []
+        if enable_summary:
+            summaries = entry_loader.load_summaries(sample_id, with_vectors=True)
+            logger.info(
+                f"[{sample_id}] Loaded {len(entries)} entries + {len(summaries)} summaries"
+            )
+        else:
+            logger.info(f"[{sample_id}] Loaded {len(entries)} entries")
+        
         if not entries:
             logger.error(f"[{sample_id}] No entries loaded")
             return {
@@ -281,8 +355,6 @@ def process_sample(
                 'results': [],
                 'token_stats': sample_token_stats
             }
-        
-        logger.info(f"[{sample_id}] Loaded {len(entries)} entries")
     except Exception as e:
         logger.error(f"[{sample_id}] Failed to load entries: {e}")
         return {
@@ -310,6 +382,13 @@ def process_sample(
         
         # Retrieve relevant memories
         time_start = time.time()
+        
+        # Retrieve summaries if enabled
+        retrieved_summaries = []
+        if enable_summary and summaries:
+            retrieved_summaries = retrieve_summaries(summaries, retriever, question, summary_limit)
+        
+        # Retrieve entries based on mode
         if retrieval_mode == 'per-speaker':
             retrieved_entries = retrieve_by_speaker(
                 entries, retriever, question, limit_per_speaker
@@ -318,6 +397,7 @@ def process_sample(
             retrieved_entries = retrieve_combined(
                 entries, retriever, question, total_limit
             )
+        
         retrieval_time = time.time() - time_start
         
         if not retrieved_entries:
@@ -328,6 +408,7 @@ def process_sample(
                 'reference': reference,
                 'category': category,
                 'retrieved_count': 0,
+                'summary_count': 0 if enable_summary else None,
                 'retrieval_time': retrieval_time,
                 'speaker_distribution': {},
                 'error': 'No entries retrieved',
@@ -346,13 +427,24 @@ def process_sample(
             speaker = entry.get('_retrieved_speaker', 'Unknown')
             speaker_dist[speaker] = speaker_dist.get(speaker, 0) + 1
         
-        logger.info(
-            f"[{sample_id}] Retrieved {len(retrieved_entries)} entries in {retrieval_time:.3f}s"
-        )
+        if enable_summary:
+            logger.info(
+                f"[{sample_id}] Retrieved {len(retrieved_summaries)} summaries + "
+                f"{len(retrieved_entries)} entries in {retrieval_time:.3f}s"
+            )
+        else:
+            logger.info(
+                f"[{sample_id}] Retrieved {len(retrieved_entries)} entries in {retrieval_time:.3f}s"
+            )
         logger.info(f"[{sample_id}] Speaker distribution: {speaker_dist}")
         
         # Build prompt
-        user_prompt = build_prompt_with_speaker_memories(question, retrieved_entries)
+        user_prompt = build_prompt_with_speaker_memories(
+            question, 
+            retrieved_entries,
+            enable_summary=enable_summary,
+            summaries=retrieved_summaries if enable_summary else None
+        )
         
         # Generate answer
         token_usage = {
@@ -413,7 +505,7 @@ def process_sample(
             metrics = {'judge_correct': 0, 'judge_response': ''}
         
         # Store results
-        qa_results.append({
+        result_dict = {
             'question': question,
             'prediction': generated_answer,
             'reference': reference,
@@ -423,7 +515,13 @@ def process_sample(
             'retrieval_time': retrieval_time,
             'metrics': metrics,
             'token_usage': token_usage
-        })
+        }
+        
+        # Add summary count if enabled
+        if enable_summary:
+            result_dict['summary_count'] = len(retrieved_summaries)
+        
+        qa_results.append(result_dict)
     
     return {
         'sample_id': sample_id,
@@ -465,6 +563,12 @@ def main():
                        default=DEFAULT_EMBEDDING_MODEL_PATH,
                        help="Path to embedding model (for huggingface backend)")
     
+    # Summary configuration
+    parser.add_argument('--enable-summary', action='store_true',
+                       help="Enable summary retrieval (StructMem mode)")
+    parser.add_argument('--summary-limit', type=int, default=5,
+                       help="Retrieval limit for summaries (only used if --enable-summary)")
+    
     # LLM configuration
     parser.add_argument('--llm-api-key', type=str, required=True,
                        help="API key for LLM")
@@ -494,6 +598,9 @@ def main():
         logger.info(f"  Limit per speaker: {args.limit_per_speaker}")
     else:
         logger.info(f"  Total limit:     {args.total_limit}")
+    logger.info(f"  Summary enabled: {args.enable_summary}")
+    if args.enable_summary:
+        logger.info(f"  Summary limit:   {args.summary_limit}")
     logger.info(f"  Categories:      {args.allow_categories}")
     logger.info(f"  Embedder:        {args.embedder}")
     logger.info(f"  LLM model:       {args.llm_model}")
@@ -505,7 +612,12 @@ def main():
     
     # Initialize components
     logger.info("\nInitializing components...")
-    entry_loader = QdrantEntryLoader(args.qdrant_dir)
+    
+    # Initialize entry loader with summary support if enabled
+    if args.enable_summary:
+        entry_loader = QdrantEntryLoader(args.qdrant_dir, summary_suffix="_summary")
+    else:
+        entry_loader = QdrantEntryLoader(args.qdrant_dir)
     
     # Initialize embedding model
     if args.embedder == 'openai':
@@ -552,6 +664,7 @@ def main():
     all_categories = []
     total_questions = 0
     category_counts = {1: 0, 2: 0, 3: 0, 4: 0}
+    total_summaries_used = 0
     
     for sample in tqdm(samples, desc="Processing samples"):
         sample_result = process_sample(
@@ -559,7 +672,9 @@ def main():
             llm_client, judge_client,
             args.llm_model, args.judge_model,
             args.allow_categories, args.limit_per_speaker,
-            args.total_limit, args.retrieval_mode
+            args.total_limit, args.retrieval_mode,
+            enable_summary=args.enable_summary,
+            summary_limit=args.summary_limit
         )
         
         all_results.append(sample_result)
@@ -578,6 +693,10 @@ def main():
             category_counts[category] += 1
             all_metrics.append(qa_result['metrics'])
             all_categories.append(category)
+            
+            # Count summaries if enabled
+            if args.enable_summary and 'summary_count' in qa_result:
+                total_summaries_used += qa_result['summary_count']
         
         # Save individual sample result
         sample_file = os.path.join(args.output_dir, f"sample_{sample['sample_id']}.json")
@@ -613,6 +732,19 @@ def main():
                 }
             }
     
+    # Build config dict
+    config_dict = {
+        "retrieval_mode": args.retrieval_mode,
+        "limit_per_speaker": args.limit_per_speaker,
+        "total_limit": args.total_limit,
+        "embedder": args.embedder,
+        "method": "structmem" if args.enable_summary else "lightmem",
+        "allow_categories": args.allow_categories,
+        "enable_summary": args.enable_summary,
+    }
+    if args.enable_summary:
+        config_dict["summary_limit"] = args.summary_limit
+    
     # Save summary results
     final_results = {
         "llm_model": args.llm_model,
@@ -621,14 +753,7 @@ def main():
         "total_questions": total_questions,
         "total_samples": len(samples),
         "category_distribution": {str(cat): count for cat, count in category_counts.items()},
-        "config": {
-            "retrieval_mode": args.retrieval_mode,
-            "limit_per_speaker": args.limit_per_speaker,
-            "total_limit": args.total_limit,
-            "embedder": args.embedder,
-            "method": "vector_baseline",
-            "allow_categories": args.allow_categories,
-        },
+        "config": config_dict,
         "aggregate_metrics": aggregate_results,
         "token_statistics": {
             "total_prompt_tokens": global_token_stats['total_prompt_tokens'],
@@ -651,6 +776,13 @@ def main():
         "timestamp": RUN_TIMESTAMP
     }
     
+    # Add summary statistics if enabled
+    if args.enable_summary:
+        final_results["retrieval_statistics"] = {
+            "total_summaries_used": total_summaries_used,
+            "avg_summaries_per_question": total_summaries_used / total_questions if total_questions > 0 else 0,
+        }
+    
     summary_file = os.path.join(args.output_dir, "summary.json")
     with open(summary_file, 'w', encoding='utf-8') as f:
         json.dump(final_results, f, ensure_ascii=False, indent=2)
@@ -663,6 +795,12 @@ def main():
     logger.info(f"Total questions:  {total_questions}")
     logger.info(f"LLM model:        {args.llm_model}")
     logger.info(f"Judge model:      {args.judge_model}")
+    
+    if args.enable_summary:
+        logger.info("\nRetrieval Statistics:")
+        logger.info(f"  Total summaries:  {total_summaries_used}")
+        if total_questions > 0:
+            logger.info(f"  Avg summaries/Q:  {total_summaries_used/total_questions:.2f}")
     
     logger.info("\nCategory Distribution:")
     for category, count in sorted(category_counts.items()):

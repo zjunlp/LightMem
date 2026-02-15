@@ -43,7 +43,6 @@
 <span id='news'/>
 
 ## 📢 News
-
 - **[2026-01-26]**: 🎉🎉🎉 [**LightMem: Lightweight and Efficient Memory-Augmented Generation**](https://arxiv.org/abs/2510.18866) has been accepted by **ICLR 2026**!
 - **[2026-01-17]**: 🚀 We provide a comprehensive [baseline evaluation framework](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md), supporting the benchmarking of memory layers such as Mem0, A-MEM, and LangMem on multiple datasets like LoCoMo and LongMemEval.
 - **[2025-12-09]**: 🎬 Released a **[Demo Video](#demo)** showcasing long-context handling, along with comprehensive **[Tutorial Notebooks](./tutorial-notebooks/)** for various scenarios!
@@ -260,6 +259,14 @@ config_dict = {
             "path": "./my_long_term_chat", 
         }
     },
+    "summary_retriever": {
+        "model_name": "qdrant",
+        "configs": {
+            "collection_name": "my_chat_summaries",
+            "embedding_model_dims": 384,
+            "path": "./my_chat_summaries",
+        }
+    },
     "update": "offline",
     "logging": {
         "level": "DEBUG",
@@ -300,6 +307,11 @@ for turn_messages in session["turns"]:
 lightmem.construct_update_queue_all_entries()
 lightmem.offline_update_all_entries(score_threshold=0.8)
 ``` 
+
+### Generate summaries 
+```python
+summary_result = lightmem.summarize()
+```
 
 ### Retrieve Memory
 ```python
@@ -463,6 +475,7 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
 ## ⚙️ Configuration
 
 All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration class. Users can customize aspects like pre-processing, memory extraction, retrieval strategy, and update mechanisms by providing a custom configuration.
+
 #### Key Configuration Options (Usage)
 
 | Option                    | Default                                     | Usage (allowed values and behavior) |
@@ -477,17 +490,19 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `text_summary`        | `True`                                      | True / False. If True, a text summary is generated and stored alongside the original text (reduces retrieval cost and speeds review). If False, only the original text is stored. Summary quality depends on `memory_manager`. |
 | `memory_manager`      | `MemoryManagerConfig()`                     | dict / object. Controls the model used to generate summaries and metadata (`MemoryManagerConfig`), e.g., `model_name` (`openai`, `ollama`, etc.) and `configs`. Changing this affects summary style, length, and cost. |
 | `extract_threshold`   | `0.5`                                       | float (0.0 - 1.0). Threshold used to decide whether content is important enough to be extracted as metadata or highlight. Higher values (e.g., 0.8) mean more conservative extraction; lower values (e.g., 0.2) extract more items (may increase noise). |
-| `index_strategy`      | `None`                                      | `'embedding'` / `'context'` / `'hybrid'` / `None`. Determines how memories are indexed: 'embedding' uses vector-based indexing (requires embedders/retriever) for semantic search; 'context' uses text-based/contextual retrieval (requires context_retriever) for keyword/document similarity; and 'hybrid' combines context filtering and vector reranking for robustness and higher accuracy.
+| `index_strategy`      | `None`                                      | `'embedding'` / `'context'` / `'hybrid'` / `None`. Determines how memories are indexed: 'embedding' uses vector-based indexing (requires embedders/retriever) for semantic search; 'context' uses text-based/contextual retrieval (requires context_retriever) for keyword/document similarity; and 'hybrid' combines context filtering and vector reranking for robustness and higher accuracy. |
 | `text_embedder`       | `None`                                      | dict / object. Configuration for text embedding model (`TextEmbedderConfig`) with `model_name` (e.g., `huggingface`) and `configs` (batch size, device, embedding dim). Required when `index_strategy` or `retrieve_strategy` includes `'embedding'`. |
 | `multimodal_embedder` | `None`                                      | dict / object. Configuration for multimodal/image embedder (`MMEmbedderConfig`). Used for non-text modalities. |
 | `history_db_path`     | `os.path.join(lightmem_dir, "history.db")`  | str. Path to persist conversation history and lightweight state. Useful to restore state across restarts. |
 | `retrieve_strategy`   | `'embedding'`                               | `'embedding'` / `'context'` / `'hybrid'`. Strategy used at query time to fetch relevant memories. Pick based on data and query type: semantic queries -> `'embedding'`; keyword/structured queries -> `'context'`; mixed -> `'hybrid'`. |
 | `context_retriever`   | `None`                                      | dict / object. Configuration for context-based retriever (`ContextRetrieverConfig`), e.g., `model_name='BM25'` and `configs` like `top_k`. Used when `retrieve_strategy` includes `'context'`. |
 | `embedding_retriever` | `None`                                      | dict / object. Vector store configuration (`EmbeddingRetrieverConfig`), e.g., `model_name='qdrant'` and connection/index params. Used when `retrieve_strategy` includes `'embedding'`. |
+| `summary_retriever`   | `None`                                      | dict / object. Configuration for summary-specific vector store (`EmbeddingRetrieverConfig`). When configured, summaries are stored in a separate collection for hierarchical retrieval. Used in StructMem mode to store and retrieve session/topic summaries independently from detailed memories. |
 | `update`              | `'offline'`                                 | `'online'` / `'offline'`. `'online'`: update memories immediately after each interaction (low latency for fresh memories but higher operational cost). `'offline'`: batch or scheduled updates to save cost and aggregate changes. |
 | `kv_cache`            | `False`                                     | True / False. If True, attempt to precompute and persist model KV caches to accelerate repeated LLM calls (requires support from the LLM runtime and may increase storage). Uses `kv_cache_path` to store cache. |
 | `kv_cache_path`       | `os.path.join(lightmem_dir, "kv_cache.db")` | str. File path for KV cache storage when `kv_cache=True`. |
 | `graph_mem`           | `False`                                     | True / False. When True, some memories will be organized as a graph (nodes and relationships) to support complex relation queries and reasoning. Requires additional graph processing/storage. |
+| `extraction_mode`     | `'flat'`                                    | `'flat'` / `'event'`. Memory extraction mode: `'flat'` extracts factual entries as independent units suitable for general knowledge retention; `'event'` extracts event-level structures with both factual and relational components, preserving temporal bindings and causal relationships. Use `'event'` for narrative-heavy or time-sensitive scenarios. |
 | `version`             | `'v1.1'`                                    | str. Configuration/API version. Only change if you know compatibility implications. |
 | `logging`             | `'None'`                                    | dict / object. Configuration for logging enabled. |
 

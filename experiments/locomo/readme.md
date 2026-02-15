@@ -20,6 +20,16 @@ CUDA_VISIBLE_DEVICES=0 nohup python add_locomo.py \
     > build_memory.log 2>&1 &
 ```
 
+**StructMem Mode**: To enable StructMem, using the following command:
+```bash
+CUDA_VISIBLE_DEVICES=0 nohup python add_locomo.py \
+    --extraction_mode event \
+    --enable_summary \
+    --summary_time_window 3600 \
+    --summary_top_k 15 \
+    > build_memory.log 2>&1 &
+```
+
 **Configuration**: Edit the configuration section in `add_locomo.py` before running:
 - API keys and models
 - Model paths (LLMlingua, embedding models)
@@ -36,6 +46,7 @@ CUDA_VISIBLE_DEVICES=0 nohup python add_locomo.py \
 
 Retrieve relevant memories and evaluate QA performance:
 
+**LightMem Mode** (without summaries):
 ```bash
 CUDA_VISIBLE_DEVICES=0 nohup python search_locomo.py \
     --dataset /path/to/locomo10.json \
@@ -54,13 +65,36 @@ CUDA_VISIBLE_DEVICES=0 nohup python search_locomo.py \
     > evaluation.log 2>&1 &
 ```
 
+**StructMem Mode** (with summaries):
+```bash
+CUDA_VISIBLE_DEVICES=0 nohup python search_locomo.py \
+    --dataset /path/to/locomo10.json \
+    --qdrant-dir ./qdrant_post_update \
+    --output-dir ./results/evaluation_structmem \
+    --total-limit 60 \
+    --retrieval-mode combined \
+    --enable-summary \
+    --summary-limit 5 \
+    --embedder huggingface \
+    --embedding-model-path /path/to/all-MiniLM-L6-v2 \
+    --llm-api-key sk-xxx \
+    --llm-base-url xxx \
+    --llm-model gpt-4o-mini \
+    --judge-api-key sk-xxx \
+    --judge-base-url xxx \
+    --judge-model gpt-4o-mini \
+    > evaluation.log 2>&1 &
+```
+
 **Key Arguments**:
 - `--retrieval-mode`: `combined` (top-k across speakers) or `per-speaker` (top-k per speaker)
 - `--total-limit`: Number of memories to retrieve (for `combined` mode)
 - `--limit-per-speaker`: Number of memories per speaker (for `per-speaker` mode)
+- `--enable-summary`: Enable summary retrieval (StructMem mode)
+- `--summary-limit`: Number of summaries to retrieve (only used with `--enable-summary`)
 - `--embedder`: `huggingface` or `openai`
 
-**Note**: We uses `--retrieval-mode combined` with `--total-limit 60`.
+**Note**: We use `--retrieval-mode combined` with `--total-limit 60` for our reported results.
 
 **Output**:
 - `./results/sample_*.json` - Per-sample results
@@ -146,3 +180,16 @@ backbone: `qwen3-30b-a3b-instruct-2507`, judge model: `qwen2.5-32b-instruct`
 | LightMem(768,0.6)| 69.03 | 67.38 | 60.42 | 78.48 | 48.29 | 43.18    | 35.37    |
 | LightMem(1024,0.8)|71.36 | 68.09 | 52.08 | 82.76 | 50.16 | 44.78    | 37.06    |
 
+<span id='structmem-results'/>
+
+### StructMem Results
+
+Comparison of different extraction modes and summarization on the same configuration.
+
+**Configuration**: `(512, 0.8)`, backbone: `gpt-4o-mini`, judge model: `gpt-4o-mini`, embedding model: `text-embedding-3-small`
+
+| Extraction Mode | Summary | Multi | Open | Single | Temp |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| flat | ✗ | 66.31 | 46.88 | 78.83 | 78.50 |
+| event | ✗ | 66.31 | 46.88 | 80.86 | 79.44 |
+| event | ✓ | 68.77 | 46.88 | 81.09 | 81.62 |
