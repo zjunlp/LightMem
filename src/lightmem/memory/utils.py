@@ -338,7 +338,7 @@ def _create_memory_entry_from_fact(
         time_stamp=time_stamp,
         float_time_stamp=float_time_stamp,
         weekday=weekday,
-        memory=fact_entry.get("fact", ""),
+        memory=fact_entry.get("fact") or fact_entry.get("relation", ""),
         speaker_id=speaker_id,
         speaker_name=speaker_name,
         topic_id=topic_id,
