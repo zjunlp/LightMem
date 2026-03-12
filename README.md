@@ -188,7 +188,7 @@ The following table lists the backends values currently recognized by each confi
 | `MemoryManagerConfig`           | `openai`, `deepseek`, `ollama`, `vllm`, etc. |
 | `TextEmbedderConfig`            | `huggingface` |
 | `MMEmbedderConfig`              | `huggingface` |
-| `EmbeddingRetrieverConfig`      | `qdrant` |
+| `RetrieverConfig`      | `qdrant`, `FAISS`, `BM25` |
 
 <span id='examples'/>
 
