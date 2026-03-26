@@ -413,17 +413,19 @@ def process_single_sample(sample, api_key, args):
             case_summarize_prompt = summarize_stats['llm']['summarize']['prompt_tokens'] - initial_summarize_stats['llm']['summarize']['prompt_tokens']
             case_summarize_completion = summarize_stats['llm']['summarize']['completion_tokens'] - initial_summarize_stats['llm']['summarize']['completion_tokens']
             
-            if summary_result and 'covered_entries' in summary_result:
-                num_summaries = 1
-            else:
-                try:
-                    summary_entries = lightmem_for_summary.retriever.scroll(
-                        scroll_filter={"type": "summary"},
-                        limit=1000
-                    )
-                    num_summaries = len(summary_entries) if summary_entries else 0
-                except:
-                    num_summaries = 0
+            if summary_result:
+                if 'total_summaries' in summary_result:
+                    num_summaries = summary_result['total_summaries']
+                elif 'covered_entries' in summary_result:
+                    num_summaries = 1
+                else:
+                    try:
+                        summary_entries, _ = lightmem_for_summary.summary_retriever.scroll(
+                            limit=1000
+                        )
+                        num_summaries = len(summary_entries) if summary_entries else 0
+                    except Exception:
+                        num_summaries = 0
             
             logger.info(f"✓ Summary generation completed: {num_summaries} summaries in {summarize_duration:.2f}s")
             logger.info(f"  Tokens used: {case_summarize_tokens:,} ({case_summarize_calls} API calls)")
