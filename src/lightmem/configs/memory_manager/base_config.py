@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union, List, Any
+from typing import Any, Dict, List, Optional, Union
 
 
 class BaseMemoryManagerConfig:

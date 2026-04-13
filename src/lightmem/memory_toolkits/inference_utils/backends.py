@@ -1,13 +1,15 @@
-from openai import OpenAI 
-import warnings 
+import warnings
 from concurrent.futures import ThreadPoolExecutor
 from typing import (
-    Optional,  
-    Dict, 
-    Any, 
-    Callable, 
-    List, 
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
 )
+
+from openai import OpenAI
+
 
 class OpenAIClient(OpenAI): 
     """
@@ -157,7 +159,7 @@ class NativeLLMClient:
             )
         
         if len(kwargs) > 0:
-            from vllm import SamplingParams 
+            from vllm import SamplingParams
             sampling_params = SamplingParams(**kwargs)
             outputs = self.model.generate(texts, sampling_params)
         else: 

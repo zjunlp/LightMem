@@ -1,28 +1,19 @@
 from __future__ import annotations
-from .base import BaseMemoryLayer 
+
+import json
+import logging
+import os
+import pickle
+from typing import Any, Dict, List, Literal, Optional, Union
+
 from pydantic import (
-    BaseModel, 
-    Field, 
+    BaseModel,
+    Field,
     model_validator,
 )
-from .baselines.mem0 import (
-    Memory,
-    MemoryConfig
-) 
-from typing import (
-    Literal, 
-    List, 
-    Dict, 
-    Any,
-    Optional, 
-    Union
-)
-import os
-import json
-import pickle
-import logging
 
-
+from .base import BaseMemoryLayer
+from .baselines.mem0 import Memory
 
 logger = logging.getLogger(__name__)
 

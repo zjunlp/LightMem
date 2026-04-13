@@ -2,8 +2,8 @@ import importlib
 from collections import OrderedDict
 from collections.abc import Iterator
 from typing import (
-    Any, 
-    Type, 
+    Any,
+    Type,
     Union,
 )
 

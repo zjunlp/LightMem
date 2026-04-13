@@ -1,6 +1,8 @@
-from typing import Dict, Optional
 from importlib import import_module
-from lightmem.configs.pre_compressor.base import PreCompressorConfig 
+from typing import Dict
+
+from lightmem.configs.pre_compressor.base import PreCompressorConfig
+
 
 class PreCompressorFactory:
     _MODEL_MAPPING: Dict[str, str] = {

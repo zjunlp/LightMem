@@ -1,21 +1,22 @@
 import logging
 import os
 import shutil
+from typing import Any, Optional
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    MatchAny,
     MatchValue,
     PointIdsList,
     PointStruct,
     Range,
     VectorParams,
-    MatchAny,
 )
+
 from lightmem.configs.retriever.embeddingretriever.qdrant import QdrantConfig
-from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

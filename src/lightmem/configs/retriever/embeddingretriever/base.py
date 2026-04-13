@@ -1,6 +1,8 @@
-from typing import Dict, Optional, ClassVar
 from importlib import import_module
+from typing import ClassVar, Dict, Optional
+
 from pydantic import BaseModel, Field, model_validator
+
 
 class EmbeddingRetrieverConfig(BaseModel):
     model_name: str = Field(

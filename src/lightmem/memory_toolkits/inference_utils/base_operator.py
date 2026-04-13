@@ -1,18 +1,22 @@
 from __future__ import annotations
-from .prompts import get_prompt 
-from string import Template
+
 import inspect
+import os
+import time
 from abc import ABC, abstractmethod
-from .backends import get_interface_for_inference
-from tqdm import tqdm 
-import time 
-import os 
+from string import Template
 from typing import (
-    Any, 
-    List, 
-    Optional, 
-    Dict, 
+    Any,
+    Dict,
+    List,
+    Optional,
 )
+
+from tqdm import tqdm
+
+from .backends import get_interface_for_inference
+from .prompts import get_prompt
+
 
 class NonCachedLLMOperator(ABC): 
 

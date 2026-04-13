@@ -1,6 +1,8 @@
+from typing import Dict, List, Optional
+
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from typing import List, Dict, Optional
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from lightmem.configs.pre_compressor.entropy_compress import EntropyCompressorConfig
 
 

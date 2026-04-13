@@ -5,10 +5,9 @@ from typing import Dict, List, Optional
 
 import torch
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from lightmem.memory.lightmem import LightMemory
-
 
 # =========== Transformers Model Configuration ============
 your_model_path_or_name = "your_model_path_or_name_01"  # specify the model's path or name

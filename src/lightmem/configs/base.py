@@ -1,15 +1,16 @@
 import os
-from pydantic import BaseModel, Field, model_validator
-from typing import Any, Dict, Optional, Literal
-from pydantic import ValidationError
-from lightmem.configs.pre_compressor.base import PreCompressorConfig
-from lightmem.configs.topic_segmenter.base import TopicSegmenterConfig
+from typing import Literal, Optional
+
+from pydantic import BaseModel, Field
+
+from lightmem.configs.logging.base import LoggingConfig
 from lightmem.configs.memory_manager.base import MemoryManagerConfig
-from lightmem.configs.text_embedder.base import TextEmbedderConfig
 from lightmem.configs.multimodal_embedder.base import MMEmbedderConfig
+from lightmem.configs.pre_compressor.base import PreCompressorConfig
 from lightmem.configs.retriever.contextretriever.base import ContextRetrieverConfig
 from lightmem.configs.retriever.embeddingretriever.base import EmbeddingRetrieverConfig
-from lightmem.configs.logging.base import LoggingConfig
+from lightmem.configs.text_embedder.base import TextEmbedderConfig
+from lightmem.configs.topic_segmenter.base import TopicSegmenterConfig
 
 lightmem_dir = ""
 

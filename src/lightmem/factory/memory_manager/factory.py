@@ -1,5 +1,6 @@
-from typing import Dict, Optional
 from importlib import import_module
+from typing import Dict
+
 from lightmem.configs.memory_manager.base import MemoryManagerConfig
 
 

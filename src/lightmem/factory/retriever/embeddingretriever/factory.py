@@ -1,6 +1,8 @@
-from typing import Dict, Optional
 from importlib import import_module
+from typing import Dict
+
 from lightmem.configs.retriever.embeddingretriever.base import EmbeddingRetrieverConfig
+
 
 class EmbeddingRetrieverFactory:
     _MODEL_MAPPING: Dict[str, str] = {

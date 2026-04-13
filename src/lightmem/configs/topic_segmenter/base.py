@@ -1,5 +1,7 @@
+from typing import ClassVar, List, Optional
+
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Optional, Type, Any, List, ClassVar
+
 
 class TopicSegmenterConfig(BaseModel):
     model_name: str = Field(description="The TopicSegmenter model or Deployment platform (e.g., 'openai', 'deepseek', 'ollama', 'llmlingua-2')", default="llmlingua-2")

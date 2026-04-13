@@ -1,5 +1,7 @@
 import os
+
 from lightmem.memory.lightmem import LightMemory
+
 
 def load_lightmem(collection_name):
     config = {

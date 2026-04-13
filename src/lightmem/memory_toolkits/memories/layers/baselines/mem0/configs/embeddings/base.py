@@ -3,7 +3,6 @@ from abc import ABC
 from typing import Dict, Optional, Union
 
 import httpx
-
 from mem0.configs.base import AzureConfig
 
 

@@ -1,14 +1,16 @@
 from __future__ import annotations
-import json 
-from .base import (
-    MemoryDataset, 
-    Trajectory, 
-    Session, 
-    QuestionAnswerPair, 
-    Message, 
-)
+
+import json
 from datetime import datetime
-from typing import Dict, Any, Tuple
+from typing import Any, Dict, Tuple
+
+from .base import (
+    MemoryDataset,
+    Message,
+    QuestionAnswerPair,
+    Session,
+    Trajectory,
+)
 
 
 class LongMemEval(MemoryDataset):

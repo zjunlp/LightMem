@@ -1,22 +1,21 @@
-from openai import OpenAI
-import json
-from tqdm import tqdm
-import datetime
-import time
-import os
-import logging
-from typing import List, Dict, Any, Optional
-import numpy as np
 import argparse
+import datetime
+import json
+import logging
+import os
+import time
+from typing import Dict, List, Optional
 
-from lightmem.factory.text_embedder.huggingface import TextEmbedderHuggingface
-from lightmem.factory.text_embedder.openai import TextEmbedderOpenAI
-from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
-
+import numpy as np
+from llm_judge import evaluate_llm_judge
+from openai import OpenAI
 from prompts import ANSWER_PROMPT, ANSWER_PROMPT_StructMem
 from retrievers import QdrantEntryLoader, VectorRetriever, format_related_memories
-from llm_judge import evaluate_llm_judge
+from tqdm import tqdm
 
+from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
+from lightmem.factory.text_embedder.huggingface import TextEmbedderHuggingface
+from lightmem.factory.text_embedder.openai import TextEmbedderOpenAI
 
 # ============ Configuration ============
 LOGS_ROOT = "./logs"
@@ -589,7 +588,7 @@ def main():
     logger.info("=" * 80)
     logger.info("LightMem Evaluation - LoCoMo Dataset")
     logger.info("=" * 80)
-    logger.info(f"Configuration:")
+    logger.info("Configuration:")
     logger.info(f"  Dataset:         {args.dataset}")
     logger.info(f"  Qdrant dir:      {args.qdrant_dir}")
     logger.info(f"  Output dir:      {args.output_dir}")

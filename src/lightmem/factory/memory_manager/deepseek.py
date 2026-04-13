@@ -1,8 +1,9 @@
 import concurrent
 import json
 import os
+from typing import Dict, List, Literal, Optional
+
 from openai import OpenAI
-from typing import List, Dict, Optional, Literal, Any
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT

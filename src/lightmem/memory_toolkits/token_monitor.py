@@ -1,23 +1,26 @@
 from __future__ import annotations
+
 import functools
+import inspect
 import json
 from collections import deque
-from threading import RLock, Lock
-from litellm import token_counter as litellm_token_counter
-from litellm.types.utils import SelectTokenizerResponse
-from litellm import encoding
-import tiktoken 
-from tokenizers import Tokenizer
 from datetime import datetime
-import inspect
+from threading import Lock, RLock
 from typing import (
-    Any, 
-    Callable, 
-    Dict, 
-    List, 
-    Optional, 
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
     Tuple,
 )
+
+import tiktoken
+from litellm import encoding
+from litellm import token_counter as litellm_token_counter
+from litellm.types.utils import SelectTokenizerResponse
+from tokenizers import Tokenizer
+
 
 def get_tokenizer_for_model(model: str) -> SelectTokenizerResponse:
     """Get the tokenizer for a model."""

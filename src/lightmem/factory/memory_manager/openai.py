@@ -1,11 +1,13 @@
 import concurrent
-from collections import defaultdict
-from openai import OpenAI
-from typing import List, Dict, Optional, Literal, Any
-import json, os, warnings
+import json
+import os
+from typing import Dict, List, Literal, Optional
+
 import httpx
-from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
+from openai import OpenAI
+
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
+from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
 from lightmem.memory.utils import clean_response
 
 model_name_context_windows = {

@@ -1,43 +1,41 @@
 import argparse
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
-from tqdm import tqdm
-import time 
-import threading
-from importlib.util import find_spec
-from copy import deepcopy 
 import os
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import nullcontext
-
-from token_monitor import (
-    CostStateManager, 
-    token_monitor, 
-    CostState, 
-    get_tokenizer_for_model,
-)
-from monkey_patch import (
-    PatchSpec, 
-    MonkeyPatcher, 
-    make_attr_patch, 
+from copy import deepcopy
+from datetime import datetime
+from importlib import import_module
+from importlib.util import find_spec
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
 )
 
 from memories import (
     CONFIG_MAPPING,
-    MEMORY_LAYERS_MAPPING,
     DATASET_MAPPING,
+    MEMORY_LAYERS_MAPPING,
 )
-from memories.datasets.base import Trajectory
-from typing import (
-    Dict, 
-    Any, 
-    Optional, 
-    Tuple, 
-    List, 
-    Callable,
+from memories.datasets.base import Message, QuestionAnswerPair, Session, Trajectory
+from monkey_patch import (
+    MonkeyPatcher,
+    PatchSpec,
+    make_attr_patch,
 )
-from memories.datasets.base import Trajectory, Message, QuestionAnswerPair, Session
-from importlib import import_module
+from token_monitor import (
+    CostState,
+    CostStateManager,
+    get_tokenizer_for_model,
+    token_monitor,
+)
+from tqdm import tqdm
 
 _LOCK = threading.Lock()
 
@@ -50,10 +48,10 @@ def _normalize_langmem_messages(*args, **kwargs) -> Dict[str, List[Dict[str, str
     """A helper function to process the messages of LangMem."""
     _check_langchain_core_imports() 
     from langchain_core.messages import (
-        HumanMessage, 
-        SystemMessage, 
-        AIMessage, 
-        ToolMessage, 
+        AIMessage,
+        HumanMessage,
+        SystemMessage,
+        ToolMessage,
     )
 
     messages = kwargs.get("messages", args[0])

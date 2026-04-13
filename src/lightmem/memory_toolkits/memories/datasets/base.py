@@ -1,25 +1,27 @@
 from __future__ import annotations
-from pydantic import (
-    BaseModel, 
-    Field, 
-    model_validator,
-    field_serializer,
-    field_validator,
-    ConfigDict,
-)
+
+import random
 from abc import ABC, abstractmethod
-from types import MappingProxyType
 from datetime import datetime
 from functools import total_ordering
-import random 
+from types import MappingProxyType
 from typing import (
-    List, 
-    Any, 
+    Any,
+    Dict,
     Iterator,
+    List,
+    Mapping,
+    Optional,
     Tuple,
-    Mapping, 
-    Dict, 
-    Optional, 
+)
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
 )
 
 TIMESTAMP_FORMAT = "%Y-%m-%d (%a) %H:%M"

@@ -1,16 +1,14 @@
-from openai import OpenAI
 import logging
 import os
-import time
-import sqlite3
 import pickle
-from typing import List, Dict, Any, Set, Optional, Tuple
-from collections import defaultdict, deque
+import sqlite3
 from datetime import datetime
+from typing import Any, Dict, List
+
 import numpy as np
-import spacy
-from lightmem.factory.retriever.embeddingretriever.qdrant import Qdrant
+
 from lightmem.configs.retriever.embeddingretriever.qdrant import QdrantConfig
+from lightmem.factory.retriever.embeddingretriever.qdrant import Qdrant
 
 SPACY_AVAILABLE = True
 logger = logging.getLogger(__name__)

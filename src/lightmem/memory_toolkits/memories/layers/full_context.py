@@ -1,15 +1,17 @@
 from __future__ import annotations
-import os
+
 import json
+import os
 import pickle
 import time
-from typing import Any, Dict, List, Optional, Union, Literal
+from typing import Any, Dict, List, Literal, Optional, Union
 
+from litellm import token_counter as litellm_token_counter
 from pydantic import BaseModel, Field, model_validator
+from token_monitor import get_tokenizer_for_model
 
 from .base import BaseMemoryLayer
-from token_monitor import get_tokenizer_for_model
-from litellm import token_counter as litellm_token_counter
+
 
 class FullContextConfig(BaseModel):
     """Configuration: Full-Text Memory layer (simple full-context storage and retrieval).

@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-import os
 import json
 import logging
-from typing import Any, Dict, List, Optional, Literal, Union
+import os
+from collections.abc import Mapping
+from types import MappingProxyType
+from typing import Any, Dict, List, Literal, Optional, Union
 
+from mem0.memory.main import Memory  # type: ignore
 from pydantic import BaseModel, Field, model_validator
 
 from .base import BaseMemoryLayer
-
-from mem0.memory.main import Memory  # type: ignore
-
-from collections.abc import Mapping
-from types import MappingProxyType
-
 
 logger = logging.getLogger(__name__)
 

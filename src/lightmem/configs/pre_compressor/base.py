@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Optional, Type, Any, Union, ClassVar
 from importlib import import_module
+from typing import Any, ClassVar, Dict
+
+from pydantic import BaseModel, Field, model_validator
+
 
 class PreCompressorConfig(BaseModel):
     model_name: str = Field(

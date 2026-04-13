@@ -1,9 +1,8 @@
 import concurrent
-import json
-from typing import Dict, List, Optional, Literal, Any, Union
+from typing import Dict, List, Literal, Optional
 
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
