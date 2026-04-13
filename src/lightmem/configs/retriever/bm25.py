@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, model_validator
 from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class BM25Config(BaseModel):

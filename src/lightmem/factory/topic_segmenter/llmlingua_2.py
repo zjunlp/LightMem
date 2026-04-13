@@ -1,6 +1,9 @@
-from typing import Dict, Optional, List, Any
-import torch, numpy as np
-from transformers import AutoTokenizer, AutoModel
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import torch
+from transformers import AutoModel, AutoTokenizer
+
 
 class LlmLingua2Segmenter:
     def __init__(self, config: Optional[Dict] = None, shared: bool = False, compressor=None):

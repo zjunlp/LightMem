@@ -1,19 +1,24 @@
-from openai import OpenAI
-import json
-from tqdm import tqdm
+import argparse
 import datetime
-import time
-import os
+import json
 import logging
-from lightmem.memory.lightmem import LightMemory
+import multiprocessing as mp
+import os
+import shutil
+import sqlite3
+import time
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+
+from prompts import (
+    LoCoMo_Event_Binding_factual,
+    LoCoMo_Event_Binding_relational,
+    METADATA_GENERATE_PROMPT_locomo,
+)
+from tqdm import tqdm
+
 from lightmem.configs.retriever.embeddingretriever.qdrant import QdrantConfig
 from lightmem.factory.retriever.embeddingretriever.qdrant import Qdrant
-from prompts import METADATA_GENERATE_PROMPT_locomo, LoCoMo_Event_Binding_factual, LoCoMo_Event_Binding_relational
-import sqlite3
-import shutil
-import argparse
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
-import multiprocessing as mp
+from lightmem.memory.lightmem import LightMemory
 
 # ============ Configuration ============
 LOGS_ROOT = "./logs"
@@ -357,7 +362,7 @@ def process_single_sample(sample, api_key, args):
         backup_start_time = time.time()
         
         if os.path.exists(backup_dir):
-            logger.info(f"  Removing existing backup...")
+            logger.info("  Removing existing backup...")
             shutil.rmtree(backup_dir)
         
         logger.info(f"  Copying: {source_dir} -> {backup_dir}")
@@ -389,7 +394,7 @@ def process_single_sample(sample, api_key, args):
             initial_summarize_tokens = initial_summarize_stats['llm']['summarize']['total_tokens']
             initial_summarize_calls = initial_summarize_stats['llm']['summarize']['calls']
             
-            logger.info(f"  Creating LightMemory instance for summarization (using pre_update)")
+            logger.info("  Creating LightMemory instance for summarization (using pre_update)")
             lightmem_for_summary = load_lightmem(
                 collection_name=sample_id, 
                 api_key=api_key,
@@ -465,13 +470,13 @@ def process_single_sample(sample, api_key, args):
         logger.info(f"SUMMARY: {sample_id}")
         logger.info(f"{'='*70}")
         
-        logger.info(f"\n[Storage Information]")
+        logger.info("\n[Storage Information]")
         logger.info(f"  Pre-update:  {QDRANT_PRE_UPDATE_DIR}/{sample_id} ({pre_update_count} entries)")
         logger.info(f"  Post-update: {QDRANT_POST_UPDATE_DIR}/{sample_id} ({post_update_count} entries)")
         logger.info(f"  Change:      {post_update_count - pre_update_count:+d} entries")
         logger.info(f"  Summaries:   {num_summaries}")
         
-        logger.info(f"\n[Time Statistics]")
+        logger.info("\n[Time Statistics]")
         logger.info(f"  Total:       {case_total_duration:.2f}s")
         logger.info(f"  ├─ Add:      {add_memory_duration:.2f}s ({add_memory_duration/case_total_duration*100:.1f}%)")
         if args.enable_summary:
@@ -479,26 +484,26 @@ def process_single_sample(sample, api_key, args):
         logger.info(f"  ├─ Backup:   {backup_duration:.2f}s ({backup_duration/case_total_duration*100:.1f}%)")
         logger.info(f"  └─ Update:   {update_duration:.2f}s ({update_duration/case_total_duration*100:.1f}%)")
         
-        logger.info(f"\n[Token Statistics - Add Memory]")
+        logger.info("\n[Token Statistics - Add Memory]")
         logger.info(f"  Calls:       {case_add_calls}")
         logger.info(f"  Prompt:      {case_add_prompt:,}")
         logger.info(f"  Completion:  {case_add_completion:,}")
         logger.info(f"  Total:       {case_add_tokens:,}")
         
         if args.enable_summary:
-            logger.info(f"\n[Token Statistics - Summarize]")
+            logger.info("\n[Token Statistics - Summarize]")
             logger.info(f"  Calls:       {case_summarize_calls}")
             logger.info(f"  Prompt:      {case_summarize_prompt:,}")
             logger.info(f"  Completion:  {case_summarize_completion:,}")
             logger.info(f"  Total:       {case_summarize_tokens:,}")
         
-        logger.info(f"\n[Token Statistics - Update]")
+        logger.info("\n[Token Statistics - Update]")
         logger.info(f"  Calls:       {case_update_calls}")
         logger.info(f"  Prompt:      {case_update_prompt:,}")
         logger.info(f"  Completion:  {case_update_completion:,}")
         logger.info(f"  Total:       {case_update_tokens:,}")
         
-        logger.info(f"\n[Total Usage]")
+        logger.info("\n[Total Usage]")
         logger.info(f"  API Calls:   {case_add_calls + case_summarize_calls + case_update_calls}")
         logger.info(f"  Tokens:      {case_add_tokens + case_summarize_tokens + case_update_tokens:,}")
         logger.info(f"{'='*70}\n")
@@ -667,7 +672,7 @@ def main():
     
     successful = [r for r in results if r['status'] == 'success']
     
-    main_logger.info(f"\n[Overall Statistics]")
+    main_logger.info("\n[Overall Statistics]")
     main_logger.info(f"  Total samples:   {len(missing)}")
     main_logger.info(f"  Successful:      {len(successful)}")
     main_logger.info(f"  Failed:          {len(failed_samples)}")
@@ -679,7 +684,7 @@ def main():
         total_calls = sum(r['add_calls'] + r.get('summarize_calls', 0) + r['update_calls'] for r in successful)
         total_summaries = sum(r.get('num_summaries', 0) for r in successful)
         
-        main_logger.info(f"\n[Performance Metrics]")
+        main_logger.info("\n[Performance Metrics]")
         main_logger.info(f"  Avg per sample:  {avg_duration:.2f}s")
         main_logger.info(f"  Speedup:         {avg_duration * len(successful) / total_duration:.2f}x")
         main_logger.info(f"  Total API calls: {total_calls}")
@@ -687,7 +692,7 @@ def main():
         main_logger.info(f"  Total summaries: {total_summaries}")
     
     if failed_samples:
-        main_logger.info(f"\n[Failed Samples]")
+        main_logger.info("\n[Failed Samples]")
         for sample_id in failed_samples:
             main_logger.info(f"  - {sample_id}")
     

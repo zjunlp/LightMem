@@ -3,10 +3,9 @@ import os
 import platform
 import sys
 
-from posthog import Posthog
-
 import mem0
 from mem0.memory.setup import get_or_create_user_id
+from posthog import Posthog
 
 MEM0_TELEMETRY = os.environ.get("MEM0_TELEMETRY", "True")
 PROJECT_API_KEY = "phc_hgJkUVJFYtmaJqrvf6CYN67TIQ8yhXAkWzUn9AMU4yX"

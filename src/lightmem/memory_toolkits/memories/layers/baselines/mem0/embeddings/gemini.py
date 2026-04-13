@@ -3,7 +3,6 @@ from typing import Literal, Optional
 
 from google import genai
 from google.genai import types
-
 from mem0.configs.embeddings.base import BaseEmbedderConfig
 from mem0.embeddings.base import EmbeddingBase
 

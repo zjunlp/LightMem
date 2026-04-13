@@ -1,5 +1,7 @@
-from typing import List, Dict, Optional, Any, Union
+from typing import Any, Dict, List, Optional
+
 from lightmem.memory.utils import resolve_tokenizer
+
 
 class ShortMemBufferManager:
     def __init__(self, max_tokens: int = 2000, tokenizer: Optional[Any] = None):

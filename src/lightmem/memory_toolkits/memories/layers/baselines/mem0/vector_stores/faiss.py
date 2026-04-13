@@ -2,13 +2,12 @@ import logging
 import os
 import pickle
 import uuid
+import warnings
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
 from pydantic import BaseModel
-
-import warnings
 
 try:
     # Suppress SWIG deprecation warnings from FAISS

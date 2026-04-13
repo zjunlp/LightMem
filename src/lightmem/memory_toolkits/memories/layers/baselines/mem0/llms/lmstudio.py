@@ -1,12 +1,11 @@
 import json
 from typing import Dict, List, Optional, Union
 
-from openai import OpenAI
-
 from mem0.configs.llms.base import BaseLlmConfig
 from mem0.configs.llms.lmstudio import LMStudioConfig
 from mem0.llms.base import LLMBase
 from mem0.memory.utils import extract_json
+from openai import OpenAI
 
 
 class LMStudioLLM(LLMBase):

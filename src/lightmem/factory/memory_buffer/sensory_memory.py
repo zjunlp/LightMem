@@ -1,5 +1,7 @@
+from typing import Dict, List
+
 import numpy as np
-from typing import List, Dict, Optional, Any
+
 
 class SenMemBufferManager:
     def __init__(self, max_tokens: int = 512, tokenizer = None):

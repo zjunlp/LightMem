@@ -1,10 +1,9 @@
 import logging
 from typing import Dict, Optional
 
-from pydantic import BaseModel
-
 from mem0.configs.vector_stores.milvus import MetricType
 from mem0.vector_stores.base import VectorStoreBase
+from pydantic import BaseModel
 
 try:
     import pymilvus  # noqa: F401

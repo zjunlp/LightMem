@@ -6,13 +6,12 @@ from functools import reduce
 import numpy as np
 import pytz
 import redis
+from mem0.memory.utils import extract_json
+from mem0.vector_stores.base import VectorStoreBase
 from redis.commands.search.query import Query
 from redisvl.index import SearchIndex
 from redisvl.query import VectorQuery
 from redisvl.query.filter import Tag
-
-from mem0.memory.utils import extract_json
-from mem0.vector_stores.base import VectorStoreBase
 
 logger = logging.getLogger(__name__)
 

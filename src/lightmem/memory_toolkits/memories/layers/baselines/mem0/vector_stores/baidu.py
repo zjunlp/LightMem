@@ -2,9 +2,8 @@ import logging
 import time
 from typing import Dict, Optional
 
-from pydantic import BaseModel
-
 from mem0.vector_stores.base import VectorStoreBase
+from pydantic import BaseModel
 
 try:
     import pymochow

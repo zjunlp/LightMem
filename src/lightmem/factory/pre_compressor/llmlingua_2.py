@@ -1,4 +1,5 @@
-from typing import Dict, Optional, List, Union, Any
+from typing import Any, Dict, List, Optional, Union
+
 from transformers import PreTrainedTokenizerBase
 
 from lightmem.configs.pre_compressor.llmlingua_2 import LlmLingua2Config

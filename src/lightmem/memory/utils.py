@@ -1,14 +1,15 @@
+import json
 import os
 import re
-import json
-from datetime import datetime
-from typing import List, Dict, Literal, Optional, Any, Tuple, Union
-import tiktoken
 import uuid
 from dataclasses import dataclass, field
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+from datetime import datetime
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+
+import tiktoken
 from transformers.tokenization_utils import PreTrainedTokenizer
-from typing import Optional, Union, Dict
+from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+
 
 @dataclass
 class MemoryEntry:
@@ -57,9 +58,9 @@ def clean_response(response: str) -> List[Dict[str, Any]]:
 
 
 def assign_sequence_numbers_with_timestamps(extract_list, offset_ms: int = 500, topic_id_mapping: List[List[int]] = None):
-    from datetime import datetime, timedelta
-    from collections import defaultdict
     import re
+    from collections import defaultdict
+    from datetime import datetime, timedelta
     
     current_index = 0
     timestamps_list = []

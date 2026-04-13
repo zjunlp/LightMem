@@ -1,24 +1,28 @@
 from __future__ import annotations
-from .base import BaseMemoryLayer 
+
+import json
+import os
+import pickle
+from typing import (
+    Any,
+    Dict,
+    List,
+    Literal,
+    Optional,
+)
+
 from pydantic import (
-    BaseModel, 
-    Field, 
+    BaseModel,
+    Field,
     model_validator,
 )
+
+from .base import BaseMemoryLayer
 from .baselines.agentic_memory.memory_system import (
-    AgenticMemorySystem, 
-    MemoryNote, 
-) 
-import pickle 
-import os
-import json
-from typing import (
-    Literal, 
-    List, 
-    Dict, 
-    Any,
-    Optional, 
+    AgenticMemorySystem,
+    MemoryNote,
 )
+
 
 class AMEMConfig(BaseModel):
     """The default configuration for A-MEM."""

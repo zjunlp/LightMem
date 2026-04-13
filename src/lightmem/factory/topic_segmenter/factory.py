@@ -1,6 +1,8 @@
-from typing import Dict, Optional
 from importlib import import_module
+from typing import Dict
+
 from lightmem.configs.topic_segmenter.base import TopicSegmenterConfig
+
 
 class TopicSegmenterFactory:
     _MODEL_MAPPING: Dict[str, str] = {

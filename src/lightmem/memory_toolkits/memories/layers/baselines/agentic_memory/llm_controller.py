@@ -1,8 +1,10 @@
-from typing import Dict, Optional, Literal, Any
-import os
 import json
+import os
 from abc import ABC, abstractmethod
+from typing import Any, Literal, Optional
+
 from litellm import completion
+
 
 class BaseLLMController(ABC):
     @abstractmethod
@@ -42,7 +44,6 @@ class OpenAIController(BaseLLMController):
 
 class OllamaController(BaseLLMController):
     def __init__(self, model: str = "llama2"):
-        from ollama import chat
         self.model = model
     
     def _generate_empty_value(self, schema_type: str, schema_items: dict = None) -> Any:
