@@ -7,8 +7,8 @@ from pydantic import BaseModel
 
 try:
     import pymysql
-    from pymysql.cursors import DictCursor
     from dbutils.pooled_db import PooledDB
+    from pymysql.cursors import DictCursor
 except ImportError:
     raise ImportError(
         "Azure MySQL vector store requires PyMySQL and DBUtils. "

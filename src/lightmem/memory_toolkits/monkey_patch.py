@@ -60,15 +60,17 @@ Notes:
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from pydantic import BaseModel
 from typing import (
-    Callable, 
-    Any, 
-    List, 
-    Dict, 
-    Tuple, 
+    Any,
+    Callable,
+    Dict,
+    List,
+    Tuple,
 )
+
+from pydantic import BaseModel
 
 
 @dataclass

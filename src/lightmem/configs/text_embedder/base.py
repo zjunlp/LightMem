@@ -1,6 +1,9 @@
+from typing import Any, ClassVar, Dict, List, Optional, Union
+
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Optional, Any, List, Union, ClassVar
+
 from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
+
 
 class TextEmbedderConfig(BaseModel):
     model_name: str = Field(

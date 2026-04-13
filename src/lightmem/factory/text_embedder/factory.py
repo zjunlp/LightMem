@@ -1,6 +1,8 @@
-from typing import Dict, Optional
 from importlib import import_module
+from typing import Dict
+
 from lightmem.configs.text_embedder.base import TextEmbedderConfig
+
 
 class TextEmbedderFactory:
     _MODEL_MAPPING: Dict[str, str] = {

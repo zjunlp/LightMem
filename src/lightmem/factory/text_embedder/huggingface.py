@@ -1,8 +1,11 @@
-from openai import OpenAI
-from typing import Optional, Literal
-from sentence_transformers import SentenceTransformer
+from typing import Optional
+
 import numpy as np
+from openai import OpenAI
+from sentence_transformers import SentenceTransformer
+
 from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
+
 
 class TextEmbedderHuggingface:
     def __init__(self, config: Optional[BaseTextEmbedderConfig] = None):

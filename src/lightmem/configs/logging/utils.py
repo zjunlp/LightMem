@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union, Dict, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 if TYPE_CHECKING:
     from .base import LoggingConfig

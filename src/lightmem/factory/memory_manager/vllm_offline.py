@@ -5,11 +5,11 @@ Require vLLM version >= 0.9.0, and vLLM version 0.11.0 is recommended.
 """
 
 import concurrent
-import json
 import warnings
-from typing import Dict, List, Optional, Literal, Any, Union
+from typing import Dict, List, Literal, Optional, Union
 
 import torch
+
 try:
     from vllm import LLM, SamplingParams
 except ImportError:

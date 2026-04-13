@@ -1,21 +1,22 @@
 import argparse
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from copy import deepcopy
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+)
+
 from memories import (
     CONFIG_MAPPING,
-    MEMORY_LAYERS_MAPPING,
     DATASET_MAPPING,
+    MEMORY_LAYERS_MAPPING,
 )
-from memories.datasets.base import QuestionAnswerPair, MemoryDataset
-from typing import (
-    Dict,
-    Any,
-    Optional,
-    List,
-)
+from memories.datasets.base import MemoryDataset, QuestionAnswerPair
+from tqdm import tqdm
 
 _LOCK = threading.Lock()
 

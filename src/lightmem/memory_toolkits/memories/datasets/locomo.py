@@ -1,22 +1,22 @@
 from __future__ import annotations
-import os
 
 import base64
-import requests
-from io import BytesIO
-from PIL import Image
-import openai
-
 import json
+import os
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from io import BytesIO
+from typing import Any, Dict, List, Optional, Tuple
+
+import openai
+import requests
+from PIL import Image
 
 from .base import (
     MemoryDataset,
-    Trajectory,
-    Session,
-    QuestionAnswerPair,
     Message,
+    QuestionAnswerPair,
+    Session,
+    Trajectory,
 )
 
 

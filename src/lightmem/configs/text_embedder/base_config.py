@@ -1,5 +1,7 @@
+from typing import Any, Dict, Optional
+
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+
 
 class BaseTextEmbedderConfig(BaseModel):
     model: Optional[str] = None

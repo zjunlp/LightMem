@@ -1,5 +1,7 @@
+from typing import List, Optional
+
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Optional, Type, Any, List
+
 
 class ContextRetrieverConfig(BaseModel):
     model_name: str = Field(description="The Context retriever or algorithm (e.g., 'BM25', 'TF-IDF')", default="BM25")

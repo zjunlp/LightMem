@@ -1,13 +1,16 @@
-from .base_operator import NonCachedLLMOperator
-import numpy as np 
 import json
 import re
-from typing import ( 
-    List, 
-    Dict, 
-    Any, 
-    Optional, 
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
 )
+
+import numpy as np
+
+from .base_operator import NonCachedLLMOperator
+
 
 class QuestionAnsweringOperator(NonCachedLLMOperator):
     """An operator for question answering."""

@@ -1,26 +1,34 @@
-import uuid
-import re
-import copy
 import concurrent
-import logging
+import copy
 import json
+import re
 import threading
+import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict, Literal, Optional, List, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+
 from pydantic import ValidationError
+
 from lightmem.configs.base import BaseMemoryConfigs
-from lightmem.factory.pre_compressor.factory import PreCompressorFactory
-from lightmem.factory.topic_segmenter.factory import TopicSegmenterFactory
-from lightmem.factory.memory_manager.factory import MemoryManagerFactory
-from lightmem.factory.text_embedder.factory import TextEmbedderFactory
-from lightmem.factory.retriever.contextretriever.factory import ContextRetrieverFactory
-from lightmem.factory.retriever.embeddingretriever.factory import EmbeddingRetrieverFactory
-from lightmem.factory.retriever.embeddingretriever.qdrant import QdrantConfig
+from lightmem.configs.logging.utils import get_logger
 from lightmem.factory.memory_buffer.sensory_memory import SenMemBufferManager
 from lightmem.factory.memory_buffer.short_term_memory import ShortMemBufferManager
-from lightmem.memory.utils import MemoryEntry, assign_sequence_numbers_with_timestamps, save_memory_entries,convert_extraction_results_to_memory_entries,normalize_extraction_prompts,process_extraction_results
-from lightmem.memory.prompts import METADATA_GENERATE_PROMPT, UPDATE_PROMPT
-from lightmem.configs.logging.utils import get_logger
+from lightmem.factory.memory_manager.factory import MemoryManagerFactory
+from lightmem.factory.pre_compressor.factory import PreCompressorFactory
+from lightmem.factory.retriever.contextretriever.factory import ContextRetrieverFactory
+from lightmem.factory.retriever.embeddingretriever.factory import (
+    EmbeddingRetrieverFactory,
+)
+from lightmem.factory.text_embedder.factory import TextEmbedderFactory
+from lightmem.factory.topic_segmenter.factory import TopicSegmenterFactory
+from lightmem.memory.prompts import UPDATE_PROMPT
+from lightmem.memory.utils import (
+    assign_sequence_numbers_with_timestamps,
+    convert_extraction_results_to_memory_entries,
+    normalize_extraction_prompts,
+    process_extraction_results,
+    save_memory_entries,
+)
 
 GLOBAL_TOPIC_IDX = 0
 GLOBAL_LAST_SUMMARY_TIME = None
@@ -723,18 +731,18 @@ class LightMemory:
         top_k_seeds: int = 15,
     ) -> Dict:
         from lightmem.memory.utils import (
-            initialize_time_pointer,
-            get_window_entries,
-            mark_entries_and_get_next_time,
-            check_has_more_entries,
-            retrieve_supplementary_entries,
-            format_entries_for_prompt,
-            call_summary_llm,
-            store_summary,
-            build_summary_item,
-            build_single_result,
             build_batch_result,
-            build_empty_result
+            build_empty_result,
+            build_single_result,
+            build_summary_item,
+            call_summary_llm,
+            check_has_more_entries,
+            format_entries_for_prompt,
+            get_window_entries,
+            initialize_time_pointer,
+            mark_entries_and_get_next_time,
+            retrieve_supplementary_entries,
+            store_summary,
         )
         global GLOBAL_LAST_SUMMARY_TIME
         

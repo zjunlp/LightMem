@@ -1,12 +1,12 @@
 import json
-import ollama
 import os
 import time
-from tqdm import tqdm
 from typing import Dict, List, Optional
 
-from lightmem.memory.lightmem import LightMemory
+import ollama
+from tqdm import tqdm
 
+from lightmem.memory.lightmem import LightMemory
 
 # =========== Ollama Configuration ============
 your_ollama_model_name = "your_Ollama_model_name_01"  # such as "llama3:latest"

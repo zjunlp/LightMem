@@ -1,7 +1,8 @@
-from openai import OpenAI
-from typing import Optional, List, Union
-import os
+from typing import List, Optional, Union
+
 import httpx
+from openai import OpenAI
+
 from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
 
 

@@ -1,7 +1,7 @@
 import json
 import logging
-import httpx
 
+import httpx
 from mem0.exceptions import (
     NetworkError,
     create_exception_from_response,

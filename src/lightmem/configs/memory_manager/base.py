@@ -1,5 +1,7 @@
+from typing import ClassVar, List, Optional
+
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, Optional, Type, Any, List, ClassVar
+
 from .base_config import BaseMemoryManagerConfig
 
 
