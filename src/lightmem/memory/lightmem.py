@@ -295,22 +295,21 @@ class LightMemory:
             compressed_messages = msgs
             self.logger.info(f"[{call_id}] Pre-compression disabled, using normalized messages")
         
+        #topic_segment==false 完全跳过了后续的记忆提取、Embedding 生成和向量数据库存储流程
         if not self.config.topic_segment:
             # TODO:
-            self.logger.info(f"[{call_id}] Topic segmentation disabled, returning emitted messages")
-            return {
-                "triggered": True,
-                "cut_index": len(msgs),
-                "boundaries": [0, len(msgs)],
-                "emitted_messages": msgs,
-                "carryover_size": 0,
-            }
+            self.logger.info(f"[{call_id}] Topic segmentation disabled, treating all messages as one segment")
+            #更严谨，防止compressed_messages为[],导致后面检测不出来
+            if not compressed_messages:
+                all_segments = []
+            else:
+                all_segments = [compressed_messages]
+        else:
+            all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
 
-        all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
-
-        if force_segment:
-            all_segments = self.senmem_buffer_manager.cut_with_segmenter(self.segmenter, self.text_embedder, force_segment)
-        
+        if force_segment and self.config.topic_segment:
+            all_segments = self.senmem_buffer_manager.cut_with_segmenter(self.segmenter, self.text_embedder, force_segment)    
+            
         if not all_segments:
             self.logger.debug(f"[{call_id}] No segments generated, returning empty result")
             return result # TODO
