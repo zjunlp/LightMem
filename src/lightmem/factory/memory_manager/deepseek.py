@@ -18,6 +18,22 @@ class DeepseekManager:
         self.base_url = (self.config.deepseek_base_url or "https://api.deepseek.com/v1").rstrip("/")
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
 
+    def _build_extra_body(self) -> Optional[Dict[str, Any]]:
+        extra_body = dict(getattr(self.config, "extra_body", {}) or {})
+        thinking = getattr(self.config, "thinking", None)
+
+        if thinking is not None:
+            if isinstance(thinking, bool):
+                extra_body["thinking"] = {"type": "enabled" if thinking else "disabled"}
+            elif isinstance(thinking, str):
+                extra_body["thinking"] = {"type": thinking}
+            elif isinstance(thinking, dict):
+                extra_body["thinking"] = thinking
+            else:
+                raise TypeError("thinking must be a bool, str, dict, or None")
+
+        return extra_body or None
+
     def _parse_response(self, response, tools):
         """
         Process the response based on whether tools are used or not.
@@ -98,6 +114,16 @@ class DeepseekManager:
         if tools:  # TODO: Remove tools if no issues found with new memory addition logic
             params["tools"] = tools
             params["tool_choice"] = tool_choice
+        if self.config.stop:
+            params["stop"] = self.config.stop
+
+        reasoning_effort = getattr(self.config, "reasoning_effort", None)
+        if reasoning_effort:
+            params["reasoning_effort"] = reasoning_effort
+
+        extra_body = self._build_extra_body()
+        if extra_body:
+            params["extra_body"] = extra_body
 
         response = self.client.chat.completions.create(**params)
         usage_info = {

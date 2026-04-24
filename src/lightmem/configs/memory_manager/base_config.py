@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union, List
+from typing import Dict, Optional, Union, List, Any
 
 
 class BaseMemoryManagerConfig:
@@ -32,6 +32,10 @@ class BaseMemoryManagerConfig:
         vllm_base_url: Optional[str] = None, # vLLM specific
         site_url: Optional[str] = None,
         app_name: Optional[str] = None,
+        reasoning_effort: Optional[str] = None,
+        extra_body: Optional[Dict[str, Any]] = None,
+        thinking: Optional[Union[bool, str, Dict[str, Any]]] = None,
+        **kwargs: Any,
     ):
 
         # General parameters
@@ -62,3 +66,9 @@ class BaseMemoryManagerConfig:
         self.vllm_base_url = vllm_base_url
         self.site_url = site_url
         self.app_name = app_name
+        self.reasoning_effort = reasoning_effort
+        self.extra_body = extra_body
+        self.thinking = thinking
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
