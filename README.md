@@ -43,7 +43,7 @@
 <span id='news'/>
 
 ## 📢 News
-- **[2026-04-24]**: 🚀 LightMem now supports the latest DeepSeek models, including `deepseek-v4-flash` and `deepseek-v4-pro`, with `reasoning_effort` and thinking-mode configuration!
+- **[2026-04-24]**: 🚀 LightMem now supports the latest [**DeepSeek**](./src/lightmem/configs/memory_manager/base_config.py) models, including `deepseek-v4-flash` and `deepseek-v4-pro`, with `reasoning_effort` and thinking-mode configuration!
 - **[2026-04-24]**: 🎉🎉🎉 [**StructMem: Structured Memory for Long-Horizon Behavior in LLMs**](https://arxiv.org/abs/2604.21748) has been accepted by **ACL 2026**!
 - **[2026-03-21]**: 🚀 We provide a more comprehensive [baseline evaluation framework](https://github.com/zjunlp/MemBase), supporting the benchmarking of memory layers such as Mem0, A-MEM, EverMemOS, LangMem on multiple datasets like LoCoMo and LongMemEval.
 - **[2026-02-15]**: 🚀 **[StructMem](./StructMem.md)** is released: A hierarchical memory framework that preserves event-level memory bindings and cross-event memory connections. 
