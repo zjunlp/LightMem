@@ -243,7 +243,7 @@ def main():
         messages.append({"role": "system", "content": "You are a helpful assistant."})
         messages.append({
             "role": "user",
-            "content": f"Question time:{item['question_date']} and question:{item['question']}\nPlease answer the question based on the following memories: {str(related_memories)}"
+            "content": f"Question time:{item['question_date']} and question:{item['question']}\nPlease answer the question based on the following memories: {'\n'.join(related_memories)}"
         })
         generated_answer = llm.call(messages)
 

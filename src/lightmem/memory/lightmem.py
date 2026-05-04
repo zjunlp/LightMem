@@ -657,7 +657,7 @@ class LightMemory:
             return_full=True,
         )
         self.logger.info(f"[{call_id}] Found {len(results)} results")
-        formatted_results = []
+        formatted_results: list[str] = []
         for r in results:
             payload = r.get("payload", {})
             time_stamp = payload.get("time_stamp", "")
@@ -665,11 +665,11 @@ class LightMemory:
             memory = payload.get("memory", "")
             formatted_results.append(f"{time_stamp} {weekday} {memory}")
             
-        result_string = "\n".join(formatted_results)
+        result_string: str = "\n".join(formatted_results)
         self.logger.info(f"[{call_id}] Formatted {len(formatted_results)} results into output string")
         self.logger.debug(f"[{call_id}] Output string length: {len(result_string)} characters")
         self.logger.info(f"========== END {call_id} ==========")
-        return result_string
+        return formatted_results
 
     def get_token_statistics(self):
         embedder_stats = {"total_calls": 0, "total_tokens": None}

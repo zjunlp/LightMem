@@ -247,12 +247,7 @@ def retrieve_memory(query: str, limit: int = 10, filters: Optional[Any] = {}) ->
             limit=limit,
             filters=filters
         )
-        if isinstance(related_memories, str):
-            related_memories_list = [item for item in related_memories.split("\n") if item.strip()]
-        elif isinstance(related_memories, list):
-            related_memories_list = related_memories
-        else:
-            related_memories_list = [str(related_memories)]
+        related_memories_list = related_memories
 
         return {
             "status": STATUS_SUCCESS,
