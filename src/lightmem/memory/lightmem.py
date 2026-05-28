@@ -219,7 +219,8 @@ class LightMemory:
         The process is as follows:
           1. Normalize input messages with standardized timestamps and session tracking.
           2. Optionally compress messages using the pre-defined compression model (if enabled).
-          3. If topic segmentation is enabled, split messages into coherent segments and add them to the sentence-level buffer.
+          3. If topic segmentation is enabled, split messages into coherent segments 
+             via the topic segmenter; otherwise, treat all messages as a single segment.
           4. Trigger memory extraction based on configured thresholds or forced flags.
           5. Optionally perform metadata summarization using an external model if enabled.
           6. Convert extracted results into `MemoryEntry` objects and update memory storage
@@ -243,15 +244,18 @@ class LightMemory:
                     - `"add_input_prompt"`: List of input prompts used for metadata generation (if enabled)
                     - `"add_output_prompt"`: Corresponding output results from metadata generation
                     - `"api_call_nums"`: Number of API calls made for extraction/summarization
-                    - (In early termination cases) A segmentation result dict with keys such as
-                      `"triggered"`, `"cut_index"`, `"boundaries"`, and `"emitted_messages"`
+                  Returns an empty result dict (with `api_call_nums=0`) if no segments are
+                  generated or extraction is not triggered.
 
         Notes:
-            - If `self.config.pre_compress` is True, messages will first be token-compressed before segmentation.
-            - If `self.config.topic_segment` is disabled, the function returns early with segmentation info only.
-            - Memory extraction results are wrapped into `MemoryEntry` objects containing timestamps,
-              weekdays, and extracted factual content.
-            - Depending on `self.config.update`, the function triggers either online or offline memory updates.
+            - If `self.config.pre_compress` is True, messages will first be token-compressed
+              before segmentation.
+            - When `self.config.topic_segment` is disabled, all messages are treated as a single
+              segment and the full memory extraction pipeline proceeds normally (no early return).
+            - Memory extraction results are wrapped into `MemoryEntry` objects containing
+              timestamps, weekdays, and extracted factual content.
+            - Depending on `self.config.update`, the function triggers either online or offline
+              memory updates.
         """
         extract_prompts = normalize_extraction_prompts(
             prompts=METADATA_GENERATE_PROMPT,
@@ -295,11 +299,9 @@ class LightMemory:
             compressed_messages = msgs
             self.logger.info(f"[{call_id}] Pre-compression disabled, using normalized messages")
         
-        #topic_segment==false 完全跳过了后续的记忆提取、Embedding 生成和向量数据库存储流程
         if not self.config.topic_segment:
-            # TODO:
             self.logger.info(f"[{call_id}] Topic segmentation disabled, treating all messages as one segment")
-            #更严谨，防止compressed_messages为[],导致后面检测不出来
+            # guard against empty compressed_messages
             if not compressed_messages:
                 all_segments = []
             else:
