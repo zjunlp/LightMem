@@ -219,7 +219,8 @@ class LightMemory:
         The process is as follows:
           1. Normalize input messages with standardized timestamps and session tracking.
           2. Optionally compress messages using the pre-defined compression model (if enabled).
-          3. If topic segmentation is enabled, split messages into coherent segments and add them to the sentence-level buffer.
+          3. If topic segmentation is enabled, split messages into coherent segments 
+             via the topic segmenter; otherwise, treat all messages as a single segment.
           4. Trigger memory extraction based on configured thresholds or forced flags.
           5. Optionally perform metadata summarization using an external model if enabled.
           6. Convert extracted results into `MemoryEntry` objects and update memory storage
@@ -243,15 +244,18 @@ class LightMemory:
                     - `"add_input_prompt"`: List of input prompts used for metadata generation (if enabled)
                     - `"add_output_prompt"`: Corresponding output results from metadata generation
                     - `"api_call_nums"`: Number of API calls made for extraction/summarization
-                    - (In early termination cases) A segmentation result dict with keys such as
-                      `"triggered"`, `"cut_index"`, `"boundaries"`, and `"emitted_messages"`
+                  Returns an empty result dict (with `api_call_nums=0`) if no segments are
+                  generated or extraction is not triggered.
 
         Notes:
-            - If `self.config.pre_compress` is True, messages will first be token-compressed before segmentation.
-            - If `self.config.topic_segment` is disabled, the function returns early with segmentation info only.
-            - Memory extraction results are wrapped into `MemoryEntry` objects containing timestamps,
-              weekdays, and extracted factual content.
-            - Depending on `self.config.update`, the function triggers either online or offline memory updates.
+            - If `self.config.pre_compress` is True, messages will first be token-compressed
+              before segmentation.
+            - When `self.config.topic_segment` is disabled, all messages are treated as a single
+              segment and the full memory extraction pipeline proceeds normally (no early return).
+            - Memory extraction results are wrapped into `MemoryEntry` objects containing
+              timestamps, weekdays, and extracted factual content.
+            - Depending on `self.config.update`, the function triggers either online or offline
+              memory updates.
         """
         extract_prompts = normalize_extraction_prompts(
             prompts=METADATA_GENERATE_PROMPT,
@@ -296,21 +300,18 @@ class LightMemory:
             self.logger.info(f"[{call_id}] Pre-compression disabled, using normalized messages")
         
         if not self.config.topic_segment:
-            # TODO:
-            self.logger.info(f"[{call_id}] Topic segmentation disabled, returning emitted messages")
-            return {
-                "triggered": True,
-                "cut_index": len(msgs),
-                "boundaries": [0, len(msgs)],
-                "emitted_messages": msgs,
-                "carryover_size": 0,
-            }
+            self.logger.info(f"[{call_id}] Topic segmentation disabled, treating all messages as one segment")
+            # guard against empty compressed_messages
+            if not compressed_messages:
+                all_segments = []
+            else:
+                all_segments = [compressed_messages]
+        else:
+            all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
 
-        all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
-
-        if force_segment:
-            all_segments = self.senmem_buffer_manager.cut_with_segmenter(self.segmenter, self.text_embedder, force_segment)
-        
+        if force_segment and self.config.topic_segment:
+            all_segments = self.senmem_buffer_manager.cut_with_segmenter(self.segmenter, self.text_embedder, force_segment)    
+            
         if not all_segments:
             self.logger.debug(f"[{call_id}] No segments generated, returning empty result")
             return result # TODO
@@ -339,6 +340,7 @@ class LightMemory:
         self.logger.debug(f"[{call_id}] Extract list sample: {json.dumps(extract_list)}")
         max_source_ids = [sum(1 for seg in batch for msg in seg if msg.get("role") == "user") - 1 for batch in extract_list]
         self.logger.info(f"[{call_id}] Batch max_source_ids: {max_source_ids}")
+        extracted_results = []
         if self.config.metadata_generate and self.config.text_summary:
             self.logger.info(f"[{call_id}] Starting metadata generation")
             extracted_results = self.manager.meta_text_extract(
