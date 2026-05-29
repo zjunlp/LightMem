@@ -340,6 +340,7 @@ class LightMemory:
         self.logger.debug(f"[{call_id}] Extract list sample: {json.dumps(extract_list)}")
         max_source_ids = [sum(1 for seg in batch for msg in seg if msg.get("role") == "user") - 1 for batch in extract_list]
         self.logger.info(f"[{call_id}] Batch max_source_ids: {max_source_ids}")
+        extracted_results = []
         if self.config.metadata_generate and self.config.text_summary:
             self.logger.info(f"[{call_id}] Starting metadata generation")
             extracted_results = self.manager.meta_text_extract(
