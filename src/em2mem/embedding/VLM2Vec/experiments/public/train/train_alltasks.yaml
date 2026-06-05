@@ -1,0 +1,197 @@
+ImageNet_1K:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: ImageNet_1K
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+N24News:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: N24News
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 50000
+    weight: 1
+HatefulMemes:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: HatefulMemes
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 10000
+    weight: 0.5
+VOC2007:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VOC2007
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 10000
+    weight: 0.5
+SUN397:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: SUN397
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 0.5
+OK-VQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: OK-VQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 10000
+    weight: 0.5
+A-OKVQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: A-OKVQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 0.5
+DocVQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: DocVQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 40000
+    weight: 1
+InfographicsVQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: InfographicsVQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 25000
+    weight: 0.5
+ChartQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: ChartQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 28000
+    weight: 0.5
+Visual7W:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: Visual7W
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 70000
+    weight: 1
+VisDial:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VisDial
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 130000
+    weight: 1
+CIRR:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: CIRR
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 30000
+    weight: 0.5
+VisualNews_t2i:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VisualNews_t2i
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+VisualNews_i2t:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VisualNews_i2t
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+MSCOCO_t2i:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: MSCOCO_t2i
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+MSCOCO_i2t:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: MSCOCO_i2t
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 120000
+    weight: 1
+NIGHTS:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: NIGHTS
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 0.5
+WebQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: WebQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 0.5
+MSCOCO:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: MSCOCO
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+
+colpali_train_set:
+    dataset_parser: vidore
+    dataset_name: vidore/colpali_train_set
+    weight: 10
+visrag-indomain:
+    dataset_parser: visrag
+    dataset_name: openbmb/VisRAG-Ret-Train-In-domain-data
+    global_dataset_name: VisRAG-Indomain-data
+    weight: 12
+
+video_caption_300k:
+    dataset_parser: llavahound_caption
+    dataset_name: video_caption_300k
+    dataset_path: vlm2vec_train/train_video_and_instruction/video_instruction/train/sft/video_caption_300k.jsonl
+    video_frame_basedir: vlm2vec_train/train_video_and_instruction/train_300k
+    weight: 5
+    num_rows: 300_000
+    num_frames: 8
+    data_mode: caption_retrieval
+video_caption_300k-video:
+    dataset_parser: llavahound_caption
+    dataset_name: video_caption_300k
+    dataset_path: vlm2vec_train/train_video_and_instruction/video_instruction/train/sft/video_caption_300k.jsonl
+    video_frame_basedir: vlm2vec_train/train_video_and_instruction/train_300k
+    weight: 5
+    num_rows: 300_000
+    num_frames: 8
+    data_mode: video_retrieval
+video_qa_240k:
+    dataset_parser: llavahound_qa
+    dataset_name: video_qa_240k
+    dataset_path: vlm2vec_train/train_video_and_instruction/video_instruction/train/sft/video_240k_caption_15k.jsonl
+    video_frame_basedir: vlm2vec_train/train_video_and_instruction/train_300k
+    weight: 5
+    num_rows: 240_000
+    num_frames: 8
