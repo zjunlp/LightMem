@@ -510,6 +510,23 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `version`             | `'v1.1'`                                    | str. Configuration/API version. Only change if you know compatibility implications. |
 | `logging`             | `'None'`                                    | dict / object. Configuration for logging enabled. |
 
+**(Option) BoundMem Configuration:**
+
+BoundMem tag fallback is intentionally opt-in and is not enabled by `BaseMemoryConfigs` by default. The following are parameters related to the BoundMem plugin in the main functions, which can be added as needed:
+
+| Function | Parameter / Behavior | Notes |
+| --- | --- | --- |
+| `add_memory()` | `boundmem_tags` | Tags newly created memories before insertion. Accepts a string or tag list. |
+| `retrieve()` | `boundmem_tags` | Filters retrieved memories by overlap with the current tags. |
+| `retrieve()` | `boundmem_drop_untagged` | Keeps untagged legacy memories by default; set `True` to drop them. |
+| `retrieve()` | returned memory text | Internal tag prefixes are stripped before results are returned. |
+| `resolve_tags()` | `strategy="hard"` | Uses caller-provided `hard_tags`. |
+| `resolve_tags()` | `strategy="soft"` | Uses `environment_tag_fn` with `query`, `history`, `known_tags`, and optional `metadata`. |
+| `resolve_tags()` | `known_tags` | Caller-maintained tag list; returned together with newly resolved tags. |
+| `tag_text()` / `strip_tags()` | string-level helpers | Add or remove the internal tag prefix for custom integrations. |
+| `filter_by_tags()` | raw retriever-result helper | Keeps memories with overlapping tags; accepts custom `tag_match_fn`. |
+| Matching rule | default matcher | A memory is kept if it shares at least one tag with current tags. |
+
 ## 🏆 Contributors
 
 <table>
