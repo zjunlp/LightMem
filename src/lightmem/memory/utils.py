@@ -2,7 +2,7 @@ import os
 import re
 import json
 from datetime import datetime
-from typing import List, Dict, Literal, Optional, Any, Tuple, Union
+from typing import List, Dict, Literal, Optional, Any, Tuple, Union, Callable
 import tiktoken
 import uuid
 from dataclasses import dataclass, field
@@ -29,6 +29,7 @@ class MemoryEntry:
     hit_time: int = 0
     update_queue: List = field(default_factory=list)
     consolidated: bool = False
+    bam_tags: List[Any] = field(default_factory=list)
     
 def clean_response(response: str) -> List[Dict[str, Any]]:
     """
@@ -135,7 +136,7 @@ def assign_sequence_numbers_with_timestamps(extract_list, offset_ms: int = 500, 
 # TODO：merge into context retriever
 def save_memory_entries(memory_entries, file_path="memory_entries.json"):
     def entry_to_dict(entry):
-        return {
+        data = {
             "id": entry.id,
             "time_stamp": entry.time_stamp,
             "topic_id": entry.topic_id,
@@ -154,6 +155,9 @@ def save_memory_entries(memory_entries, file_path="memory_entries.json"):
             "speaker_name": getattr(entry, "speaker_name", ""),  
             "consolidated": getattr(entry, "consolidated", False),  
         }
+        if getattr(entry, "bam_tags", []):
+            data["bam_tags"] = entry.bam_tags
+        return data
 
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
@@ -748,3 +752,215 @@ def build_empty_result(process_all: bool, has_more: bool = False) -> Dict:
             "time_range": None,
             "has_more": has_more
         }
+
+
+# === BoundMem tag utils ===
+
+def _tags(tags: Optional[Any]) -> List[Any]:
+    """Convert strings, dicts, scalars, or nested containers into a flat tag list."""
+    if tags is None:
+        return []
+    if isinstance(tags, str):
+        return [tags] if tags else []
+    if isinstance(tags, dict):
+        if "tags" in tags or "tag" in tags:
+            return _tags(tags.get("tags", tags.get("tag")))
+        return [tags]
+    if not isinstance(tags, (list, tuple, set)):
+        return [tags]
+    normalized: List[Any] = []
+    for tag in tags:
+        normalized.extend(_tags(tag))
+    return normalized
+
+
+BAM_TAG_PREFIX = "[[BAM_TAGS:"
+BAM_TAG_SUFFIX = "]]"
+
+def _split_tags(content: str) -> Tuple[List[Any], str]:
+    """Split one memory string into BoundMem prefix tags and clean memory text."""
+    if not isinstance(content, str) or not content.startswith(BAM_TAG_PREFIX):
+        return [], content
+    payload_start = len(BAM_TAG_PREFIX)
+    try:
+        tags, consumed = json.JSONDecoder().raw_decode(content[payload_start:])
+    except json.JSONDecodeError:
+        return [], content
+    end = payload_start + consumed
+    if not content.startswith(BAM_TAG_SUFFIX, end):
+        return [], content
+    end += len(BAM_TAG_SUFFIX)
+    after = content[end:]
+    after = after[2:] if after.startswith("\r\n") else after[1:] if after.startswith(("\n", "\r")) else after
+    return _tags(tags), after
+
+
+def resolve_tags(
+    *,
+    query: str = "",
+    history: Optional[List[Any]] = None,
+    hard_tags: Optional[Any] = None,
+    environment_tag_fn: Optional[Callable[[Dict[str, Any]], Any]] = None,
+    known_tags: Optional[List[Any]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    strategy: Literal["hard", "soft"] = "hard",
+) -> Tuple[List[Any], List[Any]]:
+    """
+    Resolve current environment tags and return the updated known-tag list.
+
+    `strategy="hard"` uses only `hard_tags`; `strategy="soft"` requires
+    `environment_tag_fn`, which receives the current query, history, known tags,
+    metadata, and strategy, then returns tags or a dict with `tags` / `tag` and
+    optionally `known_tags`.
+    """
+    if strategy not in ("hard", "soft"):
+        raise ValueError("strategy must be 'hard' or 'soft'")
+    known = _tags(known_tags)
+    if strategy == "hard":
+        if hard_tags is None:
+            raise ValueError("hard_tags is required when strategy='hard'")
+        env_tags = _tags(hard_tags)
+        extra_known = []
+    else:
+        if environment_tag_fn is None:
+            raise ValueError("environment_tag_fn is required when strategy='soft'")
+        raw = environment_tag_fn({
+            "query": query,
+            "history": history or [],
+            "known_tags": list(known),
+            "metadata": metadata or {},
+            "strategy": strategy,
+            "mode": strategy,
+        })
+        env_tags = _tags(raw.get("tags") or raw.get("tag")) if isinstance(raw, dict) else _tags(raw)
+        extra_known = _tags(raw.get("known_tags")) if isinstance(raw, dict) else []
+
+    merged, seen = [], set()
+    for tag in known + extra_known + env_tags:
+        if isinstance(tag, str):
+            key = tag.strip().lower()
+        else:
+            try:
+                key = json.dumps(tag, sort_keys=True, ensure_ascii=False, separators=(",", ":")).lower()
+            except TypeError:
+                key = str(tag).strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            merged.append(tag)
+    return env_tags, merged
+
+
+def tag_text(content: str, tags: Any) -> str:
+    """Prefix one memory string with tags in a JSON form that can be stripped later."""
+    env_tags = _tags(tags)
+    if not env_tags:
+        return content
+    _, clean = _split_tags(content)
+    encoded = json.dumps(env_tags, ensure_ascii=False, separators=(",", ":"))
+    return f"{BAM_TAG_PREFIX}{encoded}{BAM_TAG_SUFFIX}\n{clean}"
+
+
+def strip_tags(content: str) -> str:
+    """Remove the BoundMem prefix and return the original memory text."""
+    return _split_tags(content)[1]
+
+
+def match_tags(
+    memory_tags: Any,
+    environment_tags: Any,
+    *,
+    tag_match_fn: Optional[Callable[[Dict[str, Any]], Any]] = None,
+    tag_match_threshold: float = 1.0,
+) -> float:
+    """
+    Return a 0-1 score for whether memory tags belong to the current environment.
+
+    By default, any overlap means the memory belongs to the current environment.
+    A custom `tag_match_fn` can override this rule and return bool or a numeric
+    environment-membership score.
+    """
+    mem_tags, env_tags = _tags(memory_tags), _tags(environment_tags)
+    if not env_tags:
+        return 0.0
+    if tag_match_fn is not None:
+        score = tag_match_fn({"memory_tags": mem_tags, "environment_tags": env_tags, "threshold": tag_match_threshold})
+        return 1.0 if score is True else 0.0 if score is False else max(0.0, min(1.0, float(score)))
+    mem_keys, env_keys = set(), set()
+    for group, keys in ((mem_tags, mem_keys), (env_tags, env_keys)):
+        for tag in group:
+            if isinstance(tag, str):
+                key = tag.strip().lower()
+            else:
+                try:
+                    key = json.dumps(tag, sort_keys=True, ensure_ascii=False, separators=(",", ":")).lower()
+                except TypeError:
+                    key = str(tag).strip().lower()
+            if key:
+                keys.add(key)
+    mem_keys.discard("")
+    env_keys.discard("")
+    return 1.0 if mem_keys and env_keys and mem_keys & env_keys else 0.0
+
+
+def filter_by_tags(
+    *,
+    results: List[Dict[str, Any]],
+    environment_tags: Optional[Any] = None,
+    query: str = "",
+    force_drop_all: bool = False,
+    force_allow_all: bool = False,
+    tag_match_fn: Optional[Callable[[Dict[str, Any]], Any]] = None,
+    tag_match_threshold: float = 1.0,
+    drop_untagged_on_tag_filter: bool = False,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Keep only retrieved memories whose tags match the current environment.
+
+    The returned results are shallow copies with the memory text stripped back to
+    its original form. `drop_untagged_on_tag_filter=False` lets old untagged
+    memories pass during migration; by default, untagged results are kept for
+    backward compatibility.
+    With the default matcher, scores are binary: `1.0` means at least one tag
+    overlaps, not vector similarity.
+    """
+    if force_drop_all and force_allow_all:
+        raise ValueError("force_drop_all and force_allow_all cannot both be True")
+    env_tags = _tags(environment_tags)
+    scores: List[Optional[float]] = [None] * len(results)
+    if force_drop_all:
+        kept_indices, status = [], "tag_forced_drop_all"
+    elif force_allow_all or not env_tags:
+        kept_indices = list(range(len(results)))
+        status = "tag_forced_allow_all" if force_allow_all else "tag_filter_skipped"
+    else:
+        kept_indices, status = [], "tag_filtered"
+        for idx, result in enumerate(results):
+            payload = result.get("payload", {})
+            prefix_tags, _ = _split_tags(payload.get("memory", ""))
+            memory_tags = prefix_tags + _tags(payload.get("bam_tags"))
+            if not memory_tags:
+                scores[idx] = 0.0 if drop_untagged_on_tag_filter else 1.0
+            else:
+                scores[idx] = match_tags(
+                    memory_tags,
+                    env_tags,
+                    tag_match_fn=tag_match_fn,
+                    tag_match_threshold=tag_match_threshold,
+                )
+            if scores[idx] >= tag_match_threshold:
+                kept_indices.append(idx)
+    kept_results = []
+    for idx in kept_indices:
+        clean = dict(results[idx])
+        payload = dict(clean.get("payload", {}))
+        payload["memory"] = strip_tags(payload.get("memory", ""))
+        clean["payload"] = payload
+        kept_results.append(clean)
+    return kept_results, {
+        "status": status,
+        "environment_tags": env_tags,
+        "tag_scores": scores,
+        "tag_kept_indices": kept_indices,
+        "kept_result_indices": kept_indices,
+        "diagnostics": {"query": query, "drop_untagged_on_tag_filter": drop_untagged_on_tag_filter},
+    }

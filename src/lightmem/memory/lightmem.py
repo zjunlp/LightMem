@@ -18,7 +18,7 @@ from lightmem.factory.retriever.embeddingretriever.factory import EmbeddingRetri
 from lightmem.factory.retriever.embeddingretriever.qdrant import QdrantConfig
 from lightmem.factory.memory_buffer.sensory_memory import SenMemBufferManager
 from lightmem.factory.memory_buffer.short_term_memory import ShortMemBufferManager
-from lightmem.memory.utils import MemoryEntry, assign_sequence_numbers_with_timestamps, save_memory_entries,convert_extraction_results_to_memory_entries,normalize_extraction_prompts,process_extraction_results
+from lightmem.memory.utils import *
 from lightmem.memory.prompts import METADATA_GENERATE_PROMPT, UPDATE_PROMPT
 from lightmem.configs.logging.utils import get_logger
 
@@ -207,7 +207,8 @@ class LightMemory:
         METADATA_GENERATE_PROMPT: Optional[Union[str, Dict[str, str]]] = None,
         *,
         force_segment: bool = False, 
-        force_extract: bool = False
+        force_extract: bool = False,
+        boundmem_tags: Optional[Any] = None,
     ):
         """
         Add new memory entries from message history.
@@ -236,6 +237,7 @@ class LightMemory:
                 - None: Use default prompts based on self.config.extraction_mode
             force_segment (bool, optional): If True, forces segmentation regardless of buffer conditions.
             force_extract (bool, optional): If True, forces memory extraction even if thresholds are not met.
+            boundmem_tags (optional): If provided, these tags will be applied to the created MemoryEntry objects for BAM tag-based filtering during retrieval.
 
         Returns:
             dict: A dictionary containing the intermediate results of the memory addition pipeline.
@@ -368,6 +370,12 @@ class LightMemory:
             logger=self.logger
         )
         self.logger.info(f"[{call_id}] Created {len(memory_entries)} MemoryEntry objects")
+        if boundmem_tags is not None:
+            boundmem_tags, _ = resolve_tags(strategy="hard", hard_tags=boundmem_tags)
+            for mem in memory_entries:
+                mem.bam_tags = list(boundmem_tags)
+                mem.memory = tag_text(mem.memory, mem.bam_tags)
+            self.logger.info(f"[{call_id}] Applied BoundMem tags to {len(memory_entries)} MemoryEntry objects")
         for i, mem in enumerate(memory_entries):
             self.logger.debug(f"[{call_id}] MemoryEntry[{i}]: time={mem.time_stamp}, weekday={mem.weekday}, speaker_id={mem.speaker_id}, speaker_name={mem.speaker_name}, topic_id={mem.topic_id}, memory={mem.memory}")
 
@@ -400,7 +408,9 @@ class LightMemory:
             inserted_count = 0
             self.logger.info(f"[{call_id}] Starting embedding and insertion to vector database")
             for mem_obj in memory_list:
-                embedding_vector = self.text_embedder.embed(mem_obj.memory)
+                bam_tags = getattr(mem_obj, "bam_tags", [])
+                embed_text = strip_tags(mem_obj.memory) if bam_tags else mem_obj.memory
+                embedding_vector = self.text_embedder.embed(embed_text)
                 ids = mem_obj.id
                 while self.embedding_retriever.exists(ids):
                     ids = str(uuid.uuid4())
@@ -421,6 +431,8 @@ class LightMemory:
                     "speaker_name": mem_obj.speaker_name,
                     "consolidated": mem_obj.consolidated,
                 }
+                if bam_tags:
+                    payload["bam_tags"] = bam_tags
                 self.embedding_retriever.insert(
                     vectors = [embedding_vector],
                     payloads = [payload],
@@ -629,7 +641,15 @@ class LightMemory:
         )
         self.logger.info(f"========== END {call_id} ==========")
     
-    def retrieve(self, query: str, limit: int = 10, filters: Optional[dict] = None) -> list[str]:
+    def retrieve(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: Optional[dict] = None,
+        *,
+        boundmem_tags: Optional[Any] = None,
+        boundmem_drop_untagged: bool = False,
+    ) -> list[str]:
         """
         Retrieve relevant entries and return them as formatted strings.
 
@@ -637,6 +657,8 @@ class LightMemory:
             query (str): The natural language query string.
             limit (int, optional): Number of results to return. Defaults to 10.
             filters (dict, optional): Optional filters to narrow down the search. Defaults to None.
+            boundmem_tags (optional): If provided, these tags will be used to filter results based on BoundMem tag matching.
+            boundmem_drop_untagged (bool): If True, entries without any BAM tags will be dropped when boundmem_tags is provided.
 
         Returns:
             list[str]: A list of formatted strings containing time_stamp, weekday, and memory.
@@ -657,12 +679,25 @@ class LightMemory:
             return_full=True,
         )
         self.logger.info(f"[{call_id}] Found {len(results)} results")
+        if boundmem_tags is not None:
+            results, boundmem_result = filter_by_tags(
+                query=query,
+                results=results,
+                environment_tags=boundmem_tags,
+                drop_untagged_on_tag_filter=boundmem_drop_untagged,
+            )
+            self.logger.info(
+                f"[{call_id}] BoundMem filter kept {len(results)} results; "
+                f"status={boundmem_result.get('status')}"
+            )
         formatted_results: list[str] = []
         for r in results:
             payload = r.get("payload", {})
             time_stamp = payload.get("time_stamp", "")
             weekday = payload.get("weekday", "")
             memory = payload.get("memory", "")
+            if boundmem_tags is not None:
+                memory = strip_tags(memory)
             formatted_results.append(f"{time_stamp} {weekday} {memory}")
             
         result_string: str = "\n".join(formatted_results)
