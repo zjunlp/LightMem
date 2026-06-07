@@ -298,17 +298,12 @@ class LightMemory:
             self.logger.info(f"[{call_id}] Pre-compression disabled, using normalized messages")
         
         if not self.config.topic_segment:
-            # TODO:
-            self.logger.info(f"[{call_id}] Topic segmentation disabled, returning emitted messages")
-            return {
-                "triggered": True,
-                "cut_index": len(msgs),
-                "boundaries": [0, len(msgs)],
-                "emitted_messages": msgs,
-                "carryover_size": 0,
-            }
-
-        all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
+            # When topic segmentation is disabled, treat all messages as a single segment
+            # and proceed with the extraction pipeline directly
+            self.logger.info(f"[{call_id}] Topic segmentation disabled, treating all messages as single segment")
+            all_segments = [compressed_messages]
+        else:
+            all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
 
         if force_segment:
             all_segments = self.senmem_buffer_manager.cut_with_segmenter(self.segmenter, self.text_embedder, force_segment)
