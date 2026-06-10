@@ -89,6 +89,11 @@ llms = [
 mcp = [
     "fastmcp==2.13.1",
 ]
+fluxmem = [
+    "openai>=1.0.0",
+    "faiss-cpu>=1.7.0",
+    "scikit-learn>=1.0.0",
+]
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",
