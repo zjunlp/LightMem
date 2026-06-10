@@ -4,7 +4,7 @@
 
 **FluxMem** is a connectivity-evolving memory framework for LLM agents that models memory as a heterogeneous graph and progressively refines its topology through three stages: initial connection formation, feedback-driven refinement, and long-term consolidation. Instead of treating semantic facts, episodic trajectories, and procedural skills as isolated stores, FluxMem links them through typed edges and continuously rewires the graph as the agent acts, fails, recovers, and consolidates experience.
 
-<div align=center><img src="./figs/EM2Mem.png" width="100%" height="60%" /></div>
+<div align=center><img src="./figs/FluxMem.png" width="100%" height="60%" /></div>
 
 ## Key Contributions
 
