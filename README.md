@@ -54,7 +54,18 @@
 - **[2025-11-26]**: 🚀 Added full **LoCoMo** dataset support, delivering strong [results](https://github.com/zjunlp/LightMem?tab=readme-ov-file#locomo) with leading performance and efficiency! Here is the [**reproduction script**](https://github.com/zjunlp/LightMem/blob/main/experiments/locomo/readme.md)!
 - **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
+<span id='project-navigation'/>
 
+## 🧭 Project Navigation
+
+This repository hosts multiple memory methods. The table below provides an overview and links to each method's documentation:
+
+| Method | Description | Paper | Documentation |
+| :--- | :--- | :--- | :--- |
+| **LightMem** | Lightweight and efficient memory-augmented generation framework | [ICLR 2026](https://arxiv.org/abs/2510.18866) | [README.md](./README.md) |
+| **FluxMem** | Connectivity-evolving memory framework modeling memory as a heterogeneous graph | [EMNLP 2026](#) | [FluxMem.md](./FluxMem.md) |
+| **EM²Mem** | Event-centric multimodal memory for long-video question answering | — | [EM2Mem.md](./EM2Mem.md) |
+| **StructMem** | Structured hierarchical memory preserving event-level bindings and cross-event connections | [ACL 2026](https://arxiv.org/abs/2604.21748) | [StructMem.md](./StructMem.md) |
 
 <span id='reproduction'/>
 
@@ -109,6 +120,7 @@ LightMem is continuously evolving! Here's what's coming:
 * <a href='#news'>📢 News</a>
 * <a href='#reproduction'>🧪 Reproduction Scripts</a>
 * <a href='#baseline-evaluation'>🧪 Baseline Evaluation</a>
+* <a href='#project-navigation'>🧭 Project Navigation</a>
 * <a href='#demo'>🎥 Demo & Tutorials</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
