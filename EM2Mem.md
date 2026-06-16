@@ -2,7 +2,7 @@
 
 ---
 
-**EM²Mem** is an event-centric multimodal memory framework for long-video question answering. Instead of retrieving captions, frames, transcripts, summaries, or graph facts as isolated fragments, EM²Mem organizes heterogeneous evidence under shared event anchors. Each event-indexed memory cell binds visual observations, transcript context, structured metadata, temporal context, graph relations, semantic facts, and provenance into a query-ready evidence unit.
+**EM²Mem** is an event-centric multimodal memory framework for long-video QA. It turns scattered frames, captions, transcripts, and graph facts into grounded event-level memory cells, enabling LLMs to retrieve aligned evidence instead of reconstructing it during inference.
 
 <div align=center><img src="./figs/EM2Mem.png" width="100%" height="60%" /></div>
 
