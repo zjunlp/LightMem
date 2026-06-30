@@ -1,5 +1,17 @@
 <h1 align="center"> EM²Mem: Event-Centric Multimodal Memory for Large Language Models </h1>
-
+<p align="center">
+  <a href="https://drive.google.com/drive/folders/1YZCp8O7Sje-kh3mFpcwnzz19x0tUvELD?usp=sharing">
+    <img src="https://img.shields.io/badge/Google%20Drive-4285F4?style=flat&logo=googledrive&logoColor=white" alt="Google Drive">
+  </a>
+  <a href="https://github.com/zjunlp/LightMem">
+    <img src="https://img.shields.io/github/stars/zjunlp/LightMem?style=social" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/zjunlp/LightMem/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT">
+  </a>
+  <img src="https://img.shields.io/github/last-commit/zjunlp/LightMem?color=blue" alt="Last Commit">
+  <img src="https://img.shields.io/badge/PRs-Welcome-red" alt="PRs Welcome">
+</p>
 ---
 
 **EM²Mem** is an event-centric multimodal memory framework for long-video QA. It turns scattered frames, captions, transcripts, and graph facts into grounded event-level memory cells, enabling LLMs to retrieve aligned evidence instead of reconstructing it during inference.
