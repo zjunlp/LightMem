@@ -21,11 +21,19 @@ This script performs the complete evaluation pipeline:
 
 1. Configure your `api_key` and `base_url` inside the script.
 2. Ensure the `longmemeval_s.json` dataset is in the correct path.
-3. Execute the following command:
+3. Execute the command for your LLM provider:
 
-```bash
-python run_lightmem_gpt.py
-```
+   **For OpenAI / GPT-compatible APIs:**
+   ```bash
+   python run_lightmem_gpt.py
+   ```
+
+   **For Qwen / DeepSeek / other OpenAI-compatible APIs:**
+   ```bash
+   python run_lightmem_qwen.py
+   ```
+
+   Both scripts implement the same evaluation pipeline; the only difference is the model provider and API configuration. The root `README.md` Quick Start uses `run_lightmem_qwen.py` as the default example.
 
 ### 2. Offline Memory Update
 
@@ -39,6 +47,22 @@ This utility script demonstrates LightMem's Offline Update mechanism. It process
 ```bash
 python offline_update.py
 ```
+
+## Key Configuration Parameters
+
+Both evaluation scripts share a common configuration block. The parameters below are frequently asked about:
+
+### `messages_use`
+
+Controls which side of each conversation turn is indexed into memory.
+
+| Value | Behavior |
+|---|---|
+| `"user_only"` | Index only user messages (**default** in both scripts; used for the LongMemEval results reported in Table 2 of the paper) |
+| `"assistant_only"` | Index only assistant (model) messages |
+| `"hybrid"` | Index both user and assistant messages per turn |
+
+> **Note on paper Section 3.2**: The paper describes memory entries as containing `{user_i, model_i}` pairs to illustrate the *source data structure*, but the actual experiment configuration uses `"user_only"` for indexing. The `messages_use` option lets you reproduce the exact reported results or experiment with alternative indexing strategies.
 
 ## Results
 Detailed experimental results, including comparisons with baselines and ablation studies on LongMemEval, are available in our research paper:
