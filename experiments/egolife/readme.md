@@ -166,6 +166,26 @@ The following results are reported in the EM²Mem paper. Accuracy is reported in
 
 † denotes reproduced WorldMM results under the same evaluation setting as EM²Mem.
 
+### Ego-R1 Bench
+
+| Method | Ent. | EvR. | Hab. | Rel. | Task | Avg. |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Qwen3-VL-8B | 31.8 | 41.5 | 38.5 | 42.1 | 44.7 | 35.7 |
+| Gemini 2.5 Pro | 43.9 | 56.1 | 53.9 | 47.4 | 47.4 | 46.7 |
+| GPT-5 | 41.8 | 58.5 | 53.9 | 52.6 | 50.0 | 46.3 |
+| VideoChat-Flash | 43.4 | 43.9 | 38.5 | 31.6 | 44.7 | 42.7 |
+| Time-R1 | 49.2 | 48.8 | 46.2 | 42.1 | 44.7 | 48.0 |
+| Video-RTS | 47.6 | 46.3 | 53.9 | 52.6 | 47.4 | 48.0 |
+| LightRAG | 54.0 | 61.0 | 46.2 | 42.1 | 42.1 | 52.3 |
+| HippoRAG | 54.5 | 65.9 | 69.2 | 52.6 | 50.0 | 56.0 |
+| Video-RAG | 48.7 | 58.5 | 53.9 | 47.4 | 44.7 | 49.7 |
+| EgoRAG | 46.6 | 56.1 | 46.2 | 47.4 | 55.3 | 49.0 |
+| Ego-R1 | 50.8 | 63.4 | 38.5 | 36.8 | 57.9 | 52.0 |
+| HippoMM | 51.9 | 56.1 | 46.2 | 52.6 | 57.9 | 53.0 |
+| M3-Agent | 52.4 | 58.5 | 38.5 | 42.1 | 52.6 | 52.0 |
+| WorldMM | 64.6 | **70.7** | **76.9** | **57.9** | **63.2** | 65.3 |
+| **EM²Mem** | **74.6** | 53.7 | 69.2 | 47.4 | 57.9 | **67.7** |
+
 ### Video-MME (L)
 
 | Method | ARES | AREC | ATTR | CNT | ISYN | OCR | ORES | OREC | SPER | SRES | TPER | TRES | Avg. |
