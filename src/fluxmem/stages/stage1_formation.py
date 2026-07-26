@@ -7,19 +7,18 @@ At each time step t, build initial connections:
 
 Output: initial subgraph G_t and serialized context S_t(q)
 """
+
 import logging
 from typing import Dict, List, Tuple
 
-import numpy as np
-
-from ..graph.memory_graph import MemoryGraph, Subgraph
-from ..graph.nodes import SemanticNode, EpisodicNode, ProceduralNode, NodeType
 from ..graph.edges import StepLinkEdge
-from ..retrieval.semantic_retriever import SemanticRetriever
+from ..graph.memory_graph import MemoryGraph, Subgraph
+from ..graph.nodes import EpisodicNode, ProceduralNode, SemanticNode
+from ..interfaces.embedder import BaseEmbedder
+from ..interfaces.llm import BaseLLM
 from ..retrieval.episodic_retriever import EpisodicRetriever
 from ..retrieval.procedural_retriever import ProceduralRetriever
-from ..interfaces.llm import BaseLLM
-from ..interfaces.embedder import BaseEmbedder
+from ..retrieval.semantic_retriever import SemanticRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -55,9 +54,7 @@ class StageI:
         self.top_k_semantic = top_k_semantic
         self.top_k_episodic = top_k_episodic
 
-    async def execute(
-        self, task_query: str, observation: str, step_index: int = 0
-    ) -> Tuple[Subgraph, str]:
+    async def execute(self, task_query: str, observation: str, step_index: int = 0) -> Tuple[Subgraph, str]:
         """Execute Stage I and return (subgraph, context_string).
 
         Args:
@@ -81,9 +78,7 @@ class StageI:
         procedural_nodes = self._retrieve_procedural(episodic_nodes)
 
         # 4. Build the subgraph and create StepLinkEdge connections
-        subgraph = self._build_subgraph(
-            semantic_nodes, episodic_nodes, procedural_nodes, step_index
-        )
+        subgraph = self._build_subgraph(semantic_nodes, episodic_nodes, procedural_nodes, step_index)
 
         # 5. Serialize as context string S_t(q) = Concat(q, Obs_t, V_sem_t, V_epi_t, V_proc_t)
         context_string = subgraph.to_context_string(task_query, observation)
@@ -105,9 +100,7 @@ class StageI:
         Score(v, o_t) = dense_weight * cosine_sim + bm25_weight * BM25 + llm_weight * LLM_ver
         """
         try:
-            nodes = await self.semantic_retriever.retrieve(
-                query=observation, top_k=self.top_k_semantic
-            )
+            nodes = await self.semantic_retriever.retrieve(query=observation, top_k=self.top_k_semantic)
             return nodes
         except Exception as e:
             logger.warning("Semantic retrieval failed: %s", e)
@@ -116,17 +109,13 @@ class StageI:
     async def _retrieve_episodic(self, observation: str) -> List[EpisodicNode]:
         """Episodic connection retrieval: V_epi_t = TopK_{u ∈ V_epi} cos(u, o_t)"""
         try:
-            nodes = await self.episodic_retriever.retrieve(
-                query=observation, top_k=self.top_k_episodic
-            )
+            nodes = await self.episodic_retriever.retrieve(query=observation, top_k=self.top_k_episodic)
             return nodes
         except Exception as e:
             logger.warning("Episodic retrieval failed: %s", e)
             return []
 
-    def _retrieve_procedural(
-        self, episodic_nodes: List[EpisodicNode]
-    ) -> List[ProceduralNode]:
+    def _retrieve_procedural(self, episodic_nodes: List[EpisodicNode]) -> List[ProceduralNode]:
         """Procedural connection inheritance: obtain related skills via E_distill.
 
         V_proc_t = ∪_{v_epi ∈ V_epi_t} {v_proc | (v_epi, v_proc) ∈ E_distill}

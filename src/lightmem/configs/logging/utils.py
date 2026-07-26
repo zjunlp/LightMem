@@ -4,12 +4,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Union
 if TYPE_CHECKING:
     from .base import LoggingConfig
 
-__all__ = [
-    'apply_logging_config',
-    'normalize_level', 
-    'init_logging',
-    'get_logger'
-]
+__all__ = ["apply_logging_config", "normalize_level", "init_logging", "get_logger"]
 
 
 def normalize_level(level: Union[int, str]) -> int:
@@ -19,7 +14,7 @@ def normalize_level(level: Union[int, str]) -> int:
     return level
 
 
-def apply_logging_config(config: 'LoggingConfig') -> None:
+def apply_logging_config(config: "LoggingConfig") -> None:
     """Apply a LoggingConfig to Python's logging system."""
     root = logging.getLogger()
     root.setLevel(normalize_level(config.level))
@@ -39,11 +34,7 @@ def apply_logging_config(config: 'LoggingConfig') -> None:
 
     # File handler
     if config.file_enabled and config.file_path:
-        file_handler = logging.FileHandler(
-            config.file_path,
-            mode=config.file_mode,
-            encoding=config.file_encoding
-        )
+        file_handler = logging.FileHandler(config.file_path, mode=config.file_mode, encoding=config.file_encoding)
         file_handler.setLevel(normalize_level(config.file_level))
         file_handler.setFormatter(formatter)
         root.addHandler(file_handler)
@@ -76,10 +67,10 @@ def init_logging(
     file_mode: str = "a",
     force: bool = True,
     logger_levels: Optional[Dict[str, Union[int, str]]] = None,
-    suppress_loggers: Optional[List[str]] = None
-) -> 'LoggingConfig':
+    suppress_loggers: Optional[List[str]] = None,
+) -> "LoggingConfig":
     """Initialize logging configuration for LightMem (convenience function).
-    
+
     Args:
         level: Root logging level.
         fmt: Log message format string.
@@ -95,13 +86,13 @@ def init_logging(
         logger_levels: Optional dict mapping logger names to their specific levels.
         suppress_loggers: Optional list of logger names to suppress.
                          If None, defaults to ["httpcore", "openai", "urllib3", "httpx"].
-    
+
     Returns:
         The created LoggingConfig instance (in case caller wants to modify it later).
-    
+
     """
     from .base import LoggingConfig
-    
+
     config = LoggingConfig(
         level=level,
         format=fmt,
@@ -115,12 +106,12 @@ def init_logging(
         timestamp_format=timestamp_format,
         file_level=file_level,
         file_mode=file_mode,
-        file_encoding='utf-8',
+        file_encoding="utf-8",
         logger_levels=logger_levels,
         suppress_loggers=suppress_loggers,
-        force_reconfigure=force
+        force_reconfigure=force,
     )
-    
+
     config.apply()
     return config
 

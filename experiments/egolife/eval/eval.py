@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # Derived from an external implementation; see LICENSE for attribution and upstream license terms.
 # Changes made by anonymous authors
-import os
-import json
-import re
-import glob
-import queue as pyqueue
 import argparse
+import glob
+import json
 import logging
-import threading
 import multiprocessing as mp
+import os
+import queue as pyqueue
+import re
+import threading
 from concurrent.futures import ProcessPoolExecutor
-from typing import Dict, List, Any, Tuple, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from tqdm import tqdm
 
@@ -22,13 +22,13 @@ from em2mem.embedding import EmbeddingModel
 from em2mem.llm import LLMModel, PromptTemplateManager
 from em2mem.memory import EM2Memory, QAResult, transform_timestamp
 
-
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5-mini")
 
 
 # -----------------------------------------------------
 # helpers
 # -----------------------------------------------------
+
 
 def load_json(file_path: str) -> Any:
     with open(file_path, "r", encoding="utf-8") as f:
@@ -149,18 +149,10 @@ def _glob_first(candidates: List[str]) -> Optional[str]:
 def build_episodic_caption_file_map(base_dir: str, subject: str) -> Dict[str, str]:
     file_map: Dict[str, str] = {}
     scale_to_patterns = {
-        "30sec": [
-            os.path.join(base_dir, f"{subject}_record.json")
-        ],
-        "3min": [
-            os.path.join(base_dir, "temporal_context_views", "temporal_context_views_3min.json")
-        ],
-        "10min": [
-            os.path.join(base_dir, "temporal_context_views", "temporal_context_views_10min.json")
-        ],
-        "1h": [
-            os.path.join(base_dir, "temporal_context_views", "temporal_context_views_1h.json")
-        ],
+        "30sec": [os.path.join(base_dir, f"{subject}_record.json")],
+        "3min": [os.path.join(base_dir, "temporal_context_views", "temporal_context_views_3min.json")],
+        "10min": [os.path.join(base_dir, "temporal_context_views", "temporal_context_views_10min.json")],
+        "1h": [os.path.join(base_dir, "temporal_context_views", "temporal_context_views_1h.json")],
     }
     scale_to_globs = {
         "30sec": [os.path.join(base_dir, "*30sec.json"), os.path.join(base_dir, "*30s.json")],
@@ -221,6 +213,7 @@ def build_worker_em2mem(config: Dict[str, Any], worker_id: int) -> Tuple[EM2Memo
     logger.info(f"[worker-{worker_id}] Binding to physical GPU {physical_gpu_id}")
 
     import torch
+
     if torch.cuda.is_available():
         torch.cuda.set_device(physical_gpu_id)
         device_str = f"cuda:{physical_gpu_id}"
@@ -283,6 +276,7 @@ def build_worker_em2mem(config: Dict[str, Any], worker_id: int) -> Tuple[EM2Memo
     episodic_captions_30sec = load_json(config["episodic_caption_files"]["30sec"])
     return em2mem, episodic_captions_30sec
 
+
 def process_shard(
     worker_id: int,
     shard: List[Tuple[int, Dict[str, Any]]],
@@ -340,8 +334,7 @@ def process_shard(
                 "query_time_str": transform_timestamp(str(query_time)),
                 "target_time": target_time_list,
                 "target_time_str": [
-                    (transform_timestamp(str(start)), transform_timestamp(str(end)))
-                    for start, end in target_time_list
+                    (transform_timestamp(str(start)), transform_timestamp(str(end))) for start, end in target_time_list
                 ],
             }
             results.append((dataset_idx, result_entry, int(evaluate)))
@@ -366,6 +359,7 @@ def process_shard(
 # main
 # -----------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(description="EgoLifeQA Evaluation with event-centric EM2Memory")
     parser.add_argument("--person", type=str, default="A1_JAKE", help="Subject ID")
@@ -378,7 +372,12 @@ def main():
     parser.add_argument("--visual-top-k", type=int, default=3, help="Max images per final event anchor")
     parser.add_argument("--num-workers", type=int, default=2, help="Number of parallel worker processes")
     parser.add_argument("--gpu-list", type=str, default="0,1", help='Comma-separated physical GPU ids, e.g. "0,1"')
-    parser.add_argument("--text-embedding-model", type=str, default="Qwen/Qwen3-Embedding-4B", help="Text embedding model id or local path")
+    parser.add_argument(
+        "--text-embedding-model",
+        type=str,
+        default="Qwen/Qwen3-Embedding-4B",
+        help="Text embedding model id or local path",
+    )
     parser.add_argument("--output-dir", type=str, default="output", help="Output directory")
     parser.add_argument("--data-dir", type=str, default="data/EgoLife", help="Data directory")
     parser.add_argument("--memory-cell-dir", type=str, default=None, help="Directory for multimodal memory cells.")

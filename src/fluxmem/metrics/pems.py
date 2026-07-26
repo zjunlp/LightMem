@@ -10,8 +10,9 @@ Where:
 """
 
 import math
-import numpy as np
 from typing import List, Optional
+
+import numpy as np
 
 
 class PEMSCalculator:
@@ -64,9 +65,7 @@ class PEMSCalculator:
         self.history.append(pems)
         return pems
 
-    def compute_delta(
-        self, current_embedding: np.ndarray, previous_embedding: np.ndarray
-    ) -> float:
+    def compute_delta(self, current_embedding: np.ndarray, previous_embedding: np.ndarray) -> float:
         """Compute the difference between two embeddings (1 - cosine_similarity)."""
         # Normalize
         norm_curr = np.linalg.norm(current_embedding)
@@ -76,9 +75,7 @@ class PEMSCalculator:
             # Cannot compute cosine for a zero vector; return maximum difference
             return 1.0
 
-        cosine_sim = float(
-            np.dot(current_embedding, previous_embedding) / (norm_curr * norm_prev)
-        )
+        cosine_sim = float(np.dot(current_embedding, previous_embedding) / (norm_curr * norm_prev))
         # Clamp to [-1, 1] range (floating-point error protection)
         cosine_sim = max(-1.0, min(1.0, cosine_sim))
         return 1.0 - cosine_sim

@@ -15,6 +15,4 @@ em2mem_qa_system = """You are an AI assistant that answers questions about egoce
 # Output Format
 Provide your answer as a single letter (A, B, C, or D) based on the evidence."""
 
-prompt_template = [
-    {"role": "system", "content": em2mem_qa_system}
-]
+prompt_template = [{"role": "system", "content": em2mem_qa_system}]

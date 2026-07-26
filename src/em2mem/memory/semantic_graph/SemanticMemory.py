@@ -1,18 +1,18 @@
+import hashlib
 import io
 import json
 import logging
 import os
 import re
-import hashlib
 import zipfile
-from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Set, Tuple, Union
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+import igraph as ig
 import numpy as np
 import torch
 import torch.nn.functional as F
-import igraph as ig
 
 from ...embedding import EmbeddingModel
 
@@ -183,27 +183,28 @@ class SemanticMemory:
             day = m.group(1) if m else "9"
             ts_key = f"{int(day)}{end_time}"
 
-            normalized_data[ts_key]["facts"].append({
-                "fact_id": fact.get("fact_id"),
-                "head": triple[0],
-                "relation": triple[1],
-                "tail": triple[2],
-                "head_type": fact.get("head_type", ""),
-                "tail_type": fact.get("tail_type", ""),
-                "semantic_summary": fact.get("semantic_summary", ""),
-                "support_count": fact.get("support_count", 1),
-                "support_days": fact.get("support_days", []),
-                "support_scales": fact.get("support_scales", []),
-                "confidence": fact.get(
-                    "confidence",
-                    min(0.95, 0.45 + 0.04 * min(self._safe_int(fact.get("support_count", 1), 1), 8))
-                ),
-                "habit_strength": fact.get("habit_strength", "low"),
-                "raw_support_count": fact.get("raw_support_count", fact.get("support_count", 1)),
-                "evidence_event_ids": fact.get("support_docs", []) or fact.get("evidence_event_ids", []),
-                "provenance_root_ids": fact.get("provenance_root_ids", []) or fact.get("support_docs", []),
-                "source_doc_ids": fact.get("support_docs", []) or fact.get("source_doc_ids", []),
-            })
+            normalized_data[ts_key]["facts"].append(
+                {
+                    "fact_id": fact.get("fact_id"),
+                    "head": triple[0],
+                    "relation": triple[1],
+                    "tail": triple[2],
+                    "head_type": fact.get("head_type", ""),
+                    "tail_type": fact.get("tail_type", ""),
+                    "semantic_summary": fact.get("semantic_summary", ""),
+                    "support_count": fact.get("support_count", 1),
+                    "support_days": fact.get("support_days", []),
+                    "support_scales": fact.get("support_scales", []),
+                    "confidence": fact.get(
+                        "confidence", min(0.95, 0.45 + 0.04 * min(self._safe_int(fact.get("support_count", 1), 1), 8))
+                    ),
+                    "habit_strength": fact.get("habit_strength", "low"),
+                    "raw_support_count": fact.get("raw_support_count", fact.get("support_count", 1)),
+                    "evidence_event_ids": fact.get("support_docs", []) or fact.get("evidence_event_ids", []),
+                    "provenance_root_ids": fact.get("provenance_root_ids", []) or fact.get("support_docs", []),
+                    "source_doc_ids": fact.get("support_docs", []) or fact.get("source_doc_ids", []),
+                }
+            )
 
         return dict(normalized_data)
 
@@ -221,7 +222,8 @@ class SemanticMemory:
             normalized_data[str(timestamp_str)] = {
                 "consolidated_semantic_triples": triples or [],
                 "consolidated_episodic_evidence": episodic_evidence.get(str(timestamp_str), [])
-                if isinstance(episodic_evidence, dict) else [],
+                if isinstance(episodic_evidence, dict)
+                else [],
             }
         return normalized_data
 
@@ -411,10 +413,7 @@ class SemanticMemory:
             if embeddings.shape[0] != len(entries):
                 return False
 
-            self.triple_id_to_embedding = {
-                entry.id: embeddings[idx]
-                for idx, entry in enumerate(entries)
-            }
+            self.triple_id_to_embedding = {entry.id: embeddings[idx] for idx, entry in enumerate(entries)}
             self.dense_cache_built = True
             logger.info("Loaded semantic dense cache: %d facts", embeddings.shape[0])
             return True
@@ -441,7 +440,7 @@ class SemanticMemory:
         batch_size = max(1, int(os.environ.get("SEMANTIC_DENSE_BATCH_SIZE", 256)))
         chunks: List[np.ndarray] = []
         for i in range(0, len(texts), batch_size):
-            batch_texts = texts[i:i + batch_size]
+            batch_texts = texts[i : i + batch_size]
             embeddings = self.embedding_model.encode_text(batch_texts, batch_size=len(batch_texts))
             embeddings = np.asarray(embeddings, dtype=np.float32)
             if embeddings.ndim == 1:
@@ -467,10 +466,7 @@ class SemanticMemory:
 
         logger.info("Building semantic dense cache: %d facts", len(entries))
         embeddings = self._encode_texts(texts)
-        self.triple_id_to_embedding = {
-            entry.id: embeddings[idx]
-            for idx, entry in enumerate(entries)
-        }
+        self.triple_id_to_embedding = {entry.id: embeddings[idx] for idx, entry in enumerate(entries)}
         self._save_dense_cache(entries, texts, embeddings)
         self.dense_cache_built = True
         logger.info("Built semantic dense cache: %d facts", embeddings.shape[0])
@@ -641,8 +637,7 @@ class SemanticMemory:
 
         entity_list = [self.graph.vs[i]["name"] for i in range(self.graph.vcount())]
         reset = [
-            1.0 / len(personalization_entities) if entity in personalization_entities else 0.0
-            for entity in entity_list
+            1.0 / len(personalization_entities) if entity in personalization_entities else 0.0 for entity in entity_list
         ]
 
         try:
@@ -731,14 +726,16 @@ class SemanticMemory:
         entries = self.retrieve(query=query, top_k=top_k, as_context=False)
         packets: List[Dict[str, Any]] = []
         for entry in entries:
-            packets.append({
-                "packet_type": "semantic",
-                "fact_id": entry.id,
-                "text": self.build_packet_text(entry, support_event_limit=support_event_limit),
-                "support_event_ids": self.get_support_event_ids(entry, limit=support_event_limit),
-                "confidence": float(entry.confidence),
-                "support_count": int(entry.support_count),
-            })
+            packets.append(
+                {
+                    "packet_type": "semantic",
+                    "fact_id": entry.id,
+                    "text": self.build_packet_text(entry, support_event_limit=support_event_limit),
+                    "support_event_ids": self.get_support_event_ids(entry, limit=support_event_limit),
+                    "confidence": float(entry.confidence),
+                    "support_count": int(entry.support_count),
+                }
+            )
         return packets
 
     # -----------------------------------------------------

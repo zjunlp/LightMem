@@ -32,7 +32,7 @@ class TextEmbedderHuggingface:
         Validate whether the provided config dictionary contains the required configuration items.
         Assume that the HuggingFace embedder requires at least 'model_name'.
         """
-        required_keys = ['model_name']
+        required_keys = ["model_name"]
         missing = [key for key in required_keys if key not in config]
         if missing:
             raise ValueError(f"Missing required config keys for HuggingFace embedder: {missing}")
@@ -49,7 +49,7 @@ class TextEmbedderHuggingface:
         self.total_calls += 1
         if self.config.huggingface_base_url:
             response = self.client.embeddings.create(input=text, model="tei")
-            self.total_tokens += getattr(response.usage, 'total_tokens', 0)
+            self.total_tokens += getattr(response.usage, "total_tokens", 0)
             return response.data[0].embedding
         else:
             result = self.model.encode(text, convert_to_numpy=True)
@@ -57,7 +57,7 @@ class TextEmbedderHuggingface:
                 return result.tolist()
             else:
                 return result
-            
+
     def get_stats(self):
         return {
             "total_calls": self.total_calls,

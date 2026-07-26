@@ -4,19 +4,20 @@
 """
 Unified interface for multiple LLM providers
 """
-from typing import Any, Dict, List, Union, Optional
+
+from typing import Any, Dict, List, Optional, Union
 
 
 class LLMModel:
     """
-    Unified interface for interacting with different LLM providers. 
+    Unified interface for interacting with different LLM providers.
     This class wraps provider-specific models and exposes a consistent API for text generation and batch generation.
     """
 
     def __init__(self, model_name: str, *, provider: Optional[str] = None, **kwargs):
         """
         Initialize the LLMModel with the specified model name and optional provider.
- 
+
         Args:
             model_name (str): The name of the model to use (e.g., "gpt-5").
             provider (Optional[str]): The name of the LLM provider. If None, will auto-detect based on model_name.
@@ -28,19 +29,19 @@ class LLMModel:
     def _detect_provider(self, model_name: str, provider: Optional[str]) -> str:
         """
         Auto-detect the provider based on the model name if provider is not specified.
-        
+
         Args:
             model_name (str): Model name to use for auto-detection
             provider (Optional[str]): Explicitly specified provider
-            
+
         Returns:
             str: The detected or specified provider name
         """
         if provider is not None:
             return provider.lower()
-        
+
         model_name_lower = model_name.lower()
-        
+
         # Auto-detect based on model name patterns
         if "gpt" in model_name_lower:
             return "openai"
@@ -52,9 +53,11 @@ class LLMModel:
     def _init_model(self, **kwargs):
         if self.provider == "openai":
             from .openai_gpt import OpenAIModel
+
             return OpenAIModel(model_name=self.model_name, **kwargs)
         elif self.provider == "qwen3vl":
             from .qwen3vl import Qwen3VLModel
+
             return Qwen3VLModel(model_name=self.model_name, **kwargs)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")

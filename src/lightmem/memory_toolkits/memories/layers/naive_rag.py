@@ -81,9 +81,7 @@ class NaiveRAGConfig(BaseModel):
     @model_validator(mode="after")
     def _validate_and_fill(self) -> "NaiveRAGConfig":
         if os.path.isfile(self.save_dir):
-            raise AssertionError(
-                f"Provided path ({self.save_dir}) should be a directory, not a file"
-            )
+            raise AssertionError(f"Provided path ({self.save_dir}) should be a directory, not a file")
         if not self.collection_name:
             self.collection_name = self.user_id
         return self
@@ -211,9 +209,7 @@ class NaiveRAGLayer(BaseMemoryLayer):
                     except Exception:
                         pass
 
-            logger.info(
-                f"NaiveRAG saved config for user {self.config.user_id} at {self.config.save_dir}"
-            )
+            logger.info(f"NaiveRAG saved config for user {self.config.user_id} at {self.config.save_dir}")
         except Exception as e:
             logger.error(f"Error saving NaiveRAG config for user {self.config.user_id}: {e}")
             raise RuntimeError(f"Error saving NaiveRAG config for user {self.config.user_id}: {e}") from e
@@ -331,9 +327,7 @@ class NaiveRAGLayer(BaseMemoryLayer):
 
     # ==================== Retrieval ====================
 
-    def retrieve(
-        self, query: str, k: int = 10, **kwargs
-    ) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
+    def retrieve(self, query: str, k: int = 10, **kwargs) -> List[Dict[str, Union[str, Dict[str, Any]]]]:
         res = self.memory_layer.search(
             query=query,
             user_id=self.config.user_id,
@@ -357,16 +351,13 @@ class NaiveRAGLayer(BaseMemoryLayer):
             }
             used_content = {
                 "Time": item.get("timestamp"),
-                "Memory": item.get("memory"), 
+                "Memory": item.get("memory"),
             }
-            out["used_content"] = "\n".join(
-                f"{kk}: {vv}" for kk, vv in used_content.items() if vv is not None
-            )
+            out["used_content"] = "\n".join(f"{kk}: {vv}" for kk, vv in used_content.items() if vv is not None)
 
             outputs.append(out)
 
         return outputs
-
 
     # ==================== Other interfaces ====================
 

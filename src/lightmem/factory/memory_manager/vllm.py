@@ -272,9 +272,7 @@ class VllmManager:
 
                 for topic_idx, topic_segment in enumerate(api_call_segments):
                     global_topic_id = (
-                        global_topic_ids[topic_idx]
-                        if topic_idx < len(global_topic_ids)
-                        else topic_idx + 1
+                        global_topic_ids[topic_idx] if topic_idx < len(global_topic_ids) else topic_idx + 1
                     )
                     topic_text = concatenate_messages(topic_segment, messages_use)
                     user_prompt_parts.append(f"--- Topic {global_topic_id} ---\n{topic_text}")

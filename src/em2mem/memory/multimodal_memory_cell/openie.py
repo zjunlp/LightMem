@@ -1,12 +1,13 @@
 import json
-import os
-from typing import Dict, Any, List, Tuple, Union
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
 import logging
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Dict, List, Tuple, Union
 
-from .utils import compute_mdhash_id, filter_invalid_triples, NerRawOutput, TripleRawOutput, NerOutput, TripleOutput
-from ...llm import dynamic_retry_decorator, LLMModel, PromptTemplateManager
+from tqdm import tqdm
+
+from ...llm import LLMModel, PromptTemplateManager, dynamic_retry_decorator
+from .utils import NerOutput, NerRawOutput, TripleOutput, TripleRawOutput, compute_mdhash_id, filter_invalid_triples
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,9 @@ logger = logging.getLogger(__name__)
 class OpenIE:
     def __init__(self, llm_model: LLMModel):
         # Init prompt template manager
-        self.prompt_template_manager = PromptTemplateManager(role_mapping={"system": "system", "user": "user", "assistant": "assistant"})
+        self.prompt_template_manager = PromptTemplateManager(
+            role_mapping={"system": "system", "user": "user", "assistant": "assistant"}
+        )
         self.llm_model = llm_model
 
     @dynamic_retry_decorator
@@ -32,7 +35,7 @@ class OpenIE:
 
     def ner(self, chunk_key: str, passage: str) -> NerOutput:
         # PREPROCESSING
-        ner_input_message = self.prompt_template_manager.render(name='ner', passage=passage)
+        ner_input_message = self.prompt_template_manager.render(name="ner", passage=passage)
         metadata = {}
         try:
             # LLM INFERENCE (entire try-block is retried by the decorator)
@@ -41,25 +44,19 @@ class OpenIE:
         except Exception as e:
             # For any other unexpected exceptions, log them and return with the error message
             logger.warning(e)
-            metadata.update({'error': str(e)})
+            metadata.update({"error": str(e)})
             return NerOutput(
                 chunk_id=chunk_key,
                 unique_entities=[],
-                metadata=metadata  # Store the error message in metadata
+                metadata=metadata,  # Store the error message in metadata
             )
 
-        return NerOutput(
-            chunk_id=chunk_key,
-            unique_entities=unique_entities,
-            metadata=metadata
-        )
+        return NerOutput(chunk_id=chunk_key, unique_entities=unique_entities, metadata=metadata)
 
     def triple_extraction(self, chunk_key: str, passage: str, named_entities: List[str]) -> TripleOutput:
         # PREPROCESSING
         messages = self.prompt_template_manager.render(
-            name='triple_extraction',
-            passage=passage,
-            named_entity_json=json.dumps({"named_entities": named_entities})
+            name="triple_extraction", passage=passage, named_entity_json=json.dumps({"named_entities": named_entities})
         )
         metadata = {}
         try:
@@ -68,23 +65,19 @@ class OpenIE:
 
         except Exception as e:
             logger.warning(f"Exception for chunk {chunk_key}: {e}")
-            metadata.update({'error': str(e)})
+            metadata.update({"error": str(e)})
             return TripleOutput(
                 chunk_id=chunk_key,
                 triples=[],
                 metadata=metadata,
             )
 
-        return TripleOutput(
-            chunk_id=chunk_key,
-            metadata=metadata,
-            triples=triplets
-        )
-    
+        return TripleOutput(chunk_id=chunk_key, metadata=metadata, triples=triplets)
+
     def save_results(self, results: Dict[str, Any], output_dir: str = "."):
         """
         Save OpenIE results to a JSON file.
-        
+
         Args:
             results: The results dictionary to save
             output_dir: Output directory path.
@@ -93,21 +86,25 @@ class OpenIE:
         # Convert results to JSON-serializable format
         json_results = {}
         for key, value in results.items():
-            if hasattr(value, '__dict__'):
+            if hasattr(value, "__dict__"):
                 json_results[key] = value.__dict__
             else:
                 json_results[key] = value
-        
+
         os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, f"openie_results_{self.llm_model.model_name}.json"), 'w', encoding='utf-8') as f:
+        with open(
+            os.path.join(output_dir, f"openie_results_{self.llm_model.model_name}.json"), "w", encoding="utf-8"
+        ) as f:
             json.dump(json_results, f, indent=2, ensure_ascii=False)
-        
+
         logger.info(f"Results saved to {output_dir}/openie_results_{self.llm_model.model_name}.json")
 
     def openie(self, passage: str) -> Dict[str, Any]:
         chunk_key = compute_mdhash_id(passage, prefix="chunk-")
         ner_output = self.ner(chunk_key=chunk_key, passage=passage)
-        triple_output = self.triple_extraction(chunk_key=chunk_key, passage=passage, named_entities=ner_output.unique_entities)
+        triple_output = self.triple_extraction(
+            chunk_key=chunk_key, passage=passage, named_entities=ner_output.unique_entities
+        )
         return {"ner": ner_output.unique_entities, "triplets": triple_output.triples}
 
     # def batch_openie(self, chunks: Union[List[str], Dict[str, Any]], output_dir: str = ".") -> Tuple[Dict[str, List[str]], Dict[str, List[List[str]]]]:
@@ -212,8 +209,7 @@ class OpenIE:
 
         with ThreadPoolExecutor() as executor:
             ner_futures = {
-                executor.submit(self.ner, chunk_key, chunk_passages[chunk_key]): chunk_key
-                for chunk_key in chunk_keys
+                executor.submit(self.ner, chunk_key, chunk_passages[chunk_key]): chunk_key for chunk_key in chunk_keys
             }
 
             pbar = tqdm(as_completed(ner_futures), total=len(ner_futures), desc="NER")
@@ -228,7 +224,7 @@ class OpenIE:
                     self.triple_extraction,
                     ner_result.chunk_id,
                     chunk_passages[ner_result.chunk_id],
-                    ner_result.unique_entities
+                    ner_result.unique_entities,
                 ): ner_result.chunk_id
                 for ner_result in ner_results_list
             }
@@ -244,10 +240,7 @@ class OpenIE:
         ordered_ner = {key: ner_map.get(key, []) for key in chunk_keys}
         ordered_triples = {key: triple_map.get(key, []) for key in chunk_keys}
 
-        combined_results = {
-            "ner_results": ordered_ner,
-            "triple_results": ordered_triples
-        }
+        combined_results = {"ner_results": ordered_ner, "triple_results": ordered_triples}
         self.save_results(combined_results, output_dir)
 
         return ordered_ner, ordered_triples

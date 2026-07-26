@@ -22,36 +22,37 @@ your_example_options = {
 }
 
 # ============ Small Model Paths ============
-LLMLINGUA_MODEL_PATH='/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank'
-EMBEDDING_MODEL_PATH='/your/path/to/models/all-MiniLM-L6-v2'
+LLMLINGUA_MODEL_PATH = "/your/path/to/models/llmlingua-2-bert-base-multilingual-cased-meetingbank"
+EMBEDDING_MODEL_PATH = "/your/path/to/models/all-MiniLM-L6-v2"
 
 # ============ Data Configuration ============
-DATA_PATH='/your/path/to/data/longmemeval/longmemeval_s.json'
-RESULTS_DIR='../results'
-QDRANT_DATA_DIR='../qdrant_data'
-RUN_LOG_DIR='../log'
+DATA_PATH = "/your/path/to/data/longmemeval/longmemeval_s.json"
+RESULTS_DIR = "../results"
+QDRANT_DATA_DIR = "../qdrant_data"
+RUN_LOG_DIR = "../log"
 
 
 def get_anscheck_prompt(task, question, answer, response, abstention=False):
     if not abstention:
-        if task in ['single-session-user', 'single-session-assistant', 'multi-session']:
+        if task in ["single-session-user", "single-session-assistant", "multi-session"]:
             template = "I will give you a question, a correct answer, and a response from a model. Please answer yes if the response contains the correct answer. Otherwise, answer no. If the response is equivalent to the correct answer or contains all the intermediate steps to get the correct answer, you should also answer yes. If the response only contains a subset of the information required by the answer, answer no. \n\nQuestion: {}\n\nCorrect Answer: {}\n\nModel Response: {}\n\nIs the model response correct? Answer yes or no only."
             prompt = template.format(question, answer, response)
-        elif task == 'temporal-reasoning':
+        elif task == "temporal-reasoning":
             template = "I will give you a question, a correct answer, and a response from a model. Please answer yes if the response contains the correct answer. Otherwise, answer no. If the response is equivalent to the correct answer or contains all the intermediate steps to get the correct answer, you should also answer yes. If the response only contains a subset of the information required by the answer, answer no. In addition, do not penalize off-by-one errors for the number of days. If the question asks for the number of days/weeks/months, etc., and the model makes off-by-one errors (e.g., predicting 19 days when the answer is 18), the model's response is still correct. \n\nQuestion: {}\n\nCorrect Answer: {}\n\nModel Response: {}\n\nIs the model response correct? Answer yes or no only."
             prompt = template.format(question, answer, response)
-        elif task == 'knowledge-update':
+        elif task == "knowledge-update":
             template = "I will give you a question, a correct answer, and a response from a model. Please answer yes if the response contains the correct answer. Otherwise, answer no. If the response contains some previous information along with an updated answer, the response should be considered as correct as long as the updated answer is the required answer.\n\nQuestion: {}\n\nCorrect Answer: {}\n\nModel Response: {}\n\nIs the model response correct? Answer yes or no only."
             prompt = template.format(question, answer, response)
-        elif task == 'single-session-preference':
+        elif task == "single-session-preference":
             template = "I will give you a question, a rubric for desired personalized response, and a response from a model. Please answer yes if the response satisfies the desired response. Otherwise, answer no. The model does not need to reflect all the points in the rubric. The response is correct as long as it recalls and utilizes the user's personal information correctly.\n\nQuestion: {}\n\nRubric: {}\n\nModel Response: {}\n\nIs the model response correct? Answer yes or no only."
             prompt = template.format(question, answer, response)
         else:
             raise NotImplementedError
     else:
         template = "I will give you an unanswerable question, an explanation, and a response from a model. Please answer yes if the model correctly identifies the question as unanswerable. The model could say that the information is incomplete, or some other information is given but the asked information is not.\n\nQuestion: {}\n\nExplanation: {}\n\nModel Response: {}\n\nDoes the model correctly identify the question as unanswerable? Answer yes or no only."
-        prompt = template.format(question, answer, response) 
+        prompt = template.format(question, answer, response)
     return prompt
+
 
 def true_or_false(response):
     if response is None:
@@ -60,7 +61,7 @@ def true_or_false(response):
     if not normalized:
         return False
     first_line = normalized.splitlines()[0].strip()
-    tokens = first_line.replace('.', '').replace('!', '').replace(':', '').replace(';', '').split()
+    tokens = first_line.replace(".", "").replace("!", "").replace(":", "").replace(";", "").split()
     if not tokens:
         return False
     head = tokens[0]
@@ -77,18 +78,15 @@ def true_or_false(response):
 
 class TransformersModel:
     def __init__(
-            self,
-            model_path_or_name: str,
-            device: str = "auto",
-            options: Optional[Dict] = None,
-        ):
+        self,
+        model_path_or_name: str,
+        device: str = "auto",
+        options: Optional[Dict] = None,
+    ):
         self.model_name = model_path_or_name
         self.device = device
         self.options = options if options is not None else {}
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name, 
-            use_fast=True
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=True)
         self.client = AutoModelForCausalLM.from_pretrained(
             self.model_name,
             torch_dtype=torch.float16,
@@ -97,14 +95,10 @@ class TransformersModel:
 
     def call(self, messages: List[Dict[str, str]], **kwargs):
         max_retries = kwargs.get("max_retries", 3)
-    
+
         for attempt in range(max_retries):
             try:
-                prompt = self.tokenizer.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True
-                )
+                prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
                 inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
 
                 outputs = self.client.generate(
@@ -113,7 +107,7 @@ class TransformersModel:
                     max_new_tokens=self.options.get("max_tokens", 8192),
                     pad_token_id=self.tokenizer.eos_token_id,
                 )
-                generated = outputs[0][inputs["input_ids"].shape[1]:]
+                generated = outputs[0][inputs["input_ids"].shape[1] :]
 
                 response = self.tokenizer.decode(generated, skip_special_tokens=True)
                 # print(response)
@@ -137,10 +131,8 @@ def load_lightmem(collection_name):
                     "device_map": "cuda:0",
                     "use_llmlingua2": True,
                 },
-                "compress_config": {
-                    "rate": 0.6
-                }
-            }
+                "compress_config": {"rate": 0.6},
+            },
         },
         "topic_segment": True,
         "precomp_topic_shared": True,
@@ -156,7 +148,7 @@ def load_lightmem(collection_name):
                 "model": your_model_path_or_name,
                 "num_gpu": -1,  # use all available GPUs
                 "max_tokens": 8192,  # set according to the model's context window
-            }
+            },
         },
         "extract_threshold": 0.1,
         "index_strategy": "embedding",
@@ -174,8 +166,8 @@ def load_lightmem(collection_name):
             "configs": {
                 "collection_name": collection_name,
                 "embedding_model_dims": 384,
-                "path": f'{QDRANT_DATA_DIR}/{collection_name}',
-            }
+                "path": f"{QDRANT_DATA_DIR}/{collection_name}",
+            },
         },
         "update": "offline",
         "logging": {
@@ -185,10 +177,11 @@ def load_lightmem(collection_name):
             "log_filename_prefix": "run",
             "console_enabled": True,
             "file_level": "DEBUG",
-        }
+        },
     }
     lightmem = LightMemory.from_config(config)
     return lightmem
+
 
 def main():
     proj_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -210,11 +203,7 @@ def main():
         data = json.load(f)
     # data = data[:100]
 
-    INIT_RESULT = {
-        "add_input_prompt": [],
-        "add_output_prompt": [],
-        "api_call_nums": 0
-    }
+    INIT_RESULT = {"add_input_prompt": [], "add_output_prompt": [], "api_call_nums": 0}
 
     for item in tqdm(data):
         print(item["question_id"])
@@ -228,16 +217,18 @@ def main():
         for session, timestamp in zip(sessions, timestamps):
             while session and session[0]["role"] != "user":
                 session.pop(0)
-            num_turns = len(session) // 2  
+            num_turns = len(session) // 2
             for turn_idx in range(num_turns):
-                turn_messages = session[turn_idx*2 : turn_idx*2 + 2]
-                if len(turn_messages) < 2 or turn_messages[0]["role"] != "user" or turn_messages[1]["role"] != "assistant":
+                turn_messages = session[turn_idx * 2 : turn_idx * 2 + 2]
+                if (
+                    len(turn_messages) < 2
+                    or turn_messages[0]["role"] != "user"
+                    or turn_messages[1]["role"] != "assistant"
+                ):
                     continue
                 for msg in turn_messages:
                     msg["time_stamp"] = timestamp
-                is_last_turn = (
-                    session is sessions[-1] and turn_idx == num_turns - 1
-                )
+                is_last_turn = session is sessions[-1] and turn_idx == num_turns - 1
                 result = lightmem.add_memory(
                     messages=turn_messages,
                     force_segment=is_last_turn,
@@ -250,22 +241,23 @@ def main():
         construction_time = time_end - time_start
 
         related_memories = lightmem.retrieve(item["question"], limit=20)
+        memories_text = "\n".join(related_memories)
         messages = []
         messages.append({"role": "system", "content": "You are a helpful assistant."})
-        messages.append({
-            "role": "user",
-            "content": f"Question time:{item['question_date']} and question:{item['question']}\nPlease answer the question based on the following memories: {'\n'.join(related_memories)}"
-        })
+        messages.append(
+            {
+                "role": "user",
+                "content": f"Question time:{item['question_date']} and question:{item['question']}\nPlease answer the question based on the following memories: {memories_text}",
+            }
+        )
         generated_answer = llm.call(messages)
 
-        if 'abs' in item["question_id"]:
+        if "abs" in item["question_id"]:
             prompt = get_anscheck_prompt(
                 item["question_type"], item["question"], item["answer"], generated_answer, abstention=True
             )
         else:
-            prompt = get_anscheck_prompt(
-                item["question_type"], item["question"], item["answer"], generated_answer
-            )
+            prompt = get_anscheck_prompt(item["question_type"], item["question"], item["answer"], generated_answer)
         messages = [{"role": "user", "content": prompt}]
         response = llm_judge.call(messages)
 
@@ -286,5 +278,4 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()

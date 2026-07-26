@@ -1,9 +1,10 @@
-import hashlib
 import argparse
+import hashlib
 import json
 import logging
 import os
 from typing import Any, Dict, List
+
 from tqdm import tqdm
 
 from em2mem.embedding import EmbeddingModel
@@ -100,17 +101,12 @@ def consolidate(items: List[Dict[str, Any]], consolidator) -> Dict[str, Any]:
         )
         new_results = (current_triples, current_evidence)
 
-        consolidated_triples, consolidated_evidence, triples_to_remove = (
-            consolidator.batch_semantic_consolidation(
-                existing_results,
-                new_results,
-            )
+        consolidated_triples, consolidated_evidence, triples_to_remove = consolidator.batch_semantic_consolidation(
+            existing_results,
+            new_results,
         )
 
-        remove_set = {
-            (tuple(triple), tuple(evidence))
-            for triple, evidence in triples_to_remove
-        }
+        remove_set = {(tuple(triple), tuple(evidence)) for triple, evidence in triples_to_remove}
 
         kept_triples: List[List[str]] = []
         kept_evidence: List[List[str]] = []
@@ -269,4 +265,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

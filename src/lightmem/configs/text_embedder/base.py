@@ -7,15 +7,13 @@ from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
 
 class TextEmbedderConfig(BaseModel):
     model_name: str = Field(
-        default="huggingface",
-        description="The embedding model or Deployment platform (e.g., 'openai', 'huggingface')"
+        default="huggingface", description="The embedding model or Deployment platform (e.g., 'openai', 'huggingface')"
     )
 
     _model_list: ClassVar[List[str]] = ["huggingface", "openai"]
 
     configs: Optional[Union[BaseTextEmbedderConfig, Dict[str, Any]]] = Field(
-        default=None,
-        description="Configuration for the specific embedding model"
+        default=None, description="Configuration for the specific embedding model"
     )
 
     @model_validator(mode="before")

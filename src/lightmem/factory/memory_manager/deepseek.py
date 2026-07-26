@@ -94,8 +94,8 @@ class DeepseekManager:
 
         if os.getenv("OPENROUTER_API_KEY"):
             openrouter_params = {}
-            models = getattr(self.config, 'models', None)    
-            route = getattr(self.config, 'route', 'fallback') 
+            models = getattr(self.config, "models", None)
+            route = getattr(self.config, "route", "fallback")
             if models:
                 openrouter_params["models"] = models
                 openrouter_params["route"] = route
@@ -283,9 +283,7 @@ class DeepseekManager:
 
                 for topic_idx, topic_segment in enumerate(api_call_segments):
                     global_topic_id = (
-                        global_topic_ids[topic_idx]
-                        if topic_idx < len(global_topic_ids)
-                        else topic_idx + 1
+                        global_topic_ids[topic_idx] if topic_idx < len(global_topic_ids) else topic_idx + 1
                     )
                     topic_text = concatenate_messages(topic_segment, messages_use)
                     user_prompt_parts.append(f"--- Topic {global_topic_id} ---\n{topic_text}")

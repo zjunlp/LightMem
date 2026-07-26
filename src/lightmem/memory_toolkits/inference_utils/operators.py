@@ -16,50 +16,37 @@ class QuestionAnsweringOperator(NonCachedLLMOperator):
     """An operator for question answering."""
 
     def _preprocess(
-        self, 
-        question_list: List[str], 
-        context_list: Optional[List[str]] = None
-    ) -> List[List[Dict[str, str]]]: 
-        messages_list = [] 
+        self, question_list: List[str], context_list: Optional[List[str]] = None
+    ) -> List[List[Dict[str, str]]]:
+        messages_list = []
         for i in range(len(question_list)):
             question = question_list[i]
             context = context_list[i] if context_list is not None else None
             if context is not None:
                 messages = [
-                    {
-                        "role": "system", 
-                        "content": "You are a helpful assistant."
-                    }, 
-                    {
-                        "role": "user", 
-                        "content": self._prompt.substitute(question=question, context=context)
-                    }, 
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": self._prompt.substitute(question=question, context=context)},
                 ]
             else:
                 messages = [
-                    {
-                        "role": "system", 
-                        "content": "You are a helpful assistant."
-                    }, 
-                    {
-                        "role": "user", 
-                        "content": self._prompt.substitute(question=question)
-                    }, 
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": self._prompt.substitute(question=question)},
                 ]
             messages_list.append(messages)
-        return messages_list 
+        return messages_list
+
 
 class LLMExactMatch(NonCachedLLMOperator):
     """An operator for LLM exact match."""
 
     def _preprocess(
-        self, 
-        question_list: List[str], 
-        golden_answers_list: List[List[str]], 
-        prediction_list: List[str], 
-        reasoning_process_list: Optional[List[str]] = None
-    ) -> List[List[Dict[str, str]]]: 
-        messages_list = [] 
+        self,
+        question_list: List[str],
+        golden_answers_list: List[List[str]],
+        prediction_list: List[str],
+        reasoning_process_list: Optional[List[str]] = None,
+    ) -> List[List[Dict[str, str]]]:
+        messages_list = []
         for i in range(len(question_list)):
             question = question_list[i]
             golden_answer_list = golden_answers_list[i]
@@ -72,46 +59,40 @@ class LLMExactMatch(NonCachedLLMOperator):
             if reasoning_process is None:
                 messages = [
                     {
-                        "role": "user", 
+                        "role": "user",
                         "content": self._prompt.substitute(
-                            question=question, 
-                            golden_answers=golden_answer_list, 
-                            prediction=prediction
-                        )
+                            question=question, golden_answers=golden_answer_list, prediction=prediction
+                        ),
                     }
                 ]
             else:
                 messages = [
                     {
-                        "role": "user", 
+                        "role": "user",
                         "content": self._prompt.substitute(
-                            question=question, 
+                            question=question,
                             golden_answers=golden_answer_list,
                             reasoning_process=reasoning_process,
-                            prediction=prediction
-                        )
+                            prediction=prediction,
+                        ),
                     }
                 ]
             messages_list.append(messages)
-        return messages_list 
+        return messages_list
 
     def _aggregate(self, responses: List[Dict[str, Any]]) -> float:
         judge_results = np.array(responses)
-        # See https://github.com/xiaowu0162/LongMemEval/blob/main/src/evaluation/evaluate_qa.py#L113. 
-        judge_results = np.vectorize(
-            lambda item: "yes" in item["processed_content"].lower()
-        )(judge_results)
+        # See https://github.com/xiaowu0162/LongMemEval/blob/main/src/evaluation/evaluate_qa.py#L113.
+        judge_results = np.vectorize(lambda item: "yes" in item["processed_content"].lower())(judge_results)
         return judge_results.mean().item()
 
 
 def _parse_json_response(content: str) -> Dict[str, Any]:
     """Parse JSON response from an LLM output, handling markdown code blocks."""
     # Try to extract JSON from markdown code block
-    json_match = re.search(r'```(?:json)?\s*(.*?)\s*```', content, re.DOTALL)
+    json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", content, re.DOTALL)
     if json_match:
         json_str = json_match.group(1).strip()
     else:
         json_str = content.strip()
     return json.loads(json_str)
-
-

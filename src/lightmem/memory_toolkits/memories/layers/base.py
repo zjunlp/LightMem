@@ -11,14 +11,15 @@ from typing import (
 # As new methods and capabilities are standardized across implementations, this class
 # may be updated to ensure a consistent API across different memory backends.
 
+
 class BaseMemoryLayer(ABC):
     """
-    Abstract base class for memory layers that defines a unified interface for various memory 
-    algorithms. This class follows the template method pattern and provides common methods 
+    Abstract base class for memory layers that defines a unified interface for various memory
+    algorithms. This class follows the template method pattern and provides common methods
     that should be implemented by concrete memory layer classes.
-    
-    The interface is designed to be compatible with popular memory frameworks like Mem0, 
-    A-MEM, LangMem, and other memory systems, providing a consistent API for memory 
+
+    The interface is designed to be compatible with popular memory frameworks like Mem0,
+    A-MEM, LangMem, and other memory systems, providing a consistent API for memory
     operations across different implementations.
     """
 

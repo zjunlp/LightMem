@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class Qdrant:
-    def __init__(
-        self, config: Optional[QdrantConfig] = None
-    ):
+    def __init__(self, config: Optional[QdrantConfig] = None):
         """
         Initialize the Qdrant vector store.
 
@@ -129,7 +127,7 @@ class Qdrant:
         query_vector: list,
         limit: int = 5,
         filters: dict = None,
-        exclude_ids: list = None,  
+        exclude_ids: list = None,
         return_full: bool = False,
     ) -> list:
         """
@@ -149,46 +147,38 @@ class Qdrant:
         query_filter = self._create_filter(filters) if filters else None
         if exclude_ids:
             if query_filter:
-                if not hasattr(query_filter, 'must_not'):
+                if not hasattr(query_filter, "must_not"):
                     query_filter.must_not = []
-                query_filter.must_not.append(
-                    FieldCondition(
-                        key="id",
-                        match=MatchAny(any=exclude_ids)
-                    )
-                )
+                query_filter.must_not.append(FieldCondition(key="id", match=MatchAny(any=exclude_ids)))
             else:
-                query_filter = Filter(
-                    must_not=[
-                        FieldCondition(
-                            key="id",
-                            match=MatchAny(any=exclude_ids)
-                        )
-                    ]
-                )
-        
+                query_filter = Filter(must_not=[FieldCondition(key="id", match=MatchAny(any=exclude_ids))])
+
         hits = self.client.query_points(
             collection_name=self.collection_name,
             query=query_vector,
             query_filter=query_filter,
             limit=limit,
             with_payload=True,
-            with_vectors=True, 
+            with_vectors=True,
         )
 
         results = []
         for h in hits.points:
             if return_full:
-                results.append({
-                    "id": h.id,
-                    "score": h.score,
-                    "payload": h.payload,
-                })
+                results.append(
+                    {
+                        "id": h.id,
+                        "score": h.score,
+                        "payload": h.payload,
+                    }
+                )
             else:
-                results.append({
-                    "id": h.id,
-                    "score": h.score,
-                })
+                results.append(
+                    {
+                        "id": h.id,
+                        "score": h.score,
+                    }
+                )
         return results
 
     def delete(self, vector_id: int):
@@ -214,7 +204,7 @@ class Qdrant:
             vector (list, optional): Updated vector. Defaults to None.
             payload (dict, optional): Updated payload. Defaults to None.
         """
-        
+
         # Handle no-op case
         if vector is None and payload is None:
             logger.debug(f"Update called for ID {vector_id} with no data. Skipping.")
@@ -223,28 +213,19 @@ class Qdrant:
         # Case 1: only payload
         if vector is None and payload is not None:
             self.client.set_payload(
-                collection_name=self.collection_name,
-                payload=payload,
-                points=[vector_id],
-                wait=True  
+                collection_name=self.collection_name, payload=payload, points=[vector_id], wait=True
             )
             return
 
         # Case 2: only vector
         if vector is not None and payload is None:
-            self.client.update_vectors(
-                collection_name=self.collection_name,
-                points={vector_id: vector}
-            )
+            self.client.update_vectors(collection_name=self.collection_name, points={vector_id: vector})
             return
 
-        # Case 3: vector + payload 
+        # Case 3: vector + payload
         if vector is not None and payload is not None:
             point = PointStruct(id=vector_id, vector=vector, payload=payload)
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=[point]
-            )
+            self.client.upsert(collection_name=self.collection_name, points=[point])
             return
 
     def get(self, vector_id: int) -> dict:
@@ -305,7 +286,7 @@ class Qdrant:
 
     def scroll(
         self,
-        scroll_filter = None, 
+        scroll_filter=None,
         limit: int = 100,
         offset: Any = None,
         with_payload: bool = True,
@@ -326,7 +307,7 @@ class Qdrant:
         """
         if isinstance(scroll_filter, dict):
             scroll_filter = self._create_filter(scroll_filter)
-        
+
         result, next_offset = self.client.scroll(
             collection_name=self.collection_name,
             scroll_filter=scroll_filter,
@@ -336,7 +317,7 @@ class Qdrant:
             with_vectors=with_vectors,
         )
         return result, next_offset
-    
+
     def reset(self):
         """Reset the index by deleting and recreating it."""
         logger.warning(f"Resetting index {self.collection_name}...")
@@ -364,7 +345,7 @@ class Qdrant:
         except Exception as e:
             logger.error(f"Error checking existence of ID {vector_id}: {e}")
             return False
-        
+
     def get_all(self, with_vectors: bool = True, with_payload: bool = True) -> list:
         """
         Retrieve all points from the collection.
@@ -382,13 +363,12 @@ class Qdrant:
             result, offset = self.client.scroll(
                 collection_name=self.collection_name,
                 scroll_filter=None,
-                limit=100, 
+                limit=100,
                 with_payload=with_payload,
                 with_vectors=with_vectors,
                 offset=offset,
             )
             all_points.extend([p.model_dump() for p in result])
-            if offset is None: 
+            if offset is None:
                 break
         return all_points
-

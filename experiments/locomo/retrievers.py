@@ -13,6 +13,7 @@ from lightmem.factory.retriever.embeddingretriever.qdrant import Qdrant
 SPACY_AVAILABLE = True
 logger = logging.getLogger(__name__)
 
+
 class QdrantEntryLoader:
     def __init__(self, qdrant_path: str, summary_suffix: str = "_summaries"):
         self.qdrant_path = qdrant_path
@@ -21,13 +22,15 @@ class QdrantEntryLoader:
     def _get_qdrant(self, collection_name: str):
         if Qdrant is None or QdrantConfig is None:
             return None
-        cfg = QdrantConfig(collection_name=collection_name, path=self.qdrant_path, embedding_model_dims=384, on_disk=True)
+        cfg = QdrantConfig(
+            collection_name=collection_name, path=self.qdrant_path, embedding_model_dims=384, on_disk=True
+        )
         return Qdrant(cfg)
 
     def _load_from_collection(self, collection_name: str, with_vectors: bool = False) -> List[Dict[str, Any]]:
         q = self._get_qdrant(collection_name)
         logger.debug(f"Loading from collection: {collection_name} (with_vectors={with_vectors})")
-        
+
         points = []
         if q is not None:
             try:
@@ -51,13 +54,15 @@ class QdrantEntryLoader:
     def load_summaries(self, collection_name: str, with_vectors: bool = False) -> List[Dict[str, Any]]:
         summary_collection = collection_name + self.summary_suffix
         logger.info(f"Loading SUMMARIES from collection: {summary_collection}")
-        
+
         summaries = self._load_from_collection(summary_collection, with_vectors=with_vectors)
         logger.info(f"✓ Loaded {len(summaries)} summaries")
         return summaries
 
     def _fallback_sqlite_read(self, collection_name: str, with_vectors: bool = True) -> List[Dict[str, Any]]:
-        storage_sqlite = os.path.join(self.qdrant_path, collection_name, 'collection', collection_name, 'storage.sqlite')
+        storage_sqlite = os.path.join(
+            self.qdrant_path, collection_name, "collection", collection_name, "storage.sqlite"
+        )
         if not os.path.exists(storage_sqlite):
             logger.error(f"SQLite file not found: {storage_sqlite}")
             return []
@@ -80,19 +85,19 @@ class QdrantEntryLoader:
                 if isinstance(obj, dict):
                     item = obj
                 else:
-                    if hasattr(obj, '__dict__'):
-                        item.update(getattr(obj, '__dict__', {}))
-                    for attr in ('id', 'payload', 'vector'):
+                    if hasattr(obj, "__dict__"):
+                        item.update(getattr(obj, "__dict__", {}))
+                    for attr in ("id", "payload", "vector"):
                         if hasattr(obj, attr) and attr not in item:
                             item[attr] = getattr(obj, attr)
 
-                if 'id' not in item and 'point' in item:
-                    item['id'] = item['point'].get('id')
-                if 'payload' not in item and 'point' in item:
-                    item['payload'] = item['point'].get('payload', {})
+                if "id" not in item and "point" in item:
+                    item["id"] = item["point"].get("id")
+                if "payload" not in item and "point" in item:
+                    item["payload"] = item["point"].get("payload", {})
 
-                if not with_vectors and 'vector' in item:
-                    item.pop('vector', None)
+                if not with_vectors and "vector" in item:
+                    item.pop("vector", None)
 
                 points.append(item)
             conn.close()
@@ -101,6 +106,7 @@ class QdrantEntryLoader:
 
         logger.info(f"Fallback loaded {len(points)} points from SQLite")
         return points
+
 
 class VectorRetriever:
     def __init__(self, embedder):
@@ -116,17 +122,24 @@ class VectorRetriever:
         results = []
         skipped = 0
         for entry in entries:
-            vec = entry.get('vector')
+            vec = entry.get("vector")
             if vec is None:
                 skipped += 1
                 continue
             score = self._cosine_similarity(query_vector, vec)
-            results.append({'id': str(entry.get('id')), 'score': float(score), 'payload': entry.get('payload', {}), 'source': 'vector'})
+            results.append(
+                {
+                    "id": str(entry.get("id")),
+                    "score": float(score),
+                    "payload": entry.get("payload", {}),
+                    "source": "vector",
+                }
+            )
 
         if skipped:
             logger.warning(f"Skipped {skipped} entries without vectors")
 
-        results.sort(key=lambda x: x['score'], reverse=True)
+        results.sort(key=lambda x: x["score"], reverse=True)
         return results[:limit]
 
     def _cosine_similarity(self, v1: List[float], v2: List[float]) -> float:
@@ -138,21 +151,28 @@ class VectorRetriever:
             return 0.0
         return float(np.dot(a, b) / (na * nb))
 
+
 def format_related_memories(related: List[Dict[str, Any]]) -> str:
     out: List[str] = []
     for item in related:
-        payload = item.get('payload', {}) if isinstance(item, dict) else {}
+        payload = item.get("payload", {}) if isinstance(item, dict) else {}
         if not payload and isinstance(item, str):
             out.append(item)
             continue
-            
-        time_stamp = payload.get('time_stamp') or item.get('time_stamp') or ''
-        weekday = payload.get('weekday') or item.get('weekday') or ''
-        memory = payload.get('memory') or payload.get('original_memory') or payload.get('compressed_memory') or item.get('memory') or ''
-        dt = datetime.fromisoformat(time_stamp.replace('Z', '+00:00'))
-        formatted_date = dt.strftime("%d %B %Y")  
+
+        time_stamp = payload.get("time_stamp") or item.get("time_stamp") or ""
+        weekday = payload.get("weekday") or item.get("weekday") or ""
+        memory = (
+            payload.get("memory")
+            or payload.get("original_memory")
+            or payload.get("compressed_memory")
+            or item.get("memory")
+            or ""
+        )
+        dt = datetime.fromisoformat(time_stamp.replace("Z", "+00:00"))
+        formatted_date = dt.strftime("%d %B %Y")
         formatted = f"[Memory recorded on: {formatted_date}, {weekday}]\n{memory}"
-    
+
         out.append(formatted.strip())
-    
-    return "\n\n".join(out)  
+
+    return "\n\n".join(out)

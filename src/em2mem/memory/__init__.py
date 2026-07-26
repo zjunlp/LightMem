@@ -1,6 +1,5 @@
 from .EM2Memory import EM2Memory
-from .utils import MemorySearchOutput, ReasoningOutput, RetrievedItem, QAResult, transform_timestamp
-
-from .multimodal_memory_cell import MemoryCell, CaptionEntry
+from .multimodal_memory_cell import CaptionEntry, MemoryCell
 from .semantic_graph import SemanticMemory
+from .utils import MemorySearchOutput, QAResult, ReasoningOutput, RetrievedItem, transform_timestamp
 from .visual import VisualMemory

@@ -13,7 +13,9 @@ import torch
 try:
     from vllm import LLM, SamplingParams
 except ImportError:
-    raise ImportError("The 'vllm' library is required. Please install it in a new environment using 'pip install vllm', recommended version >= 0.9.0.")
+    raise ImportError(
+        "The 'vllm' library is required. Please install it in a new environment using 'pip install vllm', recommended version >= 0.9.0."
+    )
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
@@ -37,7 +39,7 @@ class VllmOfflineManager:
             else:
                 warnings.warn("CUDA not available, using CPU mode.")
                 self.config.num_gpu = 0
-        
+
         self.config.gpu_memory_utilization = getattr(self.config, "gpu_memory_utilization", 0.9)
 
         self.client = LLM(
@@ -62,7 +64,7 @@ class VllmOfflineManager:
         reference: https://docs.vllm.ai/en/latest/examples/offline_inference/chat_with_tools
         """
         content = response.outputs[0].text.strip()
-        
+
         if tools:
             processed_response = {
                 "content": content,
@@ -78,7 +80,7 @@ class VllmOfflineManager:
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
-        think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
+        think: Optional[Union[bool, Literal["low", "medium", "high"]]] = None,
     ) -> Optional[str]:
         """
         Generate a response based on the given messages.
@@ -95,7 +97,7 @@ class VllmOfflineManager:
         """
         if self.client is None:
             raise ValueError("vLLM client is not initialized.")
-        
+
         params = SamplingParams(
             seed=self.config.seed,
             temperature=self.config.temperature,
@@ -111,7 +113,7 @@ class VllmOfflineManager:
             think = True
 
         outputs = self.client.chat(
-            [messages], 
+            [messages],
             params,
             chat_template_kwargs={"enable_thinking": think},
         )
@@ -288,9 +290,7 @@ class VllmOfflineManager:
 
                 for topic_idx, topic_segment in enumerate(api_call_segments):
                     global_topic_id = (
-                        global_topic_ids[topic_idx]
-                        if topic_idx < len(global_topic_ids)
-                        else topic_idx + 1
+                        global_topic_ids[topic_idx] if topic_idx < len(global_topic_ids) else topic_idx + 1
                     )
                     topic_text = concatenate_messages(topic_segment, messages_use)
                     user_prompt_parts.append(f"--- Topic {global_topic_id} ---\n{topic_text}")

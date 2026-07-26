@@ -22,13 +22,10 @@ class TransformersManager:
             self.device = "auto"
         elif self.config.num_gpu == 1:
             self.device = {"": f"cuda:{self.config.main_gpu}"}
-        else: # For multiple GPUs, use 'auto' to let Transformers distribute the model across all available GPUs.
+        else:  # For multiple GPUs, use 'auto' to let Transformers distribute the model across all available GPUs.
             self.device = "auto"
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.config.model, 
-            use_fast=True
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(self.config.model, use_fast=True)
 
         self.client = AutoModelForCausalLM.from_pretrained(
             self.config.model,
@@ -50,7 +47,7 @@ class TransformersManager:
         TODO: reference at https://huggingface.co/docs/transformers/main/chat_extras#tool-use
         """
         content = response.strip()
-        
+
         if tools:
             processed_response = {
                 "content": content,
@@ -78,7 +75,7 @@ class TransformersManager:
         Returns:
             str: The generated response.
         """
-        params =  {
+        params = {
             "do_sample": self.config.do_sample,
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
@@ -86,11 +83,7 @@ class TransformersManager:
             "top_p": self.config.top_p,
         }
 
-        prompt = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True
-        )
+        prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.client.device)
 
         outputs = self.client.generate(
@@ -102,7 +95,7 @@ class TransformersManager:
             top_p=params["top_p"],
             pad_token_id=self.tokenizer.eos_token_id,
         )
-        generated = outputs[0][inputs["input_ids"].shape[1]:]
+        generated = outputs[0][inputs["input_ids"].shape[1] :]
 
         text = self.tokenizer.decode(generated, skip_special_tokens=True)
 
@@ -263,9 +256,7 @@ class TransformersManager:
 
                 for topic_idx, topic_segment in enumerate(api_call_segments):
                     global_topic_id = (
-                        global_topic_ids[topic_idx]
-                        if topic_idx < len(global_topic_ids)
-                        else topic_idx + 1
+                        global_topic_ids[topic_idx] if topic_idx < len(global_topic_ids) else topic_idx + 1
                     )
                     topic_text = concatenate_messages(topic_segment, messages_use)
                     user_prompt_parts.append(f"--- Topic {global_topic_id} ---\n{topic_text}")

@@ -49,9 +49,7 @@ class FullContextConfig(BaseModel):
     @model_validator(mode="after")
     def _validate_save_dir(self) -> FullContextConfig:
         if os.path.isfile(self.save_dir):
-            raise AssertionError(
-                f"Provided path ({self.save_dir}) should be a directory, not a file"
-            )
+            raise AssertionError(f"Provided path ({self.save_dir}) should be a directory, not a file")
         return self
 
 
@@ -76,7 +74,7 @@ class FullContextLayer(BaseMemoryLayer):
     # Basic utilities
     def _gen_id(self) -> str:
         # Use timestamp + count to ensure basic uniqueness
-        nid = f"{int(time.time()*1000)}-{len(self._ordered_ids)}"
+        nid = f"{int(time.time() * 1000)}-{len(self._ordered_ids)}"
         return nid
 
     def _count_tokens(self, text: str) -> int:
@@ -170,18 +168,13 @@ class FullContextLayer(BaseMemoryLayer):
             mem = self._memories[mid]
             used_content = {
                 "Time": mem["timestamp"],
-                "Memory": mem["content"], 
+                "Memory": mem["content"],
             }
             results.append(
                 {
                     "content": mem["content"],
-                    "metadata": {
-                        key: value
-                        for key, value in mem.items() if key != "content"
-                    },
-                    "used_content": '\n'.join(
-                        [f"{key}: {value}" for key, value in used_content.items()]
-                    )
+                    "metadata": {key: value for key, value in mem.items() if key != "content"},
+                    "used_content": "\n".join([f"{key}: {value}" for key, value in used_content.items()]),
                 }
             )
             count += 1
@@ -227,11 +220,7 @@ class FullContextLayer(BaseMemoryLayer):
         if "timestamp" in kwargs:
             mem["timestamp"] = kwargs["timestamp"]
 
-        other = {
-            k: v
-            for k, v in kwargs.items()
-            if k not in {"content", "role", "timestamp"}
-        }
+        other = {k: v for k, v in kwargs.items() if k not in {"content", "role", "timestamp"}}
         if other:
             meta = mem.get("metadata", {})
             meta.update(other)
@@ -270,9 +259,7 @@ class FullContextLayer(BaseMemoryLayer):
         with open(cfg_path, "r", encoding="utf-8") as f:
             cfg_dict = json.load(f)
         if uid != cfg_dict.get("user_id"):
-            raise ValueError(
-                f"Config user_id ({cfg_dict.get('user_id')}) does not match requested ({uid})"
-            )
+            raise ValueError(f"Config user_id ({cfg_dict.get('user_id')}) does not match requested ({uid})")
 
         # Update configuration (excluding save_dir)
         self.config = FullContextConfig(
@@ -285,7 +272,7 @@ class FullContextLayer(BaseMemoryLayer):
             payload = pickle.load(f)
         self._ordered_ids = payload.get("ordered_ids", [])
         self._memories = payload.get("memories", {})
-        
+
         # Recalculate token statistics and enforce capacity
         self._recalculate_tokens()
         self._ensure_capacity()
