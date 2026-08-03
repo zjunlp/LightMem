@@ -6,23 +6,20 @@ Upon receiving execution feedback f_t, perform structural edits:
 
 Loop until execution succeeds or T rounds of refinement are reached
 """
-import copy
+
 import logging
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Tuple
 
-import numpy as np
-
+from ..graph.edges import StepLinkEdge
 from ..graph.memory_graph import MemoryGraph, Subgraph
 from ..graph.nodes import (
     BaseNode,
-    SemanticNode,
     EpisodicNode,
     ProceduralNode,
-    NodeType,
+    SemanticNode,
 )
-from ..graph.edges import StepLinkEdge, BaseEdge
-from ..interfaces.llm import BaseLLM
 from ..interfaces.embedder import BaseEmbedder
+from ..interfaces.llm import BaseLLM
 from ..retrieval.semantic_retriever import SemanticRetriever
 
 logger = logging.getLogger(__name__)
@@ -92,23 +89,15 @@ class StageII:
 
         # 2. Apply edits according to the attribution type
         if action == "expand":
-            refined_subgraph = await self._expand_links(
-                subgraph, {"details": details}, observation, step_index
-            )
+            refined_subgraph = await self._expand_links(subgraph, {"details": details}, observation, step_index)
         elif action == "prune":
-            refined_subgraph = await self._prune_links(
-                subgraph, {"details": details}
-            )
+            refined_subgraph = await self._prune_links(subgraph, {"details": details})
         elif action == "reshape":
-            refined_subgraph = await self._reshape_content(
-                subgraph, {"details": details}, task_query, observation
-            )
+            refined_subgraph = await self._reshape_content(subgraph, {"details": details}, task_query, observation)
         else:
             # Unknown action; default to reshape
             logger.warning("Unknown action '%s', falling back to reshape", action)
-            refined_subgraph = await self._reshape_content(
-                subgraph, {"details": details}, task_query, observation
-            )
+            refined_subgraph = await self._reshape_content(subgraph, {"details": details}, task_query, observation)
 
         # 3. Re-serialize the context S'_t(q)
         refined_context = refined_subgraph.to_context_string(task_query, observation)
@@ -171,9 +160,7 @@ class StageII:
                 continue
 
         # Reached the maximum number of rounds without success
-        logger.warning(
-            "Refinement loop exhausted %d rounds without success", self.max_rounds
-        )
+        logger.warning("Refinement loop exhausted %d rounds without success", self.max_rounds)
         return current_subgraph, current_context
 
     async def _expand_links(
@@ -193,9 +180,7 @@ class StageII:
 
         # Retrieve semantic nodes related to the observation from the graph
         try:
-            candidates = await self.semantic_retriever.retrieve(
-                query=observation, top_k=self.expand_top_k * 3
-            )
+            candidates = await self.semantic_retriever.retrieve(query=observation, top_k=self.expand_top_k * 3)
         except Exception as e:
             logger.warning("Expand link retrieval failed: %s", e)
             return subgraph
@@ -240,9 +225,7 @@ class StageII:
 
         return Subgraph(nodes=new_subgraph_nodes, edges=new_subgraph_edges)
 
-    async def _prune_links(
-        self, subgraph: Subgraph, details: dict
-    ) -> Subgraph:
+    async def _prune_links(self, subgraph: Subgraph, details: dict) -> Subgraph:
         """Link Pruning: identify and remove distracting edges.
 
         Identify the noise edges E_noise within the subgraph:
@@ -275,14 +258,15 @@ class StageII:
                     # If the node content is highly related to the noise description, it is a noise source and should be pruned
                     noise_relevance = await self.llm.verify(
                         claim=details_str,
-                        evidence=node.content if hasattr(node, 'content') and node.content else "",
+                        evidence=node.content if hasattr(node, "content") and node.content else "",
                     )
                     # If this node is highly related to the noise description, mark it as a distractor and remove it
                     if noise_relevance > 0.7:
                         edge_ids_to_prune.append(eid)
                         logger.info(
                             "Pruning noisy node %s (relevance=%.2f)",
-                            node.id, noise_relevance,
+                            node.id,
+                            noise_relevance,
                         )
                 except Exception as e:
                     logger.warning("LLM verify failed for pruning: %s", e)
@@ -295,17 +279,9 @@ class StageII:
                 if target_node is None:
                     continue
                 try:
-                    content = (
-                        target_node.content
-                        if hasattr(target_node, "content") and target_node.content
-                        else ""
-                    )
+                    content = target_node.content if hasattr(target_node, "content") and target_node.content else ""
                     if not content:
-                        content = (
-                            target_node.skill_text
-                            if hasattr(target_node, "skill_text")
-                            else ""
-                        )
+                        content = target_node.skill_text if hasattr(target_node, "skill_text") else ""
                     noise_relevance = await self.llm.verify(
                         claim=details_str,
                         evidence=content,
@@ -332,10 +308,7 @@ class StageII:
 
         # Check whether nodes whose edges were removed are still connected to other edges
         for nid in pruned_node_ids:
-            still_connected = any(
-                (e.source_id == nid or e.target_id == nid)
-                for e in new_subgraph_edges.values()
-            )
+            still_connected = any((e.source_id == nid or e.target_id == nid) for e in new_subgraph_edges.values())
             if not still_connected and nid in new_subgraph_nodes:
                 # Remove orphaned node from the subgraph
                 del new_subgraph_nodes[nid]
@@ -386,9 +359,7 @@ class StageII:
                 original_content = node.content
             elif isinstance(node, EpisodicNode):
                 # For episodic nodes, concatenate task_description and trajectory
-                traj_str = "; ".join(
-                    f"obs={o}, act={a}" for o, a in node.trajectory
-                )
+                traj_str = "; ".join(f"obs={o}, act={a}" for o, a in node.trajectory)
                 original_content = f"Task: {node.task_description}. Trajectory: {traj_str}"
             elif isinstance(node, ProceduralNode):
                 original_content = node.skill_text
@@ -456,14 +427,30 @@ class StageII:
         details_lower = details_str.lower()
 
         coarse_keywords = [
-            "too much", "irrelevant", "noisy", "redundant",
-            "overwhelming", "excessive", "distracting",
-            "过多", "冗余", "干扰", "不相关",
+            "too much",
+            "irrelevant",
+            "noisy",
+            "redundant",
+            "overwhelming",
+            "excessive",
+            "distracting",
+            "过多",
+            "冗余",
+            "干扰",
+            "不相关",
         ]
         fine_keywords = [
-            "missing", "insufficient", "lack", "incomplete",
-            "not enough", "need more detail", "absent",
-            "缺失", "不足", "不够", "遗漏",
+            "missing",
+            "insufficient",
+            "lack",
+            "incomplete",
+            "not enough",
+            "need more detail",
+            "absent",
+            "缺失",
+            "不足",
+            "不够",
+            "遗漏",
         ]
 
         for kw in coarse_keywords:

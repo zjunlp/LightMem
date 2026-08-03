@@ -1,4 +1,5 @@
-from typing import Dict, Optional, List, Union, Any
+from typing import Any, Dict, List, Optional, Union
+
 from transformers import PreTrainedTokenizerBase
 
 from lightmem.configs.pre_compressor.llmlingua_2 import LlmLingua2Config
@@ -10,7 +11,8 @@ class LlmLingua2Compressor:
 
         try:
             import importlib
-            importlib.import_module('llmlingua')
+
+            importlib.import_module("llmlingua")
         except ImportError:
             raise ImportError(
                 "Required package 'llmlingua' not found. "
@@ -20,17 +22,17 @@ class LlmLingua2Compressor:
 
         try:
             from llmlingua import PromptCompressor
-            if config.llmlingua_config['use_llmlingua2'] is True:
+
+            if config.llmlingua_config["use_llmlingua2"] is True:
                 self._compressor = PromptCompressor(
-                    model_name=config.llmlingua_config['model_name'],
-                    device_map=config.llmlingua_config['device_map'],
-                    use_llmlingua2=config.llmlingua_config['use_llmlingua2'],
-                    llmlingua2_config=config.llmlingua2_config
+                    model_name=config.llmlingua_config["model_name"],
+                    device_map=config.llmlingua_config["device_map"],
+                    use_llmlingua2=config.llmlingua_config["use_llmlingua2"],
+                    llmlingua2_config=config.llmlingua2_config,
                 )
             else:
                 self._compressor = PromptCompressor(
-                    model_name=config.llmlingua_config['model_name'],
-                    device_map=config.llmlingua_config['device_map']
+                    model_name=config.llmlingua_config["model_name"], device_map=config.llmlingua_config["device_map"]
                 )
         except Exception as e:
             raise RuntimeError(f"Failed to initialize LlmLingua2Compressor: {str(e)}")
@@ -52,18 +54,15 @@ class LlmLingua2Compressor:
             List of messages with compressed content.
         """
         for mes in messages:
-            content = mes.get('content', '')
+            content = mes.get("content", "")
             if not content or not content.strip():
                 # If content is empty, it doesn't need compression
                 continue
 
-            compress_config = {
-                'context': [content],
-                **self.config.compress_config
-            }
+            compress_config = {"context": [content], **self.config.compress_config}
 
             try:
-                comp_content = self._compressor.compress_prompt(**compress_config)['compressed_prompt']
+                comp_content = self._compressor.compress_prompt(**compress_config)["compressed_prompt"]
             except Exception as e:
                 print(f"compress error, skip this message: {e}")
                 comp_content = content  # Keep the original content if compression fails
@@ -72,11 +71,8 @@ class LlmLingua2Compressor:
             if tokenizer is not None:
                 try:
                     while len(tokenizer.encode(comp_content)) >= 512 and comp_content.strip():
-                        new_compress_config = {
-                            'context': comp_content,
-                            **self.config.compress_config
-                        }
-                        comp_content = self._compressor.compress_prompt(**new_compress_config)['compressed_prompt']
+                        new_compress_config = {"context": comp_content, **self.config.compress_config}
+                        comp_content = self._compressor.compress_prompt(**new_compress_config)["compressed_prompt"]
                 except Exception as e:
                     print(f"secondary compress error: {e}")
                     # If an error occurs, exit the loop and keep the current compression result
@@ -84,7 +80,7 @@ class LlmLingua2Compressor:
 
             # Update message
             if comp_content.strip():
-                mes['content'] = comp_content.strip()
+                mes["content"] = comp_content.strip()
 
         return messages
 

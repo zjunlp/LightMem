@@ -1,6 +1,9 @@
-from typing import Dict, Optional, List, Any
-import torch, numpy as np
-from transformers import AutoTokenizer, AutoModel
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import torch
+from transformers import AutoModel, AutoTokenizer
+
 
 class LlmLingua2Segmenter:
     def __init__(self, config: Optional[Dict] = None, shared: bool = False, compressor=None):
@@ -11,7 +14,7 @@ class LlmLingua2Segmenter:
                 pretrained_model_name_or_path=self.config["model_name"],
                 device_map=self.config.get("device_map", None),
                 torch_dtype=self.config.get("torch_dtype", None),
-                **self.config.get("model_config", {})
+                **self.config.get("model_config", {}),
             ).eval()
             self.tokenizer = AutoTokenizer.from_pretrained(self.config["model_name"])
             self.buffer_len = self.config.get("buffer_len", 512)
@@ -26,8 +29,12 @@ class LlmLingua2Segmenter:
         model, tokenizer = self.model, self.tokenizer
         device = next(model.parameters()).device
 
-        cls_id = tokenizer.cls_token_id if tokenizer.cls_token_id is not None else tokenizer.convert_tokens_to_ids('[CLS]')
-        sep_id = tokenizer.sep_token_id if tokenizer.sep_token_id is not None else tokenizer.convert_tokens_to_ids('[SEP]')
+        cls_id = (
+            tokenizer.cls_token_id if tokenizer.cls_token_id is not None else tokenizer.convert_tokens_to_ids("[CLS]")
+        )
+        sep_id = (
+            tokenizer.sep_token_id if tokenizer.sep_token_id is not None else tokenizer.convert_tokens_to_ids("[SEP]")
+        )
 
         per_sent_tokens = [tokenizer.encode(s, add_special_tokens=False) for s in buffer_texts]
 
@@ -72,7 +79,7 @@ class LlmLingua2Segmenter:
         for i in range(n):
             i_start, i_end = spans[i]
             i_pos = np.arange(i_start, i_end)
-            if i_pos.size == 0: 
+            if i_pos.size == 0:
                 continue
             i_pos = i_pos[valid[i_pos]]
             if i_pos.size == 0:
@@ -110,11 +117,11 @@ class LlmLingua2Segmenter:
             return {"boundaries": [0], "cut_index": 0}
 
         M = self.sentence_level_attention(buffer_texts)
-        outer = [M[i, i-1] for i in range(1, n)]
+        outer = [M[i, i - 1] for i in range(1, n)]
 
         boundaries = []
-        for k in range(1, len(outer)-1):
-            if outer[k-1] < outer[k] > outer[k+1]:
+        for k in range(1, len(outer) - 1):
+            if outer[k - 1] < outer[k] > outer[k + 1]:
                 boundaries.append(k)
 
         return boundaries

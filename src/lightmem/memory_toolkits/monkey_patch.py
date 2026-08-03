@@ -60,15 +60,17 @@ Notes:
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from pydantic import BaseModel
 from typing import (
-    Callable, 
-    Any, 
-    List, 
-    Dict, 
-    Tuple, 
+    Any,
+    Callable,
+    Dict,
+    List,
+    Tuple,
 )
+
+from pydantic import BaseModel
 
 
 @dataclass
@@ -81,6 +83,7 @@ class PatchSpec:
     - setter: sets the new callable in-place
     - wrapper: a decorator (Callable[[Callable], Callable]) that wraps the target callable
     """
+
     name: str
     getter: Callable[[], Callable[..., Any]]
     setter: Callable[[Callable[..., Any]], None]
@@ -121,7 +124,9 @@ class MonkeyPatcher:
         return None
 
 
-def make_attr_patch(obj: Any, attr: str) -> Tuple[Callable[[], Callable[..., Any]], Callable[[Callable[..., Any]], None]]:
+def make_attr_patch(
+    obj: Any, attr: str
+) -> Tuple[Callable[[], Callable[..., Any]], Callable[[Callable[..., Any]], None]]:
     """
     Helper to build (getter, setter) closures for a given object attribute.
 
@@ -134,12 +139,17 @@ def make_attr_patch(obj: Any, attr: str) -> Tuple[Callable[[], Callable[..., Any
             wrapper=token_monitor(...),
         )
     """
+
     def getter() -> Callable[..., Any]:
         return getattr(obj, attr)
+
     if isinstance(obj, BaseModel):
+
         def setter(fn: Callable[..., Any]) -> None:
             object.__setattr__(obj, attr, fn)
     else:
+
         def setter(fn: Callable[..., Any]) -> None:
             setattr(obj, attr, fn)
+
     return getter, setter

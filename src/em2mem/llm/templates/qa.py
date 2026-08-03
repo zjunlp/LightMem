@@ -15,6 +15,4 @@ worldmm_qa_system = """You are an AI assistant that answers questions about vide
 # Output Format
 Provide your answer as a single letter (A, B, C, or D) based on the evidence."""
 
-prompt_template = [
-    {"role": "system", "content": worldmm_qa_system}
-]
+prompt_template = [{"role": "system", "content": worldmm_qa_system}]

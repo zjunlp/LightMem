@@ -1,29 +1,71 @@
-import os
+import hashlib
 import json
 import logging
+import os
 import re
-import hashlib
 import threading
 from collections import defaultdict
-from typing import Dict, List, Any, Optional, Tuple, Union, Set
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 import torch
 from tqdm.auto import tqdm
 
-from ...llm import LLMModel, PromptTemplateManager
 from ...embedding import EmbeddingModel
+from ...llm import LLMModel, PromptTemplateManager
 
 logger = logging.getLogger(__name__)
 
 
 STOPWORDS = {
-    "the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "and", "or",
-    "is", "are", "was", "were", "be", "been", "being", "do", "did", "does",
-    "what", "which", "who", "whom", "when", "where", "why", "how",
-    "i", "me", "my", "we", "our", "you", "your", "he", "she", "they", "them",
-    "this", "that", "these", "those", "it", "its"
+    "the",
+    "a",
+    "an",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "for",
+    "with",
+    "and",
+    "or",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "do",
+    "did",
+    "does",
+    "what",
+    "which",
+    "who",
+    "whom",
+    "when",
+    "where",
+    "why",
+    "how",
+    "i",
+    "me",
+    "my",
+    "we",
+    "our",
+    "you",
+    "your",
+    "he",
+    "she",
+    "they",
+    "them",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
 }
 
 
@@ -42,7 +84,7 @@ class CaptionEntry:
 
     @property
     def timestamp_int(self) -> Tuple[int, int]:
-        day = self.date.replace('DAY', '').replace('Day', '')
+        day = self.date.replace("DAY", "").replace("Day", "")
         start_ts = int(day + self.start_time.zfill(8))
         end_ts = int(day + self.end_time.zfill(8))
         return start_ts, end_ts
@@ -78,7 +120,7 @@ def _transform_timestamp(ts_str: str) -> str:
 
 
 def _load_json(file_path: str) -> Any:
-    with open(file_path, 'r', encoding='utf-8') as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -364,7 +406,7 @@ class MemoryCell:
         try:
             while i < total:
                 cur_bs = min(batch_size, total - i)
-                batch_texts = texts[i:i + cur_bs]
+                batch_texts = texts[i : i + cur_bs]
 
                 try:
                     if hasattr(self.embedding_model, "encode_text"):
@@ -394,9 +436,11 @@ class MemoryCell:
 
                     new_bs = max(self.dense_encode_min_batch_size, batch_size // 2)
                     logger.warning(
-                        "CUDA OOM during dense encoding at doc %d/%d. "
-                        "Reducing batch_size from %d to %d and retrying.",
-                        i, total, batch_size, new_bs
+                        "CUDA OOM during dense encoding at doc %d/%d. Reducing batch_size from %d to %d and retrying.",
+                        i,
+                        total,
+                        batch_size,
+                        new_bs,
                     )
                     batch_size = new_bs
 
@@ -412,7 +456,10 @@ class MemoryCell:
                         logger.warning(
                             "RuntimeError OOM during dense encoding at doc %d/%d. "
                             "Reducing batch_size from %d to %d and retrying.",
-                            i, total, batch_size, new_bs
+                            i,
+                            total,
+                            batch_size,
+                            new_bs,
                         )
                         batch_size = new_bs
                     else:
@@ -640,10 +687,9 @@ class MemoryCell:
             for field in ["action_threads", "object_threads", "topic_threads", "visual_object_threads"]:
                 val = event_node.get(field, [])
                 if isinstance(val, list):
-                    token_source.extend([
-                        json.dumps(x, ensure_ascii=False) if isinstance(x, dict) else str(x)
-                        for x in val
-                    ])
+                    token_source.extend(
+                        [json.dumps(x, ensure_ascii=False) if isinstance(x, dict) else str(x) for x in val]
+                    )
             token_source.append(json.dumps(event_node.get("scene_summary", {}), ensure_ascii=False))
 
             info.graph_tokens = set()
@@ -761,7 +807,9 @@ class MemoryCell:
         for (entry, _), base_score in zip(candidates, base_scores):
             retrieval_text_score = self._overlap_score(query_tokens, self._entry_retrieval_tokens(entry))
             metadata_score = self._overlap_score(query_tokens, self._entry_metadata_tokens(entry))
-            raw_triplet_score = self._overlap_score(query_tokens, self._entry_raw_triplet_tokens(entry.doc_id, granularity))
+            raw_triplet_score = self._overlap_score(
+                query_tokens, self._entry_raw_triplet_tokens(entry.doc_id, granularity)
+            )
             graph_score = 0.0
             sidecar = self.graph_sidecar[granularity].get(entry.doc_id)
             if sidecar:
@@ -808,7 +856,12 @@ class MemoryCell:
                 if norm:
                     labels.add(norm)
             for triplet_str in sidecar.triplet_strings:
-                parts = [p.strip() for p in re.split(r"\s+(?:is|are|was|were|has|have|had|at|in|on|with|to|from|of)\s+", triplet_str, maxsplit=1)]
+                parts = [
+                    p.strip()
+                    for p in re.split(
+                        r"\s+(?:is|are|was|were|has|have|had|at|in|on|with|to|from|of)\s+", triplet_str, maxsplit=1
+                    )
+                ]
                 for part in parts:
                     norm = _normalize_phrase(part)
                     if norm and len(norm.split()) <= 4:
@@ -922,7 +975,9 @@ class MemoryCell:
                 temporal_proximity = 1.0 / (1.0 + time_gap / 300.0)
                 overlap_strength = min(overlap_count, 3) / 3.0
 
-                score = float(seed_score) * self.entity_expand_decay * (0.55 + 0.45 * overlap_strength) * temporal_proximity
+                score = (
+                    float(seed_score) * self.entity_expand_decay * (0.55 + 0.45 * overlap_strength) * temporal_proximity
+                )
                 scored_neighbors.append((neighbor_entry, score))
 
             scored_neighbors.sort(key=lambda x: -x[1])
@@ -1086,7 +1141,9 @@ class MemoryCell:
         indexed_time = self._get_thread_indexed_time()
         query_tokens = _tokenize(query)
         seed_doc_ids = self.normalize_doc_ids_to_30sec(doc_ids)
-        pool_doc_ids = self.expand_seed_doc_ids_with_neighbors(seed_doc_ids, radius=neighbor_radius, indexed_time=indexed_time)
+        pool_doc_ids = self.expand_seed_doc_ids_with_neighbors(
+            seed_doc_ids, radius=neighbor_radius, indexed_time=indexed_time
+        )
         if max_candidates and len(pool_doc_ids) > max_candidates:
             pool_doc_ids = pool_doc_ids[:max_candidates]
         if not pool_doc_ids:
@@ -1127,7 +1184,9 @@ class MemoryCell:
             temporal_bonus = 0.0
             if family == "temporal-recall":
                 temporal_bonus = 0.10 * anchor_bonus
-            final_score = 0.40 * dense_score + 0.35 * direct_score + 0.15 * local_score + 0.10 * anchor_bonus + temporal_bonus
+            final_score = (
+                0.40 * dense_score + 0.35 * direct_score + 0.15 * local_score + 0.10 * anchor_bonus + temporal_bonus
+            )
             results.append((entry, final_score))
 
         results.sort(key=lambda x: -x[1])
@@ -1138,7 +1197,7 @@ class MemoryCell:
                 best_by_doc[entry.doc_id] = (entry, score)
         deduped = list(best_by_doc.values())
         deduped.sort(key=lambda x: -x[1])
-        return deduped[:max(1, final_top_k)]
+        return deduped[: max(1, final_top_k)]
 
     # -----------------------------------------------------
     # Dense retrieval
@@ -1260,77 +1319,91 @@ class MemoryCell:
         }
 
         if family == "source-trace":
-            policy.update({
-                "graph_mode": graph_mode if graph_mode != "default" else "backtrack_object_source",
-                "time_bias": "backward" if time_bias == "none" else time_bias,
-                "seed_limit": 5,
-                "max_hops": 3,
-                "hop_decay": 0.78,
-                "final_top_k": 10,
-                "projection_budget": 256,
-                "top_k_per_granularity": {"30sec": 12, "3min": 8, "10min": 4, "1h": 1},
-            })
+            policy.update(
+                {
+                    "graph_mode": graph_mode if graph_mode != "default" else "backtrack_object_source",
+                    "time_bias": "backward" if time_bias == "none" else time_bias,
+                    "seed_limit": 5,
+                    "max_hops": 3,
+                    "hop_decay": 0.78,
+                    "final_top_k": 10,
+                    "projection_budget": 256,
+                    "top_k_per_granularity": {"30sec": 12, "3min": 8, "10min": 4, "1h": 1},
+                }
+            )
         elif family == "temporal-recall":
-            policy.update({
-                "graph_mode": graph_mode if graph_mode != "default" else "temporal_walk",
-                "time_bias": time_bias if time_bias in {"forward", "backward"} else "backward",
-                "seed_limit": 5,
-                "max_hops": 3,
-                "hop_decay": 0.76,
-                "final_top_k": 10,
-                "projection_budget": 256,
-                "top_k_per_granularity": {"30sec": 12, "3min": 8, "10min": 4, "1h": 1},
-            })
+            policy.update(
+                {
+                    "graph_mode": graph_mode if graph_mode != "default" else "temporal_walk",
+                    "time_bias": time_bias if time_bias in {"forward", "backward"} else "backward",
+                    "seed_limit": 5,
+                    "max_hops": 3,
+                    "hop_decay": 0.76,
+                    "final_top_k": 10,
+                    "projection_budget": 256,
+                    "top_k_per_granularity": {"30sec": 12, "3min": 8, "10min": 4, "1h": 1},
+                }
+            )
         elif family == "action-owner":
-            policy.update({
-                "graph_mode": graph_mode if graph_mode != "default" else "actor_action_refine",
-                "seed_limit": 5,
-                "max_hops": 1,
-                "hop_decay": 0.68,
-                "final_top_k": 8,
-                "projection_budget": 160,
-                "top_k_per_granularity": {"30sec": 10, "3min": 6, "10min": 3, "1h": 1},
-            })
+            policy.update(
+                {
+                    "graph_mode": graph_mode if graph_mode != "default" else "actor_action_refine",
+                    "seed_limit": 5,
+                    "max_hops": 1,
+                    "hop_decay": 0.68,
+                    "final_top_k": 8,
+                    "projection_budget": 160,
+                    "top_k_per_granularity": {"30sec": 10, "3min": 6, "10min": 3, "1h": 1},
+                }
+            )
         elif family == "participant-membership":
-            policy.update({
-                "graph_mode": graph_mode if graph_mode != "default" else "participant_cooccurrence_refine",
-                "seed_limit": 5,
-                "max_hops": 1,
-                "hop_decay": 0.68,
-                "final_top_k": 8,
-                "projection_budget": 160,
-                "top_k_per_granularity": {"30sec": 10, "3min": 7, "10min": 3, "1h": 1},
-            })
+            policy.update(
+                {
+                    "graph_mode": graph_mode if graph_mode != "default" else "participant_cooccurrence_refine",
+                    "seed_limit": 5,
+                    "max_hops": 1,
+                    "hop_decay": 0.68,
+                    "final_top_k": 8,
+                    "projection_budget": 160,
+                    "top_k_per_granularity": {"30sec": 10, "3min": 7, "10min": 3, "1h": 1},
+                }
+            )
         elif family == "plan-intention-decision":
-            policy.update({
-                "graph_mode": graph_mode if graph_mode != "default" else "topic_commitment_refine",
-                "seed_limit": 5,
-                "max_hops": 1,
-                "hop_decay": 0.66,
-                "final_top_k": 8,
-                "projection_budget": 192,
-                "top_k_per_granularity": {"30sec": 8, "3min": 8, "10min": 4, "1h": 2},
-            })
+            policy.update(
+                {
+                    "graph_mode": graph_mode if graph_mode != "default" else "topic_commitment_refine",
+                    "seed_limit": 5,
+                    "max_hops": 1,
+                    "hop_decay": 0.66,
+                    "final_top_k": 8,
+                    "projection_budget": 192,
+                    "top_k_per_granularity": {"30sec": 8, "3min": 8, "10min": 4, "1h": 2},
+                }
+            )
         elif family == "attribute-content-purpose":
-            policy.update({
-                "graph_mode": graph_mode if graph_mode != "default" else "anchor_refine_then_visual",
-                "seed_limit": 4,
-                "max_hops": 1,
-                "hop_decay": 0.62,
-                "final_top_k": 6,
-                "projection_budget": 128,
-                "top_k_per_granularity": {"30sec": 8, "3min": 5, "10min": 2, "1h": 1},
-            })
+            policy.update(
+                {
+                    "graph_mode": graph_mode if graph_mode != "default" else "anchor_refine_then_visual",
+                    "seed_limit": 4,
+                    "max_hops": 1,
+                    "hop_decay": 0.62,
+                    "final_top_k": 6,
+                    "projection_budget": 128,
+                    "top_k_per_granularity": {"30sec": 8, "3min": 5, "10min": 2, "1h": 1},
+                }
+            )
         elif family == "habit-preference":
-            policy.update({
-                "graph_mode": graph_mode if graph_mode != "default" else "habit_support_only",
-                "seed_limit": 4,
-                "max_hops": 0,
-                "hop_decay": 0.0,
-                "final_top_k": 6,
-                "projection_budget": 96,
-                "top_k_per_granularity": {"30sec": 4, "3min": 6, "10min": 4, "1h": 2},
-            })
+            policy.update(
+                {
+                    "graph_mode": graph_mode if graph_mode != "default" else "habit_support_only",
+                    "seed_limit": 4,
+                    "max_hops": 0,
+                    "hop_decay": 0.0,
+                    "final_top_k": 6,
+                    "projection_budget": 96,
+                    "top_k_per_granularity": {"30sec": 4, "3min": 6, "10min": 4, "1h": 2},
+                }
+            )
 
         return policy
 
@@ -1488,7 +1561,9 @@ class MemoryCell:
             return ranked
 
         query_tokens = _tokenize(query)
-        seed_doc_ids = [doc_id for doc_id, _ in sorted(anchor_scores.items(), key=lambda x: -x[1])[: policy["seed_limit"]]]
+        seed_doc_ids = [
+            doc_id for doc_id, _ in sorted(anchor_scores.items(), key=lambda x: -x[1])[: policy["seed_limit"]]
+        ]
         accumulated: Dict[str, float] = defaultdict(float)
         visited_best_hop: Dict[str, int] = {}
 

@@ -1,6 +1,8 @@
-from typing import Dict, Optional, ClassVar
 from importlib import import_module
+from typing import ClassVar, Dict, Optional
+
 from pydantic import BaseModel, Field, model_validator
+
 
 class EmbeddingRetrieverConfig(BaseModel):
     model_name: str = Field(
@@ -14,7 +16,7 @@ class EmbeddingRetrieverConfig(BaseModel):
         "qdrant": "lightmem.configs.retriever.embeddingretriever.qdrant.QdrantConfig"
     }
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     def validate_model_name(cls, values):
         default_model = cls.__pydantic_fields__["model_name"].default
         model_name = values.get("model_name", default_model)
@@ -28,16 +30,16 @@ class EmbeddingRetrieverConfig(BaseModel):
     @model_validator(mode="after")
     def validate_and_create_config(self) -> "EmbeddingRetrieverConfig":
         config_path = self._model_list[self.model_name]
-        module_path, class_name = config_path.rsplit('.', 1)
-        
+        module_path, class_name = config_path.rsplit(".", 1)
+
         try:
             module = import_module(module_path)
             config_class = getattr(module, class_name)
             if self.configs is None:
-                self.configs = config_class()  
+                self.configs = config_class()
             elif isinstance(self.configs, Dict):
                 self.configs = config_class(**self.configs)
-                
+
         except (ImportError, AttributeError) as e:
             raise ValueError(f"Could not load config class '{config_path}': {e}")
         return self

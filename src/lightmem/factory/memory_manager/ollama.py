@@ -1,11 +1,13 @@
 import concurrent
 import json
-from typing import Dict, List, Optional, Literal, Any, Union
+from typing import Dict, List, Literal, Optional, Union
 
 try:
     import ollama
 except ImportError:
-    raise ImportError("The 'ollama' library is required. Please install it using 'pip install ollama', recommended version >= 0.6.0.")
+    raise ImportError(
+        "The 'ollama' library is required. Please install it using 'pip install ollama', recommended version >= 0.6.0."
+    )
 
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
 from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
@@ -17,7 +19,9 @@ class OllamaManager:
         self.config = config
 
         if not self.config.model:
-            raise ValueError("Ollama model is not specified. Refer to https://ollama.com/docs/models for available models.")
+            raise ValueError(
+                "Ollama model is not specified. Refer to https://ollama.com/docs/models for available models."
+            )
 
         self.client = ollama.Client(host=self.config.host or "http://localhost:11434")
 
@@ -40,8 +44,8 @@ class OllamaManager:
                 "tool_calls": [],
             }
 
-            if response['message']['tool_calls']:
-                for tool_call in response['message']['tool_calls']:
+            if response["message"]["tool_calls"]:
+                for tool_call in response["message"]["tool_calls"]:
                     processed_response["tool_calls"].append(
                         {
                             "name": tool_call.function.name,
@@ -58,7 +62,7 @@ class OllamaManager:
         messages: List[Dict[str, str]],
         response_format: Optional[Dict[str, str]] = None,
         tools: Optional[List[Dict]] = None,
-        think: Optional[Union[bool, Literal['low', 'medium', 'high']]] = None,
+        think: Optional[Union[bool, Literal["low", "medium", "high"]]] = None,
     ) -> Optional[str]:
         """
         Generate a response based on the given messages.
@@ -76,7 +80,7 @@ class OllamaManager:
         if self.client is None:
             raise ValueError("Ollama client is not initialized.")
 
-        params =  {
+        params = {
             "model": self.config.model,
             "messages": messages,
             "seed": self.config.seed,
@@ -86,7 +90,7 @@ class OllamaManager:
             "top_p": self.config.top_p,
             "stop": self.config.stop,
         }
-        
+
         ollama_response_format = response_format
         if isinstance(response_format, dict) and response_format.get("type") == "json_object":
             ollama_response_format = "json"
@@ -106,7 +110,7 @@ class OllamaManager:
                 "top_k": params["top_k"],
                 "top_p": params["top_p"],
                 "stop": params["stop"],
-            }
+            },
         )
 
         response = self._parse_response(completion, tools)
@@ -265,9 +269,7 @@ class OllamaManager:
 
                 for topic_idx, topic_segment in enumerate(api_call_segments):
                     global_topic_id = (
-                        global_topic_ids[topic_idx]
-                        if topic_idx < len(global_topic_ids)
-                        else topic_idx + 1
+                        global_topic_ids[topic_idx] if topic_idx < len(global_topic_ids) else topic_idx + 1
                     )
                     topic_text = concatenate_messages(topic_segment, messages_use)
                     user_prompt_parts.append(f"--- Topic {global_topic_id} ---\n{topic_text}")

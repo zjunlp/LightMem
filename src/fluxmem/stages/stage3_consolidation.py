@@ -6,16 +6,16 @@ Pipeline:
 3. PEMS-Guided Iterative Consolidation: iteratively validate and refine skills until convergence
 """
 
-from typing import List, Dict, Tuple, Optional, Callable, Awaitable
 import logging
+from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from ..graph.memory_graph import MemoryGraph
-from ..graph.nodes import EpisodicNode, ProceduralNode, NodeType
 from ..graph.edges import DistillEdge
-from ..interfaces.llm import BaseLLM
+from ..graph.memory_graph import MemoryGraph
+from ..graph.nodes import EpisodicNode, ProceduralNode
 from ..interfaces.embedder import BaseEmbedder
+from ..interfaces.llm import BaseLLM
 from ..metrics.pems import PEMSCalculator
 
 logger = logging.getLogger(__name__)
@@ -100,9 +100,7 @@ class StageIII:
         self.max_consolidation_rounds = max_consolidation_rounds
         self.convergence_threshold = convergence_threshold
 
-    async def execute(
-        self, replay_fn: Optional[Callable] = None
-    ) -> Dict:
+    async def execute(self, replay_fn: Optional[Callable] = None) -> Dict:
         """Run the full Stage III consolidation pipeline.
 
         Args:
@@ -121,16 +119,14 @@ class StageIII:
         """
         # 1. Cluster episodic nodes
         clusters = self.cluster_episodes()
-        logger.info(f"Stage III: clustered {sum(len(c) for c in clusters)} episodes "
-                     f"into {len(clusters)} clusters")
+        logger.info(f"Stage III: clustered {sum(len(c) for c in clusters)} episodes into {len(clusters)} clusters")
 
         # 2. Induce a skill for each cluster
         induced_skills: List[ProceduralNode] = []
         for idx, cluster in enumerate(clusters):
             if not cluster:
                 continue
-            logger.info(f"Stage III: inducing skill from cluster {idx} "
-                         f"({len(cluster)} episodes)")
+            logger.info(f"Stage III: inducing skill from cluster {idx} ({len(cluster)} episodes)")
             skill = await self.induce_skill(cluster)
             induced_skills.append(skill)
 
@@ -140,15 +136,14 @@ class StageIII:
 
         for skill in induced_skills:
             source_episodes = [
-                self.graph.episodic_nodes[eid]
-                for eid in skill.source_episode_ids
-                if eid in self.graph.episodic_nodes
+                self.graph.episodic_nodes[eid] for eid in skill.source_episode_ids if eid in self.graph.episodic_nodes
             ]
-            refined_skill, pems_hist = await self.iterative_consolidation(
-                skill, source_episodes, replay_fn
-            )
+            refined_skill, pems_hist = await self.iterative_consolidation(skill, source_episodes, replay_fn)
             all_pems_history.append(pems_hist)
-            if pems_hist and abs(pems_hist[-1] - pems_hist[-2 if len(pems_hist) >= 2 else -1]) >= self.convergence_threshold:
+            if (
+                pems_hist
+                and abs(pems_hist[-1] - pems_hist[-2 if len(pems_hist) >= 2 else -1]) >= self.convergence_threshold
+            ):
                 all_converged = False
 
         # Check whether all skills have converged
@@ -183,9 +178,7 @@ class StageIII:
         embeddings = np.stack([ep.embedding for ep in episodes_with_emb])
 
         # Determine the number of clusters
-        n_clusters = self.num_clusters or self._determine_num_clusters(
-            len(episodes_with_emb)
-        )
+        n_clusters = self.num_clusters or self._determine_num_clusters(len(episodes_with_emb))
         n_clusters = min(n_clusters, len(episodes_with_emb))
 
         if n_clusters <= 0:
@@ -193,9 +186,7 @@ class StageIII:
 
         # Run clustering
         if _HAS_SKLEARN:
-            kmeans = _SklearnKMeans(
-                n_clusters=n_clusters, random_state=42, n_init=10
-            )
+            kmeans = _SklearnKMeans(n_clusters=n_clusters, random_state=42, n_init=10)
             kmeans.fit(embeddings)
             labels = kmeans.labels_
         else:
@@ -287,14 +278,11 @@ class StageIII:
             (consolidated skill node, PEMS history)
         """
         # Reset the PEMS calculator for iterations on this skill
-        pems_tracker = PEMSCalculator(
-            convergence_threshold=self.convergence_threshold
-        )
+        pems_tracker = PEMSCalculator(convergence_threshold=self.convergence_threshold)
         pems_history: List[float] = []
 
         for round_k in range(1, self.max_consolidation_rounds + 1):
-            logger.info(f"  Consolidation round {round_k} for skill "
-                         f"'{skill.skill_text[:50]}...'")
+            logger.info(f"  Consolidation round {round_k} for skill '{skill.skill_text[:50]}...'")
 
             # 1. Evaluate: compute success rate eta
             if replay_fn is not None:
@@ -317,17 +305,13 @@ class StageIII:
             previous_embedding = None
             if skill.version > 1 and len(skill.version_history) > 0:
                 # Recompute the embedding of the previous version
-                previous_embedding = await self.embedder.embed_text(
-                    skill.version_history[-1]
-                )
+                previous_embedding = await self.embedder.embed_text(skill.version_history[-1])
 
             pems_score = pems_tracker.compute(
                 success_rate=success_rate,
                 num_proc_nodes=num_proc,
                 skill_token_length=token_length,
-                current_embedding=skill.embedding
-                if skill.embedding is not None
-                else np.zeros(self.embedder.dimension),
+                current_embedding=skill.embedding if skill.embedding is not None else np.zeros(self.embedder.dimension),
                 previous_embedding=previous_embedding,
             )
             pems_history.append(pems_score)
@@ -337,8 +321,7 @@ class StageIII:
 
             # 3. Check convergence
             if pems_tracker.has_converged(pems_score):
-                logger.info(f"  Skill converged at round {round_k}, "
-                             f"PEMS={pems_score:.4f}")
+                logger.info(f"  Skill converged at round {round_k}, PEMS={pems_score:.4f}")
                 break
 
             # 4. If not converged and not the last round, refine the skill
@@ -367,14 +350,11 @@ class StageIII:
 
                 logger.info(f"  Refined skill to version {skill.version}")
         else:
-            logger.info(f"  Reached max consolidation rounds "
-                         f"({self.max_consolidation_rounds}) without convergence")
+            logger.info(f"  Reached max consolidation rounds ({self.max_consolidation_rounds}) without convergence")
 
         return skill, pems_history
 
-    def _estimate_success_rate(
-        self, skill: ProceduralNode, episodes: List[EpisodicNode]
-    ) -> float:
+    def _estimate_success_rate(self, skill: ProceduralNode, episodes: List[EpisodicNode]) -> float:
         """Estimate success rate from the episodes' own success field when no replay_fn is given.
 
         Computes a weighted estimate using the success field of source episodes;

@@ -1,11 +1,13 @@
 import concurrent
-from collections import defaultdict
-from openai import OpenAI
-from typing import List, Dict, Optional, Literal, Any
-import json, os, warnings
+import json
+import os
+from typing import Dict, List, Literal, Optional
+
 import httpx
-from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
+from openai import OpenAI
+
 from lightmem.configs.memory_manager.base_config import BaseMemoryManagerConfig
+from lightmem.memory.prompts import EXTRACTION_PROMPTS, METADATA_GENERATE_PROMPT
 from lightmem.memory.utils import clean_response
 
 model_name_context_windows = {
@@ -22,7 +24,7 @@ class OpenaiManager:
 
         if not self.config.model:
             self.config.model = "gpt-4o-mini"
-        
+
         if self.config.model in model_name_context_windows:
             self.context_windows = model_name_context_windows[self.config.model]
         else:
@@ -107,9 +109,9 @@ class OpenaiManager:
 
         if os.getenv("OPENROUTER_API_KEY"):
             openrouter_params = {}
-            
-            models = getattr(self.config, 'models', None)    
-            route = getattr(self.config, 'route', 'fallback') 
+
+            models = getattr(self.config, "models", None)
+            route = getattr(self.config, "route", "fallback")
             if models:
                 openrouter_params["models"] = models
                 openrouter_params["route"] = route
@@ -146,7 +148,7 @@ class OpenaiManager:
         messages_use: Literal["user_only", "assistant_only", "hybrid"] = "user_only",
         topic_id_mapping: Optional[List[List[int]]] = None,
         extraction_mode: Literal["flat", "event"] = "flat",
-        custom_prompts: Optional[Dict[str, str]] = None  
+        custom_prompts: Optional[Dict[str, str]] = None,
     ) -> List[Optional[Dict]]:
         """
         Extract metadata from text segments using parallel processing.
@@ -163,100 +165,91 @@ class OpenaiManager:
         """
         if not extract_list:
             return []
-        
+
         default_prompts = EXTRACTION_PROMPTS.get(extraction_mode, {})
-        
+
         if custom_prompts is None:
             prompts = default_prompts
         else:
             prompts = {**default_prompts, **custom_prompts}
-        
+
         if extraction_mode == "flat":
             return self._extract_with_prompt(
                 system_prompt=prompts.get("factual", METADATA_GENERATE_PROMPT),
                 extract_list=extract_list,
                 messages_use=messages_use,
                 topic_id_mapping=topic_id_mapping,
-                entry_type="factual"
+                entry_type="factual",
             )
-        
+
         elif extraction_mode == "event":
             factual_results = self._extract_with_prompt(
                 system_prompt=prompts["factual"],
                 extract_list=extract_list,
                 messages_use=messages_use,
                 topic_id_mapping=topic_id_mapping,
-                entry_type="factual"
+                entry_type="factual",
             )
-            
+
             relational_results = self._extract_with_prompt(
                 system_prompt=prompts["relational"],
                 extract_list=extract_list,
                 messages_use=messages_use,
                 topic_id_mapping=topic_id_mapping,
-                entry_type="relational"
+                entry_type="relational",
             )
-            
-            return self._merge_dual_perspective_results(
-                factual_results, 
-                relational_results
-            )
-        
+
+            return self._merge_dual_perspective_results(factual_results, relational_results)
+
         else:
             raise ValueError(f"Unknown extraction_mode: {extraction_mode}")
-    
+
     def _merge_dual_perspective_results(
-        self,
-        factual_results: List[Optional[Dict]],
-        relational_results: List[Optional[Dict]]
+        self, factual_results: List[Optional[Dict]], relational_results: List[Optional[Dict]]
     ) -> List[Optional[Dict]]:
         """
         Args:
             factual_results: Factual extraction results
             relational_results: Relational extraction results
-        
+
         Returns:
             Merged results with combined cleaned_result and accumulated usage
         """
         merged_results = []
-        
+
         for factual, relational in zip(factual_results, relational_results):
             if factual is None and relational is None:
                 merged_results.append(None)
                 continue
-            
+
             merged = {
                 "input_prompt": [],
                 "output_prompt": "",
                 "cleaned_result": [],
-                "usage": {
-                    "prompt_tokens": 0,
-                    "completion_tokens": 0,
-                    "total_tokens": 0
-                }
+                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
             }
-            
+
             if factual is not None:
                 merged["input_prompt"].extend(factual.get("input_prompt", []))
                 merged["cleaned_result"].extend(factual.get("cleaned_result", []))
                 if factual.get("usage"):
                     for key in merged["usage"]:
                         merged["usage"][key] += factual["usage"].get(key, 0)
-            
+
             if relational is not None:
                 merged["input_prompt"].extend(relational.get("input_prompt", []))
                 merged["cleaned_result"].extend(relational.get("cleaned_result", []))
                 if relational.get("usage"):
                     for key in merged["usage"]:
                         merged["usage"][key] += relational["usage"].get(key, 0)
-            
+
             merged["output_prompt"] = (
                 f"Factual: {factual.get('output_prompt', 'N/A') if factual else 'N/A'}\n"
                 f"Relational: {relational.get('output_prompt', 'N/A') if relational else 'N/A'}"
             )
-            
+
             merged_results.append(merged)
-        
+
         return merged_results
 
     def _extract_with_prompt(
@@ -265,7 +258,7 @@ class OpenaiManager:
         extract_list: List[List[List[Dict]]],
         messages_use: str,
         topic_id_mapping: Optional[List[List[int]]],
-        entry_type: str = "factual"
+        entry_type: str = "factual",
     ) -> List[Optional[Dict]]:
         """
         Args:
@@ -274,17 +267,14 @@ class OpenaiManager:
             messages_use: Message filtering strategy
             topic_id_mapping: Global topic IDs
             entry_type: "factual" or "relational"
-        
+
         Returns:
             List of extraction results
         """
+
         def concatenate_messages(segment: List[Dict], messages_use: str) -> str:
             """Concatenate messages based on usage strategy"""
-            role_filter = {
-                "user_only": {"user"},
-                "assistant_only": {"assistant"},
-                "hybrid": {"user", "assistant"}
-            }
+            role_filter = {"user_only": {"user"}, "assistant_only": {"assistant"}, "hybrid": {"user", "assistant"}}
 
             if messages_use not in role_filter:
                 raise ValueError(f"Invalid messages_use value: {messages_use}")
@@ -300,16 +290,16 @@ class OpenaiManager:
                     speaker_name = mes.get("speaker_name", "")
                     time_stamp = mes.get("time_stamp", "")
                     weekday = mes.get("weekday", "")
-                    
+
                     time_prefix = ""
                     if time_stamp and weekday:
                         time_prefix = f"[{time_stamp}, {weekday}] "
 
                     if speaker_name:
-                        message_lines.append(f"{time_prefix}{sequence_id//2}.{speaker_name}: {content}")
+                        message_lines.append(f"{time_prefix}{sequence_id // 2}.{speaker_name}: {content}")
                     else:
-                        message_lines.append(f"{time_prefix}{sequence_id//2}.{role}: {content}")
-            
+                        message_lines.append(f"{time_prefix}{sequence_id // 2}.{role}: {content}")
+
             return "\n".join(message_lines)
 
         max_workers = min(len(extract_list), 5)
@@ -318,7 +308,7 @@ class OpenaiManager:
             api_call_idx, api_call_segments = args
             try:
                 user_prompt_parts: List[str] = []
-                
+
                 global_topic_ids: List[int] = []
                 if topic_id_mapping and api_call_idx < len(topic_id_mapping):
                     global_topic_ids = topic_id_mapping[api_call_idx]
@@ -328,24 +318,24 @@ class OpenaiManager:
                         global_topic_id = global_topic_ids[topic_idx]
                     else:
                         global_topic_id = topic_idx + 1
-                    
+
                     topic_text = concatenate_messages(topic_segment, messages_use)
                     user_prompt_parts.append(f"--- Topic {global_topic_id} ---\n{topic_text}")
 
                 print(f"User prompt for API call {api_call_idx}:\n" + "\n".join(user_prompt_parts))
                 user_prompt = "\n".join(user_prompt_parts)
-                
+
                 metadata_messages = [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ]
-                
+
                 raw_response, usage_info = self.generate_response(
                     messages=metadata_messages,
                     response_format={"type": "json_object"},
                 )
                 metadata_facts = clean_response(raw_response)
-                
+
                 for entry in metadata_facts:
                     entry["entry_type"] = entry_type
 
@@ -354,9 +344,9 @@ class OpenaiManager:
                     "output_prompt": raw_response,
                     "cleaned_result": metadata_facts,
                     "usage": usage_info,
-                    "entry_type": entry_type
+                    "entry_type": entry_type,
                 }
-                
+
             except Exception as e:
                 print(f"Error processing API call {api_call_idx}: {e}")
                 return {
@@ -364,7 +354,7 @@ class OpenaiManager:
                     "output_prompt": "",
                     "cleaned_result": [],
                     "usage": None,
-                    "entry_type": entry_type
+                    "entry_type": entry_type,
                 }
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -380,26 +370,19 @@ class OpenaiManager:
         target_memory = target_entry["payload"]["memory"]
         candidate_memories = [c["payload"]["memory"] for c in candidate_sources]
 
-        user_prompt = (
-            f"Target memory:{target_memory}\n"
-            f"Candidate memories:\n" + "\n".join([f"- {m}" for m in candidate_memories])
+        user_prompt = f"Target memory:{target_memory}\nCandidate memories:\n" + "\n".join(
+            [f"- {m}" for m in candidate_memories]
         )
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ]
+        messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}]
 
-        response_text, usage_info = self.generate_response(
-            messages=messages,
-            response_format={"type": "json_object"}
-        )
-        
+        response_text, usage_info = self.generate_response(messages=messages, response_format={"type": "json_object"})
+
         try:
             result = json.loads(response_text)
             if "action" not in result:
                 result = {"action": "ignore"}
-            result["usage"] = usage_info  
+            result["usage"] = usage_info
             return result
         except Exception:
-            return {"action": "ignore", "usage": usage_info if 'usage_info' in locals() else None}
+            return {"action": "ignore", "usage": usage_info if "usage_info" in locals() else None}

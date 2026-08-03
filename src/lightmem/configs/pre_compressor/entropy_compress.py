@@ -1,6 +1,6 @@
-import os
+from typing import Any, Dict
+
 from pydantic import BaseModel, Field, field_validator
-from typing import Dict, Optional, Any
 
 
 class EntropyCompressorConfig(BaseModel):
@@ -9,10 +9,10 @@ class EntropyCompressorConfig(BaseModel):
             "model_name": "gpt2",
             "device": "cuda",
             "word_level_strategy": "average",  # or "first_token"
-            "compress_rate": 0.5,  
-            "max_length": 512
+            "compress_rate": 0.5,
+            "max_length": 512,
         },
-        description="Configuration for entropy-based semantic unit compression."
+        description="Configuration for entropy-based semantic unit compression.",
     )
 
     @field_validator("entropy_config")

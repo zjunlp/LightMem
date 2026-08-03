@@ -1,25 +1,27 @@
 from __future__ import annotations
-from pydantic import (
-    BaseModel, 
-    Field, 
-    model_validator,
-    field_serializer,
-    field_validator,
-    ConfigDict,
-)
+
+import random
 from abc import ABC, abstractmethod
-from types import MappingProxyType
 from datetime import datetime
 from functools import total_ordering
-import random 
+from types import MappingProxyType
 from typing import (
-    List, 
-    Any, 
+    Any,
+    Dict,
     Iterator,
+    List,
+    Mapping,
+    Optional,
     Tuple,
-    Mapping, 
-    Dict, 
-    Optional, 
+)
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
 )
 
 TIMESTAMP_FORMAT = "%Y-%m-%d (%a) %H:%M"
@@ -42,7 +44,7 @@ def _normalize_timestamp_to_iso(value: Any) -> str:
             return dt.isoformat()
         except Exception:
             pass
-        
+
         try:
             dt = datetime.strptime(value, TIMESTAMP_FORMAT)
             return dt.isoformat()
@@ -53,6 +55,7 @@ def _normalize_timestamp_to_iso(value: Any) -> str:
         f"timestamp must be datetime or str in ISO 8601 / "
         f"'{TIMESTAMP_FORMAT}' format; got {type(value).__name__}: {value!r}"
     )
+
 
 def _deep_freeze(value: Any) -> Any:
     """Recursively convert containers to immutable variants.
@@ -70,6 +73,7 @@ def _deep_freeze(value: Any) -> Any:
         return frozenset(_deep_freeze(v) for v in value)
     return value
 
+
 class _TimestampOrderingMixin:
     """Mixin to compare instances by a datetime timestamp.
 
@@ -83,10 +87,8 @@ class _TimestampOrderingMixin:
         if isinstance(ts, str):
             # Assume the string is already ISO and parse directly
             return datetime.fromisoformat(ts)
-        raise TypeError(
-            f"Unsupported timestamp type {type(ts).__name__}: {ts!r}"
-        )
-    
+        raise TypeError(f"Unsupported timestamp type {type(ts).__name__}: {ts!r}")
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, self.__class__):
             return NotImplemented
@@ -96,7 +98,7 @@ class _TimestampOrderingMixin:
         if not isinstance(other, self.__class__):
             return NotImplemented
         return self._timestamp_for_ordering() < other._timestamp_for_ordering()
-    
+
     # def get_string_timestamp(self) -> str:
     #     return self.timestamp.strftime(TIMESTAMP_FORMAT)
 
@@ -107,13 +109,13 @@ class _TimestampOrderingMixin:
             return ts
         if isinstance(ts, datetime):
             return ts.isoformat()
-        raise TypeError(
-            f"Unsupported timestamp type {type(ts).__name__}: {ts!r}"
-        )
+        raise TypeError(f"Unsupported timestamp type {type(ts).__name__}: {ts!r}")
+
 
 @total_ordering
 class Message(_TimestampOrderingMixin, BaseModel):
     """A message in a session."""
+
     model_config = ConfigDict(frozen=True)
     role: str = Field(..., description="The role of the message.")
     content: str = Field(..., description="The content of the message.")
@@ -145,7 +147,7 @@ class Message(_TimestampOrderingMixin, BaseModel):
                 "'2024-08-25 12:01:42'."
             )
         return v
-    
+
     @field_serializer("metadata")
     def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
         return dict(v)
@@ -154,13 +156,16 @@ class Message(_TimestampOrderingMixin, BaseModel):
 @total_ordering
 class QuestionAnswerPair(_TimestampOrderingMixin, BaseModel):
     """A question and answer pair."""
-    # Note that, in some cases, the QA pair is regarded as two messages in a session. 
+
+    # Note that, in some cases, the QA pair is regarded as two messages in a session.
     model_config = ConfigDict(frozen=True)
     role: str = Field(..., description="The role who asks the question.")
     question: str = Field(..., description="The question.")
     answer_list: Tuple[str, ...] = Field(..., description="The answer list.", min_length=1)
     timestamp: str = Field(..., description="The timestamp of the question and answer pair in ISO 8601 format.")
-    metadata: Mapping[str, Any] = Field(default_factory=dict, description="The metadata of the question and answer pair.")
+    metadata: Mapping[str, Any] = Field(
+        default_factory=dict, description="The metadata of the question and answer pair."
+    )
 
     @model_validator(mode="after")
     def _freeze_metadata(self) -> QuestionAnswerPair:
@@ -187,17 +192,19 @@ class QuestionAnswerPair(_TimestampOrderingMixin, BaseModel):
                 "'2024-08-25 12:01:42'."
             )
         return v
-    
+
     @field_serializer("metadata")
     def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
         return dict(v)
 
+
 @total_ordering
 class Session(_TimestampOrderingMixin, BaseModel):
     """A session."""
+
     model_config = ConfigDict(frozen=True)
     messages: Tuple[Message | QuestionAnswerPair, ...] = Field(
-        ..., 
+        ...,
         description="The messages in the session.",
         min_length=1,
     )
@@ -232,7 +239,7 @@ class Session(_TimestampOrderingMixin, BaseModel):
                 "'2024-08-25 12:01:42'."
             )
         return v
-    
+
     @field_serializer("metadata")
     def _serialize_metadata(self, v: Mapping[str, Any]) -> Dict[str, Any]:
         return dict(v)
@@ -246,12 +253,14 @@ class Session(_TimestampOrderingMixin, BaseModel):
     def __getitem__(self, index: int) -> Message | QuestionAnswerPair:
         return self.messages[index]
 
+
 class Trajectory(BaseModel):
     """A trajectory."""
+
     model_config = ConfigDict(frozen=True)
     sessions: Tuple[Session, ...] = Field(
-        ..., 
-        description="The sessions in the trajectory.", 
+        ...,
+        description="The sessions in the trajectory.",
         min_length=1,
     )
     metadata: Mapping[str, Any] = Field(default_factory=dict, description="The metadata of the trajectory.")
@@ -278,15 +287,17 @@ class Trajectory(BaseModel):
     def __getitem__(self, index: int) -> Session:
         return self.sessions[index]
 
+
 class MemoryDataset(BaseModel, ABC):
     """A memory dataset."""
+
     trajectories: List[Trajectory] = Field(
-        ..., 
+        ...,
         description="The trajectories in the dataset.",
         min_length=1,
     )
     question_answer_pair_lists: List[List[QuestionAnswerPair]] = Field(
-        ..., 
+        ...,
         description="The question and answer pairs for each trajectory in the dataset. "
         "The length of the list is the same as the number of trajectories.",
         min_length=1,
@@ -299,9 +310,9 @@ class MemoryDataset(BaseModel, ABC):
             raise ValueError(
                 "Length mismatch: `trajectories` and `question_answer_pair_lists` must have the same length."
             )
-    
+
         return self
-    
+
     @model_validator(mode="after")
     def _process_metadata(self) -> MemoryDataset:
         if not self.metadata:
@@ -316,15 +327,15 @@ class MemoryDataset(BaseModel, ABC):
 
     def __getitem__(self, index: int) -> Tuple[Trajectory, List[QuestionAnswerPair]]:
         return self.trajectories[index], self.question_answer_pair_lists[index]
-    
+
     def get_trajectories(self) -> List[Trajectory]:
         """Get the trajectories in the dataset."""
         return self.trajectories
-    
+
     def get_question_answer_pair_lists(self) -> List[List[QuestionAnswerPair]]:
         """Get the question and answer pairs for each trajectory in the dataset."""
         return self.question_answer_pair_lists
-    
+
     def shuffle(self, seed: Optional[int] = None) -> None:
         """Shuffle the dataset."""
         rng = random.Random(seed)
@@ -336,16 +347,14 @@ class MemoryDataset(BaseModel, ABC):
     def sample(self, size: int, seed: Optional[int] = None) -> MemoryDataset:
         """Sample the dataset."""
         if len(self) < size:
-            raise ValueError(
-                f"Cannot sample {size} items from dataset of length {len(self)}."
-            )
+            raise ValueError(f"Cannot sample {size} items from dataset of length {len(self)}.")
         rng = random.Random(seed)
         indices = rng.sample(range(len(self)), size)
         return self.__class__(
             trajectories=[self.trajectories[i] for i in indices],
             question_answer_pair_lists=[self.question_answer_pair_lists[i] for i in indices],
         )
-    
+
     @classmethod
     @abstractmethod
     def read_raw_data(cls, path: str) -> MemoryDataset:
@@ -356,7 +365,7 @@ class MemoryDataset(BaseModel, ABC):
     def _generate_metadata(self) -> Dict[str, Any]:
         """Generate the metadata of the dataset."""
         raise NotImplementedError("Subclasses must implement `_generate_metadata()`.")
-        
+
     def __repr__(self) -> str:
         def fmt_scalar(v: Any, width: int = 100) -> str:
             s = repr(v)
@@ -396,7 +405,7 @@ class MemoryDataset(BaseModel, ABC):
         body_lines = render_dict(self.metadata, indent=2, width=100)
 
         return header + "\n" + bar + ("\n" + "\n".join(body_lines) if body_lines else "")
-    
+
     @classmethod
     def filter_questions(cls, questions: List[QuestionAnswerPair]) -> List[QuestionAnswerPair]:
         """
@@ -405,7 +414,7 @@ class MemoryDataset(BaseModel, ABC):
         Subclasses can override this method to implement custom filtering logic.
         """
         return questions
-    
+
     @classmethod
     def get_qa_prompt_name(cls, has_graph: bool = False) -> str:
         """
@@ -414,7 +423,7 @@ class MemoryDataset(BaseModel, ABC):
         Subclasses can override to provide dataset-specific prompts.
         """
         return "question-answering"
-    
+
     @classmethod
     def get_judge_prompt_info(cls, qa_pair: QuestionAnswerPair) -> Tuple[str, str]:
         """

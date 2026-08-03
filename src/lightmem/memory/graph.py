@@ -1,2 +1,2 @@
 class GraphMem:
-    
+    pass
