@@ -14,17 +14,28 @@ class SenMemBufferManager:
 
     def add_messages(self, messages: List[Dict], segmenter, text_embedder) -> None:
         all_segments = []
+        if not messages:
+            return all_segments
+
         self.big_buffer.extend(messages)
 
         while self.big_buffer:
             processed_messages = []
-            for msg in self.big_buffer:
+            for pos, msg in enumerate(self.big_buffer):
                 if msg["role"] == "user":
                     cur_token_count = len(self.tokenizer.encode(msg["content"]))
                     if self.token_count + cur_token_count <= self.max_tokens:
                         self.buffer.append(msg)
                         self.token_count += cur_token_count
                         processed_messages.append(msg)
+                    elif self.token_count == 0 and not any(m.get("role") == "user" for m in self.buffer):
+                        oversize_segment = [msg]
+                        processed_messages.append(msg)
+                        if pos + 1 < len(self.big_buffer) and self.big_buffer[pos + 1].get("role") == "assistant":
+                            oversize_segment.append(self.big_buffer[pos + 1])
+                            processed_messages.append(self.big_buffer[pos + 1])
+                        all_segments.append(oversize_segment)
+                        break
                     else:
                         segments = self.cut_with_segmenter(segmenter, text_embedder)
                         all_segments.extend(segments)
@@ -47,7 +58,16 @@ class SenMemBufferManager:
         2. Fine-grained adjustment based on semantic similarity.
         """
         segments = []
+        if not self.buffer:
+            self.token_count = 0
+            return segments
+
         buffer_texts = [m["content"] for m in self.buffer if m["role"] == "user"]
+        if not buffer_texts:
+            self.buffer.clear()
+            self.token_count = 0
+            return segments
+
         boundaries = segmenter.propose_cut(buffer_texts)
 
         if not boundaries:
@@ -57,10 +77,18 @@ class SenMemBufferManager:
             return segments
 
         turns = []
-        for i in range(0, len(self.buffer), 2):
+        for i in range(0, len(self.buffer) - 1, 2):
+            if self.buffer[i].get("role") != "user" or self.buffer[i + 1].get("role") != "assistant":
+                continue
             user_msg = self.buffer[i]["content"]
             assistant_msg = self.buffer[i + 1]["content"]
             turns.append(user_msg + " " + assistant_msg)
+
+        if not turns:
+            segments.append(self.buffer.copy())
+            self.buffer.clear()
+            self.token_count = 0
+            return segments
 
         embeddings = []
         for turn in turns:
@@ -104,7 +132,7 @@ class SenMemBufferManager:
 
         if force_segment:
             segments.append(self.buffer[start_idx:])
-            start_idx = len(boundaries)
+            start_idx = len(self.buffer)
 
         if start_idx > 0: 
             del self.buffer[:start_idx]
