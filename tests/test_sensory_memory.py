@@ -41,9 +41,11 @@ def test_force_segment_flushes_remaining_buffer():
 
     segments = manager.cut_with_segmenter(FakeSegmenter(), FakeEmbedder(), force_segment=True)
 
-    assert segments == [[
-        {"role": "user", "content": "one"},
-        {"role": "assistant", "content": "two"},
-    ]]
+    assert segments == [
+        [
+            {"role": "user", "content": "one"},
+            {"role": "assistant", "content": "two"},
+        ]
+    ]
     assert manager.buffer == []
     assert manager.token_count == 0

@@ -38,7 +38,6 @@ class BaseMemoryManagerConfig:
         thinking: Optional[Union[bool, str, Dict[str, Any]]] = None,
         **kwargs: Any,
     ):
-
         # General parameters
         self.model = model
         self.seed = seed
