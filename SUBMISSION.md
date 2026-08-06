@@ -30,7 +30,7 @@ docker run --rm -p 8000:8000 \
 ```
 
 The LLM and embedding credentials are runtime configuration and are not stored
-in the repository. The service uses `gpt-5.4-mini` and
+in the repository. The service uses `gpt-4o-mini` and
 `text-embedding-3-small` by default, with local Qdrant persistence under `/data`.
 After each Add, event memories are persisted immediately. Cross-event
 consolidation starts automatically when `MEMORY_SUMMARY_BATCH_ENTRIES` pending

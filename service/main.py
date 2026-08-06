@@ -34,7 +34,7 @@ def _build_config() -> dict:
     default_base_url = _env("MEMORY_BASE_URL", _env("OPENAI_API_BASE", "https://api.openai.com/v1"))
     llm_base_url = _env("MEMORY_LLM_BASE_URL", default_base_url)
     embedding_base_url = _env("MEMORY_EMBEDDING_BASE_URL", default_base_url)
-    llm_model = _env("MEMORY_LLM_MODEL", "gpt-5.4-mini")
+    llm_model = _env("MEMORY_LLM_MODEL", "gpt-4o-mini")
     embedding_model = _env("MEMORY_EMBEDDING_MODEL", "text-embedding-3-small")
     embedding_dims = int(_env("MEMORY_EMBEDDING_DIMS", "1536"))
 
