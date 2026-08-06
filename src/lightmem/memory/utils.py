@@ -6,8 +6,6 @@ from typing import List, Dict, Literal, Optional, Any, Tuple, Union, Callable
 import tiktoken
 import uuid
 from dataclasses import dataclass, field
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
-from transformers.tokenization_utils import PreTrainedTokenizer
 from typing import Optional, Union, Dict
 
 @dataclass
@@ -20,6 +18,8 @@ class MemoryEntry:
     subcategory: str = ""
     memory_class: str = ""
     memory: str = ""
+    entry_type: str = ""
+    user_id: str = ""
     original_memory: str = ""
     compressed_memory: str = ""
     topic_id: Optional[int] = None
@@ -181,9 +181,15 @@ def resolve_tokenizer(tokenizer_or_name: Union[str, Any]) -> Union[tiktoken.Enco
     Resolve the tokenizer for a given model name or tokenizer instance.
     """
 
-    # --- Case: already a tokenizer object (transformers local model) ---
-    if isinstance(tokenizer_or_name, (PreTrainedTokenizer, PreTrainedTokenizerFast)):
-        return tokenizer_or_name
+    # --- Case: already a tokenizer object (optional transformers local model) ---
+    try:
+        from transformers.tokenization_utils import PreTrainedTokenizer
+        from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
+
+        if isinstance(tokenizer_or_name, (PreTrainedTokenizer, PreTrainedTokenizerFast)):
+            return tokenizer_or_name
+    except ImportError:
+        pass
 
     # --- Case: OpenAI tiktoken model name ---
     try:
@@ -210,6 +216,7 @@ def convert_extraction_results_to_memory_entries(
     speaker_list: List = None,
     topic_id_map: Dict[int, int] = None,
     max_source_ids: List[int] = None, 
+    user_id: str = "",
     logger = None
 ) -> List[MemoryEntry]:
     """
@@ -277,6 +284,7 @@ def convert_extraction_results_to_memory_entries(
                     speaker_list,
                     topic_id=resolved_topic_id,
                     topic_summary="",
+                    user_id=user_id,
                     logger=logger,
                 )
 
@@ -293,7 +301,8 @@ def _create_memory_entry_from_fact(
     speaker_list: List = None,
     topic_id: int = None,  
     topic_summary: str = "",
-    logger = None
+    logger = None,
+    user_id: str = ""
 ) -> Optional[MemoryEntry]:
     """
     Helper function to create a MemoryEntry from a fact entry.
@@ -343,6 +352,8 @@ def _create_memory_entry_from_fact(
         float_time_stamp=float_time_stamp,
         weekday=weekday,
         memory=fact_entry.get("fact") or fact_entry.get("relation", ""),
+        entry_type="factual" if fact_entry.get("fact") else "relational",
+        user_id=user_id,
         speaker_id=speaker_id,
         speaker_name=speaker_name,
         topic_id=topic_id,
@@ -450,8 +461,11 @@ def retrieve_supplementary_entries(
             seed_ts = seed["payload"]["time_stamp"] 
             logger.debug(f"[Retrieve] Seed entry found: {seed_ts}")
             
-            same_time_entries_raw, _ = retriever.scroll(  
-                scroll_filter={"time_stamp": seed_ts},
+            same_time_filter = {"time_stamp": seed_ts}
+            if additional_filters and "user_id" in additional_filters:
+                same_time_filter["user_id"] = additional_filters["user_id"]
+            same_time_entries_raw, _ = retriever.scroll(
+                scroll_filter=same_time_filter,
                 limit=1000
             )
             for other in same_time_entries_raw:
@@ -550,7 +564,8 @@ def store_summary(
     seed_entries: List[Dict],
     summary_retriever,
     text_embedder,
-    logger = None
+    logger = None,
+    user_id: str = ""
 ) -> str:
     summary_id = str(uuid.uuid4())
     logger.debug(f"Storing summary with id: {summary_id}")
@@ -569,6 +584,8 @@ def store_summary(
         "entry_count": len(buffer_entries),
         "seed_count": len(seed_entries)
     }
+    if user_id:
+        payload["user_id"] = user_id
     summary_retriever.insert(
         vectors=[embedding_vector],
         payloads=[payload],
@@ -581,10 +598,13 @@ def store_summary(
 
     return summary_id
 
-def initialize_time_pointer(retriever, call_id, logger):
+def initialize_time_pointer(retriever, call_id, logger, user_filter: Optional[Dict] = None):
     logger.info(f"[{call_id}] Initializing time pointer")
+    scroll_filter = {"consolidated": False}
+    if user_filter:
+        scroll_filter.update(user_filter)
     all_unconsolidated, _ = retriever.scroll(
-        scroll_filter={"consolidated": False},
+        scroll_filter=scroll_filter,
         limit=1000,
         with_payload=True,
         with_vectors=False
@@ -602,13 +622,16 @@ def get_window_entries(
     current_time: float,
     time_window: int,
     call_id: str,
-    logger = None
+    logger = None,
+    user_filter: Optional[Dict] = None
 ) -> Tuple[Optional[List], bool, Optional[float]]:
     end_time = current_time + time_window
     filters = {
         "consolidated": False,
         "float_time_stamp": {"gte": current_time, "lte": end_time}
     }
+    if user_filter:
+        filters.update(user_filter)
     
     logger.debug(
         f"[{call_id}] Window: "
@@ -620,7 +643,11 @@ def get_window_entries(
     
     if not Cbuf_raw:
         future_raw, _ = retriever.scroll(
-            scroll_filter={"consolidated": False, "float_time_stamp": {"gt": end_time}},
+            scroll_filter={
+                "consolidated": False,
+                "float_time_stamp": {"gt": end_time},
+                **(user_filter or {}),
+            },
             limit=10000
         )
         
@@ -664,13 +691,14 @@ def mark_entries_and_get_next_time(
 
 def check_has_more_entries(
     retriever,
-    current_time: float
+    current_time: float,
+    user_filter: Optional[Dict] = None
 ) -> bool:
     remaining, _ = retriever.scroll(  
         scroll_filter={
             "consolidated": False,
             "float_time_stamp": {"gt": current_time}
-        },
+        } | (user_filter or {}),
         limit=1
     )
     return len(remaining) > 0

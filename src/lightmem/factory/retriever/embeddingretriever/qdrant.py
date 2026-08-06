@@ -116,9 +116,17 @@ class Qdrant:
         conditions = []
         for key, value in filters.items():
             if isinstance(value, dict):
-                gte = value.get("gte", None)
-                lte = value.get("lte", None)
-                conditions.append(FieldCondition(key=key, range=Range(gte=gte, lte=lte)))
+                conditions.append(
+                    FieldCondition(
+                        key=key,
+                        range=Range(
+                            gt=value.get("gt"),
+                            gte=value.get("gte"),
+                            lt=value.get("lt"),
+                            lte=value.get("lte"),
+                        ),
+                    )
+                )
             else:
                 conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
         return Filter(must=conditions) if conditions else None
@@ -148,7 +156,7 @@ class Qdrant:
         query_filter = self._create_filter(filters) if filters else None
         if exclude_ids:
             if query_filter:
-                if not hasattr(query_filter, 'must_not'):
+                if query_filter.must_not is None:
                     query_filter.must_not = []
                 query_filter.must_not.append(
                     FieldCondition(
@@ -390,4 +398,3 @@ class Qdrant:
             if offset is None: 
                 break
         return all_points
-

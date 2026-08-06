@@ -1,0 +1,22 @@
+services:
+  structmem:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MEMORY_DATA_DIR: /data
+      MEMORY_API_KEY: ${MEMORY_API_KEY:-}
+      MEMORY_LLM_API_KEY: ${MEMORY_LLM_API_KEY:-}
+      MEMORY_EMBEDDING_API_KEY: ${MEMORY_EMBEDDING_API_KEY:-}
+      MEMORY_LLM_BASE_URL: ${MEMORY_LLM_BASE_URL:-https://api.openai.com/v1}
+      MEMORY_EMBEDDING_BASE_URL: ${MEMORY_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
+      MEMORY_LLM_MODEL: ${MEMORY_LLM_MODEL:-gpt-5.4-mini}
+      MEMORY_EMBEDDING_MODEL: ${MEMORY_EMBEDDING_MODEL:-text-embedding-3-small}
+      MEMORY_EMBEDDING_DIMS: ${MEMORY_EMBEDDING_DIMS:-1536}
+      MEMORY_SUMMARY_BATCH_ENTRIES: ${MEMORY_SUMMARY_BATCH_ENTRIES:-20}
+    volumes:
+      - structmem-data:/data
+    restart: unless-stopped
+
+volumes:
+  structmem-data:

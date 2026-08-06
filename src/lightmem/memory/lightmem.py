@@ -209,6 +209,7 @@ class LightMemory:
         force_segment: bool = False, 
         force_extract: bool = False,
         boundmem_tags: Optional[Any] = None,
+        user_id: Optional[str] = None,
     ):
         """
         Add new memory entries from message history.
@@ -271,7 +272,8 @@ class LightMemory:
         result = {
             "add_input_prompt": [],
             "add_output_prompt": [],
-            "api_call_nums": 0
+            "api_call_nums": 0,
+            "memory_entries": 0,
         }
         self.logger.debug(f"[{call_id}] Raw input type: {type(messages)}")
         if isinstance(messages, list):
@@ -369,9 +371,11 @@ class LightMemory:
             speaker_list=speaker_list,
             topic_id_map=topic_id_map,
             max_source_ids=max_source_ids,
+            user_id=user_id or "",
             logger=self.logger
         )
         self.logger.info(f"[{call_id}] Created {len(memory_entries)} MemoryEntry objects")
+        result["memory_entries"] = len(memory_entries)
         if boundmem_tags is not None:
             boundmem_tags, _ = resolve_tags(strategy="hard", hard_tags=boundmem_tags)
             for mem in memory_entries:
@@ -427,6 +431,8 @@ class LightMemory:
                     "subcategory": mem_obj.subcategory,
                     "memory_class": mem_obj.memory_class,
                     "memory": mem_obj.memory,
+                    "entry_type": getattr(mem_obj, "entry_type", ""),
+                    "user_id": getattr(mem_obj, "user_id", ""),
                     "original_memory": mem_obj.original_memory,
                     "compressed_memory": mem_obj.compressed_memory,
                     "speaker_id": mem_obj.speaker_id,
@@ -758,6 +764,7 @@ class LightMemory:
         enable_cross_event: bool = True,
         retrieval_scope: Literal["global", "historical"] = "global",
         top_k_seeds: int = 15,
+        user_id: Optional[str] = None,
     ) -> Dict:
         from lightmem.memory.utils import (
             initialize_time_pointer,
@@ -774,6 +781,7 @@ class LightMemory:
             build_empty_result
         )
         global GLOBAL_LAST_SUMMARY_TIME
+        user_filter = {"user_id": user_id} if user_id else None
         
         call_id = f"summarize_{'all' if process_all else 'once'}_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
         self.logger.info(f"========== START {call_id} ==========")
@@ -789,7 +797,8 @@ class LightMemory:
                 GLOBAL_LAST_SUMMARY_TIME = initialize_time_pointer(
                     retriever=self.embedding_retriever,
                     call_id=call_id,
-                    logger=self.logger
+                    logger=self.logger,
+                    user_filter=user_filter,
                 )
                 if GLOBAL_LAST_SUMMARY_TIME is None:
                     return build_empty_result(process_all)
@@ -798,7 +807,8 @@ class LightMemory:
                 current_time=GLOBAL_LAST_SUMMARY_TIME,
                 time_window=time_window,
                 call_id=call_id,
-                logger=self.logger
+                logger=self.logger,
+                user_filter=user_filter,
             )
             if Cbuf is None:
                 if new_time is not None:
@@ -813,10 +823,10 @@ class LightMemory:
             self.logger.info(f"[{call_id}] Processing {len(Cbuf)} entries")
             Sk = []
             if enable_cross_event:
-                retrieval_filters = None
+                retrieval_filters = dict(user_filter or {})
                 if retrieval_scope == "historical":
-                    retrieval_filters = {
-                        "float_time_stamp": {"lt": Cbuf[0]["payload"]["float_time_stamp"]}
+                    retrieval_filters["float_time_stamp"] = {
+                        "lt": Cbuf[0]["payload"]["float_time_stamp"]
                     }
                 Sk = retrieve_supplementary_entries(
                     buffer_entries=Cbuf,
@@ -853,7 +863,8 @@ class LightMemory:
                 seed_entries=Sk,
                 summary_retriever=self.summary_retriever,
                 text_embedder=self.text_embedder,
-                logger=self.logger
+                logger=self.logger,
+                user_id=user_id or "",
             )
             GLOBAL_LAST_SUMMARY_TIME = mark_entries_and_get_next_time(
                 retriever=self.embedding_retriever,
@@ -863,7 +874,8 @@ class LightMemory:
             )
             has_more = check_has_more_entries(
                 retriever=self.embedding_retriever,
-                current_time=GLOBAL_LAST_SUMMARY_TIME
+                current_time=GLOBAL_LAST_SUMMARY_TIME,
+                user_filter=user_filter,
             )
             if process_all:
                 summaries.append(build_summary_item(summary_text, summary_id, Cbuf, Sk))
