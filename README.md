@@ -38,11 +38,16 @@
 * 🌐 **Broad Compatibility**
   <br> Support for cloud APIs (OpenAI, DeepSeek) and local models (Ollama, vLLM, etc.)
 
-  <div align=center><img src="./figs/Lightmem.png" width="100%" height="60%" /></div>
+  <div align=center><img src="./figs/architecture.jpg" width="100%" height="60%" /></div>
 
 <span id='news'/>
 
 ## 📢 News
+- **[2026-07-13]**: 🎉🎉🎉LightMem has been selected for the CCF ODTC open source incentive program.
+- **[2026-04-24]**: 🚀 LightMem now supports the latest [**DeepSeek**](./src/lightmem/configs/memory_manager/base_config.py) models, including `deepseek-v4-flash` and `deepseek-v4-pro`, with `reasoning_effort` and thinking-mode configuration!
+- **[2026-04-24]**: 🎉🎉🎉 [**StructMem: Structured Memory for Long-Horizon Behavior in LLMs**](https://arxiv.org/abs/2604.21748) has been accepted by **ACL 2026**!
+- **[2026-03-21]**: 🚀 We provide a more comprehensive [baseline evaluation framework](https://github.com/zjunlp/MemBase), supporting the benchmarking of memory layers such as Mem0, A-MEM, EverMemOS, LangMem on multiple datasets like LoCoMo and LongMemEval.
+- **[2026-02-15]**: 🚀 **[StructMem](./StructMem.md)** is released: A hierarchical memory framework that preserves event-level memory bindings and cross-event memory connections. 
 - **[2026-01-26]**: 🎉🎉🎉 [**LightMem: Lightweight and Efficient Memory-Augmented Generation**](https://arxiv.org/abs/2510.18866) has been accepted by **ICLR 2026**!
 - **[2026-01-17]**: 🚀 We provide a comprehensive [baseline evaluation framework](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md), supporting the benchmarking of memory layers such as Mem0, A-MEM, and LangMem on multiple datasets like LoCoMo and LongMemEval.
 - **[2025-12-09]**: 🎬 Released a **[Demo Video](#demo)** showcasing long-context handling, along with comprehensive **[Tutorial Notebooks](./tutorial-notebooks/)** for various scenarios!
@@ -51,6 +56,18 @@
 - **[2025-11-09]**: ✨ LightMem now supports local deployment via [**Ollama**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/ollama.py), [**vLLM**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/vllm_offline.py), and [**Transformers**](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/factory/memory_manager/transformers.py) auto-loading!
 - **[2025-10-12]**: 🎉 LightMem project is officially Open-Sourced!
 
+<span id='project-navigation'/>
+
+## 🧭 Project Navigation
+
+This repository hosts multiple memory methods. The table below provides an overview and links to each method's documentation:
+
+| Method | Description | Paper | Documentation |
+| :--- | :--- | :--- | :--- |
+| **LightMem** | Lightweight and efficient memory-augmented generation framework | [ICLR 2026](https://arxiv.org/abs/2510.18866) | [README.md](./README.md) |
+| **FluxMem** | Connectivity-evolving memory framework modeling memory as a heterogeneous graph | [arXiv](https://arxiv.org/abs/2605.28773) (under review at EMNLP 2026) | [FluxMem.md](./FluxMem.md) |
+| **EM²Mem** | Event-centric multimodal memory for long-video question answering | Coming soon | [EM2Mem.md](./EM2Mem.md) |
+| **StructMem** | Structured hierarchical memory preserving event-level bindings and cross-event connections | [ACL 2026](https://arxiv.org/abs/2604.21748) | [StructMem.md](./StructMem.md) |
 
 <span id='reproduction'/>
 
@@ -105,6 +122,7 @@ LightMem is continuously evolving! Here's what's coming:
 * <a href='#news'>📢 News</a>
 * <a href='#reproduction'>🧪 Reproduction Scripts</a>
 * <a href='#baseline-evaluation'>🧪 Baseline Evaluation</a>
+* <a href='#project-navigation'>🧭 Project Navigation</a>
 * <a href='#demo'>🎥 Demo & Tutorials</a>
 * <a href='#todo'>☑️ Todo List</a>
 * <a href='#installation'>🔧 Installation</a>
@@ -187,7 +205,7 @@ The following table lists the backends values currently recognized by each confi
 | `MemoryManagerConfig`           | `openai`, `deepseek`, `ollama`, `vllm`, etc. |
 | `TextEmbedderConfig`            | `huggingface` |
 | `MMEmbedderConfig`              | `huggingface` |
-| `EmbeddingRetrieverConfig`      | `qdrant` |
+| `RetrieverConfig`      | `qdrant`, `FAISS`, `BM25` |
 
 <span id='examples'/>
 
@@ -498,13 +516,30 @@ All behaviors of LightMem are controlled via the BaseMemoryConfigs configuration
 | `context_retriever`   | `None`                                      | dict / object. Configuration for context-based retriever (`ContextRetrieverConfig`), e.g., `model_name='BM25'` and `configs` like `top_k`. Used when `retrieve_strategy` includes `'context'`. |
 | `embedding_retriever` | `None`                                      | dict / object. Vector store configuration (`EmbeddingRetrieverConfig`), e.g., `model_name='qdrant'` and connection/index params. Used when `retrieve_strategy` includes `'embedding'`. |
 | `summary_retriever`   | `None`                                      | dict / object. Configuration for summary-specific vector store (`EmbeddingRetrieverConfig`). When configured, summaries are stored in a separate collection for hierarchical retrieval. Used in StructMem mode to store and retrieve session/topic summaries independently from detailed memories. |
-| `update`              | `'offline'`                                 | `'online'` / `'offline'`. `'online'`: update memories immediately after each interaction (low latency for fresh memories but higher operational cost). `'offline'`: batch or scheduled updates to save cost and aggregate changes. |
+| `update`              | `'offline'`                                 | `'online'` / `'offline'`. `'offline'`: batch or scheduled updates to save cost and aggregate changes — this is the fully supported mode with complete functionality. `'online'`: reserved for future development (currently a no-op placeholder; memory will not be persisted when this mode is set). |
 | `kv_cache`            | `False`                                     | True / False. If True, attempt to precompute and persist model KV caches to accelerate repeated LLM calls (requires support from the LLM runtime and may increase storage). Uses `kv_cache_path` to store cache. |
 | `kv_cache_path`       | `os.path.join(lightmem_dir, "kv_cache.db")` | str. File path for KV cache storage when `kv_cache=True`. |
 | `graph_mem`           | `False`                                     | True / False. When True, some memories will be organized as a graph (nodes and relationships) to support complex relation queries and reasoning. Requires additional graph processing/storage. |
 | `extraction_mode`     | `'flat'`                                    | `'flat'` / `'event'`. Memory extraction mode: `'flat'` extracts factual entries as independent units suitable for general knowledge retention; `'event'` extracts event-level structures with both factual and relational components, preserving temporal bindings and causal relationships. Use `'event'` for narrative-heavy or time-sensitive scenarios. |
 | `version`             | `'v1.1'`                                    | str. Configuration/API version. Only change if you know compatibility implications. |
 | `logging`             | `'None'`                                    | dict / object. Configuration for logging enabled. |
+
+**(Option) BoundMem Configuration:**
+
+BoundMem tag fallback is intentionally opt-in and is not enabled by `BaseMemoryConfigs` by default. The following are parameters related to the BoundMem plugin in the main functions, which can be added as needed:
+
+| Function | Parameter / Behavior | Notes |
+| --- | --- | --- |
+| `add_memory()` | `boundmem_tags` | Tags newly created memories before insertion. Accepts a string or tag list. |
+| `retrieve()` | `boundmem_tags` | Filters retrieved memories by overlap with the current tags. |
+| `retrieve()` | `boundmem_drop_untagged` | Keeps untagged legacy memories by default; set `True` to drop them. |
+| `retrieve()` | returned memory text | Internal tag prefixes are stripped before results are returned. |
+| `resolve_tags()` | `strategy="hard"` | Uses caller-provided `hard_tags`. |
+| `resolve_tags()` | `strategy="soft"` | Uses `environment_tag_fn` with `query`, `history`, `known_tags`, and optional `metadata`. |
+| `resolve_tags()` | `known_tags` | Caller-maintained tag list; returned together with newly resolved tags. |
+| `tag_text()` / `strip_tags()` | string-level helpers | Add or remove the internal tag prefix for custom integrations. |
+| `filter_by_tags()` | raw retriever-result helper | Keeps memories with overlapping tags; accepts custom `tag_match_fn`. |
+| Matching rule | default matcher | A memory is kept if it shares at least one tag with current tags. |
 
 ## 🏆 Contributors
 
@@ -580,6 +615,14 @@ We welcome contributions from the community! If you'd like to contribute, please
 <span id='related'/>
 
 ## 🔗 Related Projects
+
+### LightMem Series
+This repository belongs to ZJUNLP LightMem series, focusing on solving context bloat, excessive token consumption and low cache utilization for long-running LLM agents:
+- [LightMem](https://github.com/zjunlp/LightMem) — A lightweight and efficient memory management framework designed for Large Language Models and AI Agents
+- [LightMem2](https://github.com/zjunlp/LightMem2) —  A modular framework for long-running agent memory and context management
+- [LightMem-Ego](https://github.com/zjunlp/LightMem-Ego) — A lightweight streaming multimodal memory system for everyday-life assistance
+
+### Other Related Projects
 
 <div align="center">
   <table>

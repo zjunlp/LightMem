@@ -1,0 +1,160 @@
+ImageNet_1K:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: ImageNet_1K
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+N24News:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: N24News
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 50000
+    weight: 1
+HatefulMemes:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: HatefulMemes
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 10000
+    weight: 1
+VOC2007:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VOC2007
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 10000
+    weight: 1
+SUN397:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: SUN397
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 1
+OK-VQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: OK-VQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 10000
+    weight: 1
+A-OKVQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: A-OKVQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 1
+DocVQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: DocVQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 40000
+    weight: 1
+InfographicsVQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: InfographicsVQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 25000
+    weight: 1
+ChartQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: ChartQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 28000
+    weight: 1
+Visual7W:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: Visual7W
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 70000
+    weight: 1
+VisDial:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VisDial
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 130000
+    weight: 1
+CIRR:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: CIRR
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 30000
+    weight: 1
+VisualNews_t2i:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VisualNews_t2i
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+VisualNews_i2t:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: VisualNews_i2t
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+MSCOCO_t2i:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: MSCOCO_t2i
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+MSCOCO_i2t:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: MSCOCO_i2t
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 120000
+    weight: 1
+NIGHTS:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: NIGHTS
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 1
+WebQA:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: WebQA
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 20000
+    weight: 1
+MSCOCO:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: MSCOCO
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1

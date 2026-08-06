@@ -11,6 +11,7 @@ from lightmem.memory.utils import clean_response
 model_name_context_windows = {
     "gpt-4o-mini": 128000,
     "qwen3-30b-a3b-instruct-2507": 128000,
+    "glm-4.6": 200000,
     "DEFAULT": 128000,  # Recommended default context window
 }
 

@@ -205,23 +205,47 @@ class Qdrant:
         )
 
     def update(self, vector_id: Any, vector: list = None, payload: dict = None):
-        if vector is not None:
-            point = PointStruct(
-                id=vector_id, 
-                vector=vector, 
-                payload=payload if payload is not None else {}
-            )
-            self.client.upsert(collection_name=self.collection_name, points=[point])
-        elif payload is not None:
+        """
+        Update a vector and/or its payload.
+
+        Args:
+            vector_id (Any): ID of the vector to update.
+            vector (list, optional): Updated vector. Defaults to None.
+            payload (dict, optional): Updated payload. Defaults to None.
+        """
+        
+        # Handle no-op case
+        if vector is None and payload is None:
+            logger.debug(f"Update called for ID {vector_id} with no data. Skipping.")
+            return
+
+        # Case 1: only payload
+        if vector is None and payload is not None:
             self.client.set_payload(
                 collection_name=self.collection_name,
                 payload=payload,
                 points=[vector_id],
-                wait=True
+                wait=True  
             )
-        else:
-            logger.debug(f"Update called for ID {vector_id} with no data. Skipping.")
-    
+            return
+
+        # Case 2: only vector
+        if vector is not None and payload is None:
+            self.client.update_vectors(
+                collection_name=self.collection_name,
+                points={vector_id: vector}
+            )
+            return
+
+        # Case 3: vector + payload 
+        if vector is not None and payload is not None:
+            point = PointStruct(id=vector_id, vector=vector, payload=payload)
+            self.client.upsert(
+                collection_name=self.collection_name,
+                points=[point]
+            )
+            return
+
     def get(self, vector_id: int) -> dict:
         """
         Retrieve a vector by ID.

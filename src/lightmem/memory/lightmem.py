@@ -18,7 +18,7 @@ from lightmem.factory.retriever.embeddingretriever.factory import EmbeddingRetri
 from lightmem.factory.retriever.embeddingretriever.qdrant import QdrantConfig
 from lightmem.factory.memory_buffer.sensory_memory import SenMemBufferManager
 from lightmem.factory.memory_buffer.short_term_memory import ShortMemBufferManager
-from lightmem.memory.utils import MemoryEntry, assign_sequence_numbers_with_timestamps, save_memory_entries,convert_extraction_results_to_memory_entries,normalize_extraction_prompts,process_extraction_results
+from lightmem.memory.utils import *
 from lightmem.memory.prompts import METADATA_GENERATE_PROMPT, UPDATE_PROMPT
 from lightmem.configs.logging.utils import get_logger
 
@@ -207,7 +207,8 @@ class LightMemory:
         METADATA_GENERATE_PROMPT: Optional[Union[str, Dict[str, str]]] = None,
         *,
         force_segment: bool = False, 
-        force_extract: bool = False
+        force_extract: bool = False,
+        boundmem_tags: Optional[Any] = None,
     ):
         """
         Add new memory entries from message history.
@@ -219,7 +220,8 @@ class LightMemory:
         The process is as follows:
           1. Normalize input messages with standardized timestamps and session tracking.
           2. Optionally compress messages using the pre-defined compression model (if enabled).
-          3. If topic segmentation is enabled, split messages into coherent segments and add them to the sentence-level buffer.
+          3. If topic segmentation is enabled, split messages into coherent segments 
+             via the topic segmenter; otherwise, treat all messages as a single segment.
           4. Trigger memory extraction based on configured thresholds or forced flags.
           5. Optionally perform metadata summarization using an external model if enabled.
           6. Convert extracted results into `MemoryEntry` objects and update memory storage
@@ -236,6 +238,7 @@ class LightMemory:
                 - None: Use default prompts based on self.config.extraction_mode
             force_segment (bool, optional): If True, forces segmentation regardless of buffer conditions.
             force_extract (bool, optional): If True, forces memory extraction even if thresholds are not met.
+            boundmem_tags (optional): If provided, these tags will be applied to the created MemoryEntry objects for BAM tag-based filtering during retrieval.
 
         Returns:
             dict: A dictionary containing the intermediate results of the memory addition pipeline.
@@ -243,15 +246,18 @@ class LightMemory:
                     - `"add_input_prompt"`: List of input prompts used for metadata generation (if enabled)
                     - `"add_output_prompt"`: Corresponding output results from metadata generation
                     - `"api_call_nums"`: Number of API calls made for extraction/summarization
-                    - (In early termination cases) A segmentation result dict with keys such as
-                      `"triggered"`, `"cut_index"`, `"boundaries"`, and `"emitted_messages"`
+                  Returns an empty result dict (with `api_call_nums=0`) if no segments are
+                  generated or extraction is not triggered.
 
         Notes:
-            - If `self.config.pre_compress` is True, messages will first be token-compressed before segmentation.
-            - If `self.config.topic_segment` is disabled, the function returns early with segmentation info only.
-            - Memory extraction results are wrapped into `MemoryEntry` objects containing timestamps,
-              weekdays, and extracted factual content.
-            - Depending on `self.config.update`, the function triggers either online or offline memory updates.
+            - If `self.config.pre_compress` is True, messages will first be token-compressed
+              before segmentation.
+            - When `self.config.topic_segment` is disabled, all messages are treated as a single
+              segment and the full memory extraction pipeline proceeds normally (no early return).
+            - Memory extraction results are wrapped into `MemoryEntry` objects containing
+              timestamps, weekdays, and extracted factual content.
+            - Depending on `self.config.update`, the function triggers either online or offline
+              memory updates.
         """
         extract_prompts = normalize_extraction_prompts(
             prompts=METADATA_GENERATE_PROMPT,
@@ -296,21 +302,18 @@ class LightMemory:
             self.logger.info(f"[{call_id}] Pre-compression disabled, using normalized messages")
         
         if not self.config.topic_segment:
-            # TODO:
-            self.logger.info(f"[{call_id}] Topic segmentation disabled, returning emitted messages")
-            return {
-                "triggered": True,
-                "cut_index": len(msgs),
-                "boundaries": [0, len(msgs)],
-                "emitted_messages": msgs,
-                "carryover_size": 0,
-            }
+            self.logger.info(f"[{call_id}] Topic segmentation disabled, treating all messages as one segment")
+            # guard against empty compressed_messages
+            if not compressed_messages:
+                all_segments = []
+            else:
+                all_segments = [compressed_messages]
+        else:
+            all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
 
-        all_segments = self.senmem_buffer_manager.add_messages(compressed_messages, self.segmenter, self.text_embedder)
-
-        if force_segment:
-            all_segments = self.senmem_buffer_manager.cut_with_segmenter(self.segmenter, self.text_embedder, force_segment)
-        
+        if force_segment and self.config.topic_segment:
+            all_segments = self.senmem_buffer_manager.cut_with_segmenter(self.segmenter, self.text_embedder, force_segment)    
+            
         if not all_segments:
             self.logger.debug(f"[{call_id}] No segments generated, returning empty result")
             return result # TODO
@@ -339,6 +342,7 @@ class LightMemory:
         self.logger.debug(f"[{call_id}] Extract list sample: {json.dumps(extract_list)}")
         max_source_ids = [sum(1 for seg in batch for msg in seg if msg.get("role") == "user") - 1 for batch in extract_list]
         self.logger.info(f"[{call_id}] Batch max_source_ids: {max_source_ids}")
+        extracted_results = []
         if self.config.metadata_generate and self.config.text_summary:
             self.logger.info(f"[{call_id}] Starting metadata generation")
             extracted_results = self.manager.meta_text_extract(
@@ -368,6 +372,12 @@ class LightMemory:
             logger=self.logger
         )
         self.logger.info(f"[{call_id}] Created {len(memory_entries)} MemoryEntry objects")
+        if boundmem_tags is not None:
+            boundmem_tags, _ = resolve_tags(strategy="hard", hard_tags=boundmem_tags)
+            for mem in memory_entries:
+                mem.bam_tags = list(boundmem_tags)
+                mem.memory = tag_text(mem.memory, mem.bam_tags)
+            self.logger.info(f"[{call_id}] Applied BoundMem tags to {len(memory_entries)} MemoryEntry objects")
         for i, mem in enumerate(memory_entries):
             self.logger.debug(f"[{call_id}] MemoryEntry[{i}]: time={mem.time_stamp}, weekday={mem.weekday}, speaker_id={mem.speaker_id}, speaker_name={mem.speaker_name}, topic_id={mem.topic_id}, memory={mem.memory}")
 
@@ -400,7 +410,9 @@ class LightMemory:
             inserted_count = 0
             self.logger.info(f"[{call_id}] Starting embedding and insertion to vector database")
             for mem_obj in memory_list:
-                embedding_vector = self.text_embedder.embed(mem_obj.memory)
+                bam_tags = getattr(mem_obj, "bam_tags", [])
+                embed_text = strip_tags(mem_obj.memory) if bam_tags else mem_obj.memory
+                embedding_vector = self.text_embedder.embed(embed_text)
                 ids = mem_obj.id
                 while self.embedding_retriever.exists(ids):
                     ids = str(uuid.uuid4())
@@ -421,6 +433,8 @@ class LightMemory:
                     "speaker_name": mem_obj.speaker_name,
                     "consolidated": mem_obj.consolidated,
                 }
+                if bam_tags:
+                    payload["bam_tags"] = bam_tags
                 self.embedding_retriever.insert(
                     vectors = [embedding_vector],
                     payloads = [payload],
@@ -629,7 +643,15 @@ class LightMemory:
         )
         self.logger.info(f"========== END {call_id} ==========")
     
-    def retrieve(self, query: str, limit: int = 10, filters: Optional[dict] = None) -> list[str]:
+    def retrieve(
+        self,
+        query: str,
+        limit: int = 10,
+        filters: Optional[dict] = None,
+        *,
+        boundmem_tags: Optional[Any] = None,
+        boundmem_drop_untagged: bool = False,
+    ) -> list[str]:
         """
         Retrieve relevant entries and return them as formatted strings.
 
@@ -637,6 +659,8 @@ class LightMemory:
             query (str): The natural language query string.
             limit (int, optional): Number of results to return. Defaults to 10.
             filters (dict, optional): Optional filters to narrow down the search. Defaults to None.
+            boundmem_tags (optional): If provided, these tags will be used to filter results based on BoundMem tag matching.
+            boundmem_drop_untagged (bool): If True, entries without any BAM tags will be dropped when boundmem_tags is provided.
 
         Returns:
             list[str]: A list of formatted strings containing time_stamp, weekday, and memory.
@@ -657,19 +681,32 @@ class LightMemory:
             return_full=True,
         )
         self.logger.info(f"[{call_id}] Found {len(results)} results")
-        formatted_results = []
+        if boundmem_tags is not None:
+            results, boundmem_result = filter_by_tags(
+                query=query,
+                results=results,
+                environment_tags=boundmem_tags,
+                drop_untagged_on_tag_filter=boundmem_drop_untagged,
+            )
+            self.logger.info(
+                f"[{call_id}] BoundMem filter kept {len(results)} results; "
+                f"status={boundmem_result.get('status')}"
+            )
+        formatted_results: list[str] = []
         for r in results:
             payload = r.get("payload", {})
             time_stamp = payload.get("time_stamp", "")
             weekday = payload.get("weekday", "")
             memory = payload.get("memory", "")
+            if boundmem_tags is not None:
+                memory = strip_tags(memory)
             formatted_results.append(f"{time_stamp} {weekday} {memory}")
             
-        result_string = "\n".join(formatted_results)
+        result_string: str = "\n".join(formatted_results)
         self.logger.info(f"[{call_id}] Formatted {len(formatted_results)} results into output string")
         self.logger.debug(f"[{call_id}] Output string length: {len(result_string)} characters")
         self.logger.info(f"========== END {call_id} ==========")
-        return result_string
+        return formatted_results
 
     def get_token_statistics(self):
         embedder_stats = {"total_calls": 0, "total_tokens": None}

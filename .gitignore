@@ -213,3 +213,14 @@ __marimo__/
 __pycache__/
 *.py[codz]
 *$py.class
+
+# Experiment results / outputs
+outputs/
+checkpoints/
+wandb/
+runs/
+
+# Editors / OS
+*.swp
+*.swo
+Thumbs.db
