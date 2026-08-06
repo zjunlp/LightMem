@@ -32,7 +32,7 @@ in the repository. The service uses `gpt-5.4-mini` and
 `text-embedding-3-small` by default, with local Qdrant persistence under `/data`.
 After each Add, event memories are persisted immediately. Cross-event
 consolidation starts automatically when `MEMORY_SUMMARY_BATCH_ENTRIES` pending
-events have accumulated (default: 20). Summary is intentionally not triggered
+events have accumulated (default: 100). Summary is intentionally not triggered
 by Search; a final partial batch remains available as event-level memories and
 does not cause an extra Summary LLM call.
 

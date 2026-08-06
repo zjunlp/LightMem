@@ -152,7 +152,7 @@ class StructMemService:
         self.registry = RequestRegistry(REQUEST_DB)
         self.lightmem_module = lightmem_module
         self.memory = LightMemory.from_config(_build_config())
-        self.summary_batch_entries = max(1, int(_env("MEMORY_SUMMARY_BATCH_ENTRIES", "20")))
+        self.summary_batch_entries = max(1, int(_env("MEMORY_SUMMARY_BATCH_ENTRIES", "100")))
 
     def _pending_entries(self, user_id: str) -> int:
         pending, _ = self.memory.embedding_retriever.scroll(

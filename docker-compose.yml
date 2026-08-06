@@ -13,7 +13,7 @@ services:
       MEMORY_LLM_MODEL: ${MEMORY_LLM_MODEL:-gpt-5.4-mini}
       MEMORY_EMBEDDING_MODEL: ${MEMORY_EMBEDDING_MODEL:-text-embedding-3-small}
       MEMORY_EMBEDDING_DIMS: ${MEMORY_EMBEDDING_DIMS:-1536}
-      MEMORY_SUMMARY_BATCH_ENTRIES: ${MEMORY_SUMMARY_BATCH_ENTRIES:-20}
+      MEMORY_SUMMARY_BATCH_ENTRIES: ${MEMORY_SUMMARY_BATCH_ENTRIES:-100}
     volumes:
       - structmem-data:/data
     restart: unless-stopped
