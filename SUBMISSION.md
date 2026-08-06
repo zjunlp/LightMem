@@ -12,7 +12,9 @@ Add accepts `request_id`, `messages`, `user_id`, and `session_id`. Search accept
 `query`, `user_id`, `top_k`, and the optional `options` field. Add is idempotent
 for the same request payload and returns `409` when a request ID is reused with
 a different payload. Search returns a top-level `data` array and scopes all
-results to the exact `user_id` supplied by the caller.
+results to the exact `user_id` supplied by the caller. For a requested `top_k`,
+Search retrieves up to `top_k` event items and `ceil(top_k / 5)` summaries, then
+sorts the combined results by score.
 
 ## Build and Run
 

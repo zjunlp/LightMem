@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import os
 import sqlite3
 import threading
@@ -214,9 +215,10 @@ class StructMemService:
                 filters=user_filter,
                 return_full=True,
             )
+            summary_limit = max(1, math.ceil(request.top_k / 5))
             summaries = self.memory.summary_retriever.search(
                 query_vector=query_vector,
-                limit=request.top_k,
+                limit=summary_limit,
                 filters=user_filter,
                 return_full=True,
             )
@@ -242,7 +244,7 @@ class StructMemService:
                         score=item[0],
                         created_at=_parse_datetime(item[3]),
                     )
-                    for item in results[: request.top_k]
+                    for item in results
                 ]
             )
 
