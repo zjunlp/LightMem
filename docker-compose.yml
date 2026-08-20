@@ -1,19 +1,31 @@
 services:
   structmem:
-    build: .
+    build:
+      context: .
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.11-slim}
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+        PYTORCH_WHEEL_URL: ${PYTORCH_WHEEL_URL:-https://download.pytorch.org/whl/cpu/torch-2.5.1%2Bcpu-cp311-cp311-linux_x86_64.whl}
+        HF_ENDPOINT: ${HF_ENDPOINT:-https://huggingface.co}
+    image: structmem-raw-hybrid:0.3.0
     ports:
       - "8000:8000"
     environment:
       MEMORY_DATA_DIR: /data
       MEMORY_API_KEY: ${MEMORY_API_KEY:-}
-      MEMORY_LLM_API_KEY: ${MEMORY_LLM_API_KEY:-}
+      MEMORY_EMBEDDING_PROVIDER: ${MEMORY_EMBEDDING_PROVIDER:-sentence_transformers}
       MEMORY_EMBEDDING_API_KEY: ${MEMORY_EMBEDDING_API_KEY:-}
-      MEMORY_LLM_BASE_URL: ${MEMORY_LLM_BASE_URL:-https://api.openai.com/v1}
       MEMORY_EMBEDDING_BASE_URL: ${MEMORY_EMBEDDING_BASE_URL:-https://api.openai.com/v1}
-      MEMORY_LLM_MODEL: ${MEMORY_LLM_MODEL:-gpt-4o-mini}
-      MEMORY_EMBEDDING_MODEL: ${MEMORY_EMBEDDING_MODEL:-text-embedding-3-small}
-      MEMORY_EMBEDDING_DIMS: ${MEMORY_EMBEDDING_DIMS:-1536}
-      MEMORY_SUMMARY_BATCH_ENTRIES: ${MEMORY_SUMMARY_BATCH_ENTRIES:-100}
+      MEMORY_LOCAL_EMBEDDING_MODEL: ${MEMORY_LOCAL_EMBEDDING_MODEL:-/opt/models/bge-small-en-v1.5}
+      MEMORY_LOCAL_EMBEDDING_REVISION: ${MEMORY_LOCAL_EMBEDDING_REVISION:-5c38ec7c405ec4b44b94cc5a9bb96e735b38267a}
+      MEMORY_OPENAI_EMBEDDING_MODEL: ${MEMORY_OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      MEMORY_EMBEDDING_DEVICE: ${MEMORY_EMBEDDING_DEVICE:-cpu}
+      MEMORY_LEXICAL_WEIGHT: ${MEMORY_LEXICAL_WEIGHT:-0.5}
+      MEMORY_RRF_K: ${MEMORY_RRF_K:-60}
+      MEMORY_RESULT_WINDOW: ${MEMORY_RESULT_WINDOW:-1}
+      MEMORY_RESULT_WINDOW_SEED_K: ${MEMORY_RESULT_WINDOW_SEED_K:-20}
+      MEMORY_SEMANTIC_BRIDGE_SEED_K: ${MEMORY_SEMANTIC_BRIDGE_SEED_K:-10}
+      MEMORY_SEMANTIC_BRIDGE_MIN_SIMILARITY: ${MEMORY_SEMANTIC_BRIDGE_MIN_SIMILARITY:-0.72}
     volumes:
       - structmem-data:/data
     restart: unless-stopped
