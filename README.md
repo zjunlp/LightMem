@@ -44,6 +44,7 @@
 
 ## 📢 News
 - **[2026-08-21]**: 🎉🎉🎉 **EM²Mem: Event-Centric Multimodal Memory for Large Language Models** has been accepted by **EMNLP 2026**!
+- **[2026-08-21]**: 🚀 LightMem now supports [**OrcaRouter**](https://www.orcarouter.ai) as a named memory-manager backend — OpenAI-compatible endpoint at `https://api.orcarouter.ai/v1` (see `orcarouter_base_url`).
 - **[2026-07-13]**: 🎉🎉🎉LightMem has been selected for the CCF ODTC open source incentive program.
 - **[2026-04-24]**: 🚀 LightMem now supports the latest [**DeepSeek**](./src/lightmem/configs/memory_manager/base_config.py) models, including `deepseek-v4-flash` and `deepseek-v4-pro`, with `reasoning_effort` and thinking-mode configuration!
 - **[2026-04-24]**: 🎉🎉🎉 [**StructMem: Structured Memory for Long-Horizon Behavior in LLMs**](https://arxiv.org/abs/2604.21748) has been accepted by **ACL 2026**!
@@ -203,7 +204,7 @@ The following table lists the backends values currently recognized by each confi
 | :---                            | :--- |
 | `PreCompressorConfig`           | `llmlingua-2`, `entropy_compress` |
 | `TopicSegmenterConfig`          | `llmlingua-2` |
-| `MemoryManagerConfig`           | `openai`, `deepseek`, `ollama`, `vllm`, etc. |
+| `MemoryManagerConfig`           | `openai`, `deepseek`, `orcarouter`, `ollama`, `vllm`, etc. |
 | `TextEmbedderConfig`            | `huggingface` |
 | `MMEmbedderConfig`              | `huggingface` |
 | `RetrieverConfig`      | `qdrant`, `FAISS`, `BM25` |
@@ -256,7 +257,7 @@ config_dict = {
             "model": LLM_MODEL,
             "api_key": API_KEY,
             "max_tokens": 16000,
-            "xxx_base_url": API_BASE_URL # API model specific, such as 'openai_base_url' or 'deepseek_base_url' ...
+            "xxx_base_url": API_BASE_URL # API model specific, such as 'openai_base_url', 'deepseek_base_url' or 'orcarouter_base_url' ...
         }
     },
     "extract_threshold": 0.1,

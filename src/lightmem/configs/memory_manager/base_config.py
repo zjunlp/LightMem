@@ -29,6 +29,7 @@ class BaseMemoryManagerConfig:
         api_key: Optional[str] = None,
         openai_base_url: Optional[str] = None, # OpenAI specific
         deepseek_base_url: Optional[str] = None, # DeepSeek specific
+        orcarouter_base_url: Optional[str] = None, # OrcaRouter specific
         vllm_base_url: Optional[str] = None, # vLLM specific
         site_url: Optional[str] = None,
         app_name: Optional[str] = None,
@@ -63,6 +64,7 @@ class BaseMemoryManagerConfig:
         self.api_key = api_key
         self.openai_base_url = openai_base_url
         self.deepseek_base_url = deepseek_base_url
+        self.orcarouter_base_url = orcarouter_base_url
         self.vllm_base_url = vllm_base_url
         self.site_url = site_url
         self.app_name = app_name
