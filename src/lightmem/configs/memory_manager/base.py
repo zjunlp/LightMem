@@ -9,6 +9,7 @@ class MemoryManagerConfig(BaseModel):
     _model_list: ClassVar[List[str]] = [
         "openai",
         "deepseek",
+        "orcarouter",
         "transformers",
         "ollama",
         "vllm",

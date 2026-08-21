@@ -7,6 +7,7 @@ class MemoryManagerFactory:
     _MODEL_MAPPING: Dict[str, str] = {
         "deepseek": "lightmem.factory.memory_manager.deepseek.DeepseekManager",
         "openai": "lightmem.factory.memory_manager.openai.OpenaiManager",
+        "orcarouter": "lightmem.factory.memory_manager.orcarouter.OrcaRouterManager",
         "transformers": "lightmem.factory.memory_manager.transformers.TransformersManager",
         "ollama": "lightmem.factory.memory_manager.ollama.OllamaManager",
         "vllm": "lightmem.factory.memory_manager.vllm.VllmManager",
