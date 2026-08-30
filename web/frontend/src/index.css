@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-page text-ink font-sans antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent/15;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d8d6d0 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background-color: #dcdad4;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #c6c4bd;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent/40 ring-offset-2 ring-offset-page;
+  }
+
+  hr {
+    @apply border-0 border-t border-rule;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply text-micro font-semibold uppercase tracking-[0.13em] text-ink3;
+  }
+
+  .field {
+    @apply w-full rounded-md border border-rule bg-raised px-3 py-2 text-base text-ink
+           placeholder:text-ink4 transition-[border-color,box-shadow]
+           hover:border-ink4/70
+           focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15;
+  }
+
+  .field-flat {
+    @apply w-full border-0 bg-transparent px-0 py-1 text-ink placeholder:text-ink4
+           focus:outline-none focus:ring-0;
+  }
+
+  .surface {
+    @apply rounded-xl border border-rule bg-raised;
+  }
+
+  .link {
+    @apply text-accent underline decoration-accent/30 underline-offset-2
+           transition-colors hover:decoration-accent;
+  }
+
+  .searchbar {
+    @apply flex items-center gap-3 rounded-2xl border border-rule bg-raised px-5
+           shadow-sm transition-[box-shadow,border-color] duration-200;
+  }
+  .searchbar:focus-within {
+    @apply border-accent/40;
+    box-shadow: 0 0 0 3px rgba(42, 120, 214, 0.12);
+  }
+
+  .workspace-panel {
+    @apply rounded-2xl border border-rule bg-raised shadow-raise;
+  }
+  .workspace-composer {
+    @apply shadow-[0_10px_26px_-18px_rgba(42,120,214,0.45)];
+  }
+  .workspace-composer:focus-within {
+    @apply shadow-[0_10px_26px_-16px_rgba(42,120,214,0.7)];
+  }
+
+  .stagger > * {
+    animation: fade-up 260ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+  .stagger > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+  .stagger > *:nth-child(2) {
+    animation-delay: 24ms;
+  }
+  .stagger > *:nth-child(3) {
+    animation-delay: 48ms;
+  }
+  .stagger > *:nth-child(4) {
+    animation-delay: 72ms;
+  }
+  .stagger > *:nth-child(5) {
+    animation-delay: 96ms;
+  }
+  .stagger > *:nth-child(n + 6) {
+    animation-delay: 120ms;
+  }
+
+  .brand-mark {
+    @apply inline-flex items-center gap-2 text-sm font-semibold tracking-[-0.02em] text-ink;
+  }
+  .rail-link[aria-current="page"] svg {
+    @apply text-accent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger > *,
+  .animate-fade-up {
+    animation: none !important;
+  }
+}

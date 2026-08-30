@@ -1,0 +1,11 @@
+# Everything the console writes at runtime.
+data/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+*.tsbuildinfo
+
+# The repository-level `lib/` rule also matches this source directory.
+!frontend/src/lib/
+!frontend/src/lib/**
