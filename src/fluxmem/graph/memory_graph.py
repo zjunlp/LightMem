@@ -1,12 +1,9 @@
 from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 
-from .nodes import (
-    BaseNode, SemanticNode, EpisodicNode, ProceduralNode, NodeType
-)
-from .edges import (
-    BaseEdge, GroundEdge, DistillEdge, StepLinkEdge, EdgeType
-)
+from .edges import BaseEdge, DistillEdge, EdgeType, GroundEdge, StepLinkEdge
+from .nodes import BaseNode, EpisodicNode, NodeType, ProceduralNode, SemanticNode
 
 
 class Subgraph:
@@ -77,11 +74,7 @@ class Subgraph:
         if proc_nodes:
             parts.append("  <procedural_memory>")
             for node in proc_nodes:
-                parts.append(
-                    f'    <skill id="{node.id}" '
-                    f'version="{node.version}" '
-                    f'pems_score="{node.pems_score:.2f}">'
-                )
+                parts.append(f'    <skill id="{node.id}" version="{node.version}" pems_score="{node.pems_score:.2f}">')
                 parts.append(f"      {node.skill_text}")
                 parts.append("    </skill>")
             parts.append("  </procedural_memory>")
@@ -146,7 +139,7 @@ class MemoryGraph:
         return True
 
     def get_node(self, node_id: str) -> Optional[BaseNode]:
-        """Look up a node by id, searching all three layers"""""
+        """Look up a node by id, searching all three layers""" ""
         if node_id in self.semantic_nodes:
             return self.semantic_nodes[node_id]
         if node_id in self.episodic_nodes:
@@ -156,7 +149,7 @@ class MemoryGraph:
         return None
 
     def get_nodes_by_type(self, node_type: NodeType) -> List[BaseNode]:
-        """Get all nodes of the specified type"""""
+        """Get all nodes of the specified type""" ""
         if node_type == NodeType.SEMANTIC:
             return list(self.semantic_nodes.values())
         elif node_type == NodeType.EPISODIC:
@@ -169,7 +162,7 @@ class MemoryGraph:
     # ========== Edge operations ==========
 
     def add_edge(self, edge: BaseEdge) -> str:
-        """Add an edge to the dictionary of its type and return the edge id"""""
+        """Add an edge to the dictionary of its type and return the edge id""" ""
         if edge.edge_type == EdgeType.GROUND:
             self.ground_edges[edge.id] = edge  # type: ignore[assignment]
         elif edge.edge_type == EdgeType.DISTILL:
@@ -181,7 +174,7 @@ class MemoryGraph:
         return edge.id
 
     def remove_edge(self, edge_id: str) -> bool:
-        """Remove an edge; return whether deletion succeeded"""""
+        """Remove an edge; return whether deletion succeeded""" ""
         if edge_id in self.ground_edges:
             del self.ground_edges[edge_id]
             return True
@@ -194,7 +187,7 @@ class MemoryGraph:
         return False
 
     def get_edges_from(self, node_id: str) -> List[BaseEdge]:
-        """Get all edges originating from the specified node"""""
+        """Get all edges originating from the specified node""" ""
         result: List[BaseEdge] = []
         for edge_dict in (self.ground_edges, self.distill_edges, self.step_edges):
             for edge in edge_dict.values():
@@ -203,7 +196,7 @@ class MemoryGraph:
         return result
 
     def get_edges_to(self, node_id: str) -> List[BaseEdge]:
-        """Get all edges pointing to the specified node"""""
+        """Get all edges pointing to the specified node""" ""
         result: List[BaseEdge] = []
         for edge_dict in (self.ground_edges, self.distill_edges, self.step_edges):
             for edge in edge_dict.values():
@@ -214,7 +207,7 @@ class MemoryGraph:
     # ========== Subgraph extraction ==========
 
     def extract_subgraph(self, node_ids: List[str]) -> Subgraph:
-        """Extract a local subgraph from a list of node ids, including the nodes and edges between them"""""
+        """Extract a local subgraph from a list of node ids, including the nodes and edges between them""" ""
         nodes: Dict[str, BaseNode] = {}
         for nid in node_ids:
             node = self.get_node(nid)
@@ -232,10 +225,14 @@ class MemoryGraph:
 
     # ========== Context serialization ==========
 
-    def serialize_context(self, task_query: str, observation: str,
-                          sem_nodes: List[SemanticNode],
-                          epi_nodes: List[EpisodicNode],
-                          proc_nodes: List[ProceduralNode]) -> str:
+    def serialize_context(
+        self,
+        task_query: str,
+        observation: str,
+        sem_nodes: List[SemanticNode],
+        epi_nodes: List[EpisodicNode],
+        proc_nodes: List[ProceduralNode],
+    ) -> str:
         """Format the contents of the specified nodes as structured text for LLM consumption.
 
         Uses XML tags to organize the three memory layers, consistent with Subgraph.to_context_string.
@@ -278,11 +275,7 @@ class MemoryGraph:
         if proc_nodes:
             parts.append("  <procedural_memory>")
             for node in proc_nodes:
-                parts.append(
-                    f'    <skill id="{node.id}" '
-                    f'version="{node.version}" '
-                    f'pems_score="{node.pems_score:.2f}">'
-                )
+                parts.append(f'    <skill id="{node.id}" version="{node.version}" pems_score="{node.pems_score:.2f}">')
                 parts.append(f"      {node.skill_text}")
                 parts.append("    </skill>")
             parts.append("  </procedural_memory>")
@@ -309,7 +302,7 @@ class MemoryGraph:
         return edge.id
 
     def prune_links(self, edge_ids: List[str]) -> int:
-        """Prune edges in batch; return the number of edges successfully removed"""""
+        """Prune edges in batch; return the number of edges successfully removed""" ""
         count = 0
         for eid in edge_ids:
             if self.remove_edge(eid):
@@ -348,7 +341,7 @@ class MemoryGraph:
     # ========== Query helpers ==========
 
     def get_skills_for_episodes(self, episode_ids: List[str]) -> List[ProceduralNode]:
-        """Get procedural skill nodes connected to the specified episodic nodes via DistillEdge"""""
+        """Get procedural skill nodes connected to the specified episodic nodes via DistillEdge""" ""
         epi_id_set = set(episode_ids)
         proc_ids: set = set()
 

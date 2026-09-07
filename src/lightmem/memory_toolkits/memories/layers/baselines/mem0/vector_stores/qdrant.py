@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 
+from mem0.vector_stores.base import VectorStoreBase
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -13,8 +14,6 @@ from qdrant_client.models import (
     Range,
     VectorParams,
 )
-
-from mem0.vector_stores.base import VectorStoreBase
 
 logger = logging.getLogger(__name__)
 

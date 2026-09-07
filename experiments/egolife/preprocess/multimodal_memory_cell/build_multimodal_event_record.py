@@ -11,10 +11,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
+from dotenv import load_dotenv
 from tqdm import tqdm
 
 from em2mem.llm import LLMModel
-from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -163,6 +164,7 @@ Return exactly:
 # Data classes
 # =========================
 
+
 @dataclass
 class SyncSegment:
     sync_file: str
@@ -177,6 +179,7 @@ class SyncSegment:
 # =========================
 # Helpers
 # =========================
+
 
 def strip_code_fences(text: str) -> str:
     text = text.strip()
@@ -431,7 +434,9 @@ def select_em2mem_docs(
     if selected_docs:
         return selected_docs
 
-    logger.warning("No EM2Mem docs matched the selected sync windows; falling back to day-based 30sec caption selection.")
+    logger.warning(
+        "No EM2Mem docs matched the selected sync windows; falling back to day-based 30sec caption selection."
+    )
     return candidate_docs
 
 
@@ -454,6 +459,7 @@ def save_json(path: Path, data: Any) -> None:
 # Sync loading / matching
 # =========================
 
+
 def extract_time_segments(sync_data: Any, sync_file: str) -> List[SyncSegment]:
     date = extract_date_from_filename(Path(sync_file).name)
     segments: List[SyncSegment] = []
@@ -462,8 +468,16 @@ def extract_time_segments(sync_data: Any, sync_file: str) -> List[SyncSegment]:
         if not isinstance(entries, list) or not entries:
             return None
 
-        starts = [parse_time_code(e.get("start")) for e in entries if isinstance(e, dict) and parse_time_code(e.get("start")) is not None]
-        ends = [parse_time_code(e.get("end")) for e in entries if isinstance(e, dict) and parse_time_code(e.get("end")) is not None]
+        starts = [
+            parse_time_code(e.get("start"))
+            for e in entries
+            if isinstance(e, dict) and parse_time_code(e.get("start")) is not None
+        ]
+        ends = [
+            parse_time_code(e.get("end"))
+            for e in entries
+            if isinstance(e, dict) and parse_time_code(e.get("end")) is not None
+        ]
         if not starts or not ends:
             return None
 
@@ -591,6 +605,7 @@ def find_best_sync_segment(doc: Dict[str, Any], segments: List[SyncSegment]) -> 
 # Video / keyframes
 # =========================
 
+
 def resolve_video_path(doc: Dict[str, Any], person: str, seg: SyncSegment, video_search_root: Path) -> Optional[Path]:
     # 1) directly from doc video_path if exists
     raw_video_path = str(doc.get("video_path", "")).strip()
@@ -624,7 +639,9 @@ def resolve_video_path(doc: Dict[str, Any], person: str, seg: SyncSegment, video
     return None
 
 
-def extract_keyframes(video_path: Path, start_cs: int, end_cs: int, frames_dir: Path, num_keyframes: int = 3) -> List[Path]:
+def extract_keyframes(
+    video_path: Path, start_cs: int, end_cs: int, frames_dir: Path, num_keyframes: int = 3
+) -> List[Path]:
     ensure_dir(frames_dir)
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -664,7 +681,7 @@ def extract_keyframes(video_path: Path, start_cs: int, end_cs: int, frames_dir: 
         ok, frame = cap.read()
         if not ok or frame is None:
             continue
-        out_path = frames_dir / f"{stem}_kf{idx+1}.jpg"
+        out_path = frames_dir / f"{stem}_kf{idx + 1}.jpg"
         cv2.imwrite(str(out_path), frame)
         out_paths.append(out_path)
 
@@ -679,7 +696,10 @@ def extract_keyframes(video_path: Path, start_cs: int, end_cs: int, frames_dir: 
 # LLM calls
 # =========================
 
-def build_text_prompt(wearer_name: str, original_em2mem_caption: str, entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+
+def build_text_prompt(
+    wearer_name: str, original_em2mem_caption: str, entries: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
     payload = {
         "wearer_name": wearer_name,
         "original_em2mem_caption": original_em2mem_caption,
@@ -710,9 +730,7 @@ def build_visual_prompt(
         ),
     }
 
-    user_content: List[Dict[str, Any]] = [
-        {"type": "text", "text": json.dumps(context, ensure_ascii=False, indent=2)}
-    ]
+    user_content: List[Dict[str, Any]] = [{"type": "text", "text": json.dumps(context, ensure_ascii=False, indent=2)}]
     for p in keyframe_paths:
         user_content.append({"type": "image", "image": str(p)})
 
@@ -722,7 +740,9 @@ def build_visual_prompt(
     ]
 
 
-def run_text_enrichment(model: LLMModel, wearer_name: str, original_em2mem_caption: str, entries: List[Dict[str, Any]]) -> Dict[str, Any]:
+def run_text_enrichment(
+    model: LLMModel, wearer_name: str, original_em2mem_caption: str, entries: List[Dict[str, Any]]
+) -> Dict[str, Any]:
     prompt = build_text_prompt(wearer_name, original_em2mem_caption, entries)
     resp = model.generate(prompt)
     data = safe_json_loads(resp)
@@ -773,6 +793,7 @@ def run_visual_enrichment(
 # Main processing
 # =========================
 
+
 def process_one_doc(
     doc: Dict[str, Any],
     person: str,
@@ -788,7 +809,9 @@ def process_one_doc(
     if matched_sync is None:
         logger.info(
             "No sync segment matched for %s %s-%s; falling back to 30sec caption.",
-            doc.get("date"), doc.get("start_time"), doc.get("end_time")
+            doc.get("date"),
+            doc.get("start_time"),
+            doc.get("end_time"),
         )
         seg = build_fallback_segment(doc)
     else:
@@ -825,8 +848,7 @@ def process_one_doc(
         text_status = "success"
     except Exception as e:
         logger.warning(
-            "Text enrichment failed for %s %s-%s: %s",
-            doc.get("date"), doc.get("start_time"), doc.get("end_time"), e
+            "Text enrichment failed for %s %s-%s: %s", doc.get("date"), doc.get("start_time"), doc.get("end_time"), e
         )
 
     # visual: no text fallback, visual failure => empty visual fields + failed status
@@ -864,8 +886,7 @@ def process_one_doc(
         visual_status = "success"
     except Exception as e:
         logger.warning(
-            "Visual enrichment failed for %s %s-%s: %s",
-            doc.get("date"), doc.get("start_time"), doc.get("end_time"), e
+            "Visual enrichment failed for %s %s-%s: %s", doc.get("date"), doc.get("start_time"), doc.get("end_time"), e
         )
 
     start_time = str(doc.get("start_time", centis_to_code(seg.start_cs)))
@@ -909,27 +930,21 @@ def process_one_doc(
         "video_file": seg.video_file,
         "start_time": start_time,
         "end_time": end_time,
-
         "caption_text": caption_text,
         "transcript_text": transcript_text,
         "fine_caption": fine_caption,
-
         "scene": scene,
         "keyframe_caption": keyframe_caption,
         "visual_objects": visual_objects,
-
         "salient_objects": salient_objects,
         "main_actions": main_actions,
         "conversation_focus": conversation_focus,
-
         "speakers": speakers,
         "source_types": source_types,
         "raw_entries": entries,
         "keyframe_paths": keyframe_paths_str,
-
         "text_enrichment_status": text_status,
         "visual_status": visual_status,
-
         "provenance": {
             "em2mem_input_used": True,
             "matched_sync_file": seg.sync_file if seg.source_kind == "sync" else None,
@@ -982,7 +997,9 @@ def main() -> None:
         logger.warning("No person provided, so sync selection is skipped. Falling back to 30sec caption only.")
     else:
         logger.info("Selecting sync files from: %s", sync_dir)
-        sync_files = select_sync_files(sync_dir=sync_dir, person=args.person, day=args.day, max_sync_files=args.max_sync_files)
+        sync_files = select_sync_files(
+            sync_dir=sync_dir, person=args.person, day=args.day, max_sync_files=args.max_sync_files
+        )
         if sync_files:
             logger.info("Selected sync files:")
             for p in sync_files:

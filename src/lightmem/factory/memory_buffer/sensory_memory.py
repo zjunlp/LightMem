@@ -1,8 +1,10 @@
+from typing import Dict, List
+
 import numpy as np
-from typing import List, Dict, Optional, Any
+
 
 class SenMemBufferManager:
-    def __init__(self, max_tokens: int = 512, tokenizer = None):
+    def __init__(self, max_tokens: int = 512, tokenizer=None):
         self.max_tokens = max_tokens
         self.tokenizer = tokenizer
         self.buffer: List[Dict] = []
@@ -10,7 +12,7 @@ class SenMemBufferManager:
         self.token_count: int = 0
 
     def _recount_tokens(self) -> None:
-        self.token_count = sum(len(self.tokenizer.encode(m["content"])) for m in self.buffer if m["role"]=="user")
+        self.token_count = sum(len(self.tokenizer.encode(m["content"])) for m in self.buffer if m["role"] == "user")
 
     def add_messages(self, messages: List[Dict], segmenter, text_embedder) -> None:
         all_segments = []
@@ -51,7 +53,7 @@ class SenMemBufferManager:
     def should_trigger(self) -> bool:
         return self.token_count >= self.max_tokens
 
-    def cut_with_segmenter(self, segmenter, text_embedder, force_segment: bool=False) -> List:
+    def cut_with_segmenter(self, segmenter, text_embedder, force_segment: bool = False) -> List:
         """
         Cut buffer into segments using a two-stage strategy:
         1. Coarse boundaries from segmenter.
@@ -105,7 +107,7 @@ class SenMemBufferManager:
                     fine_boundaries.append(i + 1)
             if not fine_boundaries:
                 threshold += 0.05
-        
+
         if not fine_boundaries:
             segments.append(self.buffer.copy())
             self.buffer.clear()
@@ -134,7 +136,7 @@ class SenMemBufferManager:
             segments.append(self.buffer[start_idx:])
             start_idx = len(self.buffer)
 
-        if start_idx > 0: 
+        if start_idx > 0:
             del self.buffer[:start_idx]
             self._recount_tokens()
 

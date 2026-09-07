@@ -1,1 +1,1 @@
-from .MemoryCell import MemoryCell, CaptionEntry
+from .MemoryCell import CaptionEntry, MemoryCell

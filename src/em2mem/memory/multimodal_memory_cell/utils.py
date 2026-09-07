@@ -1,25 +1,31 @@
 import json
 from dataclasses import dataclass
-from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
 from hashlib import md5
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+
 
 @dataclass
 class LLMInput:
     chunk_id: str
     input_message: List[Dict]
 
+
 class NerRawOutput(BaseModel):
     named_entities: List[str]
 
+
 class TripleRawOutput(BaseModel):
     triples: List[List[str]]
+
 
 @dataclass
 class NerOutput:
     chunk_id: str
     unique_entities: List[str]
     metadata: Dict[str, Any]
+
 
 @dataclass
 class TripleOutput:
@@ -41,6 +47,7 @@ def compute_mdhash_id(content: str, prefix: Optional[str] = "") -> str:
     """
     return prefix + md5(content.encode()).hexdigest()
 
+
 def fix_broken_generated_json(json_str: str) -> str:
     """
     Fixes a malformed JSON string by:
@@ -49,7 +56,7 @@ def fix_broken_generated_json(json_str: str) -> str:
     - Ensuring braces and brackets inside string literals are not considered.
 
     If the original json_str string can be successfully loaded by json.loads(), will directly return it without any modification.
-    
+
     Args:
         json_str (str): The malformed JSON string to be fixed.
 
@@ -75,17 +82,17 @@ def fix_broken_generated_json(json_str: str) -> str:
             if inside_string:
                 if escape_next:
                     escape_next = False
-                elif char == '\\':
+                elif char == "\\":
                     escape_next = True
                 elif char == '"':
                     inside_string = False
             else:
                 if char == '"':
                     inside_string = True
-                elif char in '{[':
+                elif char in "{[":
                     unclosed.append(char)
-                elif char in '}]':
-                    if unclosed and ((char == '}' and unclosed[-1] == '{') or (char == ']' and unclosed[-1] == '[')):
+                elif char in "}]":
+                    if unclosed and ((char == "}" and unclosed[-1] == "{") or (char == "]" and unclosed[-1] == "[")):
                         unclosed.pop()
 
         return unclosed
@@ -98,7 +105,7 @@ def fix_broken_generated_json(json_str: str) -> str:
         pass
 
     # Step 1: Remove trailing content after the last comma.
-    last_comma_index = json_str.rfind(',')
+    last_comma_index = json_str.rfind(",")
     if last_comma_index != -1:
         json_str = json_str[:last_comma_index]
 
@@ -106,7 +113,7 @@ def fix_broken_generated_json(json_str: str) -> str:
     unclosed_elements = find_unclosed(json_str)
 
     # Step 3: Append the necessary closing elements in reverse order of opening.
-    closing_map = {'{': '}', '[': ']'}
+    closing_map = {"{": "}", "[": "]"}
     for open_char in reversed(unclosed_elements):
         json_str += closing_map[open_char]
 
@@ -125,20 +132,21 @@ def filter_invalid_triples(triples: List[List[str]]) -> List[List[str]]:
     - Each valid triple is converted to a list of strings.
     - The order of unique, valid triples is preserved.
     - Do not apply any text preprocessing techniques or rules within this function.
-    
+
     Args:
-        triples (List[List[str]]): 
+        triples (List[List[str]]):
             A list of triples (each a list of strings or elements that can be converted to strings).
 
     Returns:
-        List[List[str]]: 
+        List[List[str]]:
             A list of unique, valid triples, each represented as a list of strings.
     """
     unique_triples = set()
     valid_triples = []
 
     for triple in triples:
-        if len(triple) != 3: continue  # Skip triples that do not have exactly 3 elements
+        if len(triple) != 3:
+            continue  # Skip triples that do not have exactly 3 elements
 
         valid_triple = [str(item) for item in triple]
         if tuple(valid_triple) not in unique_triples:

@@ -1,6 +1,8 @@
+from typing import Dict, List, Optional
+
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from typing import List, Dict, Optional
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from lightmem.configs.pre_compressor.entropy_compress import EntropyCompressorConfig
 
 
@@ -34,7 +36,7 @@ class EntropyCompressor:
             info = -torch.log2(next_token_probs + 1e-12).squeeze(0).cpu().tolist()
 
         tokens = self.tokenizer.convert_ids_to_tokens(input_ids[0])
-        return tokens[1:], info  
+        return tokens[1:], info
 
     def _aggregate_word_info(self, text: str, tokens: List[str], infos: List[float]):
         words = []
@@ -66,11 +68,7 @@ class EntropyCompressor:
 
         return words, word_infos
 
-    def compress(
-        self,
-        messages: List[Dict[str, str]],
-        tokenizer=None
-    ):
+    def compress(self, messages: List[Dict[str, str]], tokenizer=None):
         compressed_messages = []
         for mes in messages:
             text = mes["content"].strip()
@@ -78,11 +76,7 @@ class EntropyCompressor:
             words, word_infos = self._aggregate_word_info(text, tokens, infos)
 
             keep_k = max(1, int(len(words) * self.compress_rate))
-            top_indices = sorted(
-                range(len(word_infos)),
-                key=lambda i: word_infos[i],
-                reverse=True
-            )[:keep_k]
+            top_indices = sorted(range(len(word_infos)), key=lambda i: word_infos[i], reverse=True)[:keep_k]
             top_indices = sorted(top_indices)
             compressed_text = " ".join([words[i] for i in top_indices])
 

@@ -1,28 +1,31 @@
 # Derived from an external implementation; see LICENSE for attribution and upstream license terms.
 # Changes made by anonymous authors
 
+from typing import List, Optional, Union
+
 import numpy as np
-from typing import Union, List, Optional
 from PIL import Image
 
 
 class EmbeddingModel:
     """Universal embedding wrapper that routes different modalities to appropriate models"""
-    
-    def __init__(self, 
-                text_model_name: str = "Qwen/Qwen3-Embedding-4B",
-                vis_model_name: str = "VLM2Vec/VLM2Vec-V2.0",
-                device: str = "cuda"):
+
+    def __init__(
+        self,
+        text_model_name: str = "Qwen/Qwen3-Embedding-4B",
+        vis_model_name: str = "VLM2Vec/VLM2Vec-V2.0",
+        device: str = "cuda",
+    ):
         """
         Initialize embedding models for different modalities
-        
+
         Args:
             text_model_name: Model name for text embeddings (defaults to Qwen3-Embedding-4B)
             vis_model_name: Model name for visual embeddings (defaults to VLM2Vec V2.0)
             device: Device to run models on
         """
         self.device = device
-        
+
         # Initialize models lazily
         self._text_model = None
         self._vis_model = None
@@ -38,21 +41,17 @@ class EmbeddingModel:
         """Lazy loading of text model"""
         if self._text_model is None:
             from .qwen3_embedding import Qwen3EmbeddingModel as TextEmbeddingModel
-            self._text_model = TextEmbeddingModel(
-                model_name=self.text_model_name,
-                device=self.device
-            )
+
+            self._text_model = TextEmbeddingModel(model_name=self.text_model_name, device=self.device)
         return self._text_model
-    
+
     @property
     def vis_model(self):
         """Lazy loading of visual model"""
         if self._vis_model is None:
             from .vlm2vecv2 import VLM2VecV2EmbeddingModel as VisEmbeddingModel
-            self._vis_model = VisEmbeddingModel(
-                model_name=self.vis_model_name,
-                device=self.device
-            )
+
+            self._vis_model = VisEmbeddingModel(model_name=self.vis_model_name, device=self.device)
         return self._vis_model
 
     def load_model(self, model_type: Optional[str] = None):
@@ -78,21 +77,22 @@ class EmbeddingModel:
     def encode_image(self, images: Union[Image.Image, List[Image.Image]], **kwargs) -> np.ndarray:
         """Encode images using VLM2VecV2 model"""
         return self.vis_model.encode_image(images, **kwargs)
-    
+
     def encode_video(self, video_paths: Union[str, List[str]], **kwargs) -> np.ndarray:
         """Encode videos using VLM2VecV2 model"""
         return self.vis_model.encode_video(video_paths, **kwargs)
-    
-    def encode(self, content: Union[str, List[str], Image.Image, List[Image.Image]], 
-               modality: str = "text", **kwargs) -> np.ndarray:
+
+    def encode(
+        self, content: Union[str, List[str], Image.Image, List[Image.Image]], modality: str = "text", **kwargs
+    ) -> np.ndarray:
         """
         Universal encode method that routes to appropriate model based on modality
-        
+
         Args:
             content: Content to encode (text, images, or video paths)
             modality: Type of content ('text', 'image', 'video', 'vis_query')
             **kwargs: Additional arguments for specific encoders
-        
+
         Returns:
             numpy array of embeddings
         """

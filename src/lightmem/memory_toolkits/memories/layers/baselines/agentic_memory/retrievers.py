@@ -1,19 +1,15 @@
-from typing import List, Dict, Any, Optional, Union
-from sentence_transformers import SentenceTransformer
-from rank_bm25 import BM25Okapi
-import nltk
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
+import json
+import os
+from typing import Dict, Optional
+
 import chromadb
 from chromadb.config import Settings
-import pickle
-from nltk.tokenize import word_tokenize
-import os
-import json
 from chromadb.utils.embedding_functions import (
+    OpenAIEmbeddingFunction,
     SentenceTransformerEmbeddingFunction,
-    OpenAIEmbeddingFunction  
 )
+from nltk.tokenize import word_tokenize
+
 
 def simple_tokenize(text):
     return word_tokenize(text)

@@ -8,10 +8,11 @@ Fuses three signals:
 - BM25 sparse retrieval score (TF-IDF variant, k1=1.5, b=0.75)
 - LLM verification score (via BaseLLM.verify())
 """
+
 import math
 import re
 from collections import Counter
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 
@@ -53,12 +54,12 @@ class SemanticRetriever(BaseRetriever):
         self._b = 0.75
 
         # BM25 index state
-        self._doc_freqs: Counter = Counter()       # Number of documents containing each term
+        self._doc_freqs: Counter = Counter()  # Number of documents containing each term
         self._doc_tokens: Dict[str, List[str]] = {}  # node_id -> token list
-        self._doc_lengths: Dict[str, int] = {}      # node_id -> document length
-        self._avg_dl: float = 0.0                   # Average document length
-        self._num_docs: int = 0                     # Total number of documents
-        self._idf_cache: Dict[str, float] = {}      # token -> IDF value
+        self._doc_lengths: Dict[str, int] = {}  # node_id -> document length
+        self._avg_dl: float = 0.0  # Average document length
+        self._num_docs: int = 0  # Total number of documents
+        self._idf_cache: Dict[str, float] = {}  # token -> IDF value
 
     # ==================== Public interface ====================
 
@@ -121,11 +122,7 @@ class SemanticRetriever(BaseRetriever):
         # 6. Compute the weighted total score and sort
         scored_nodes: List[Tuple[SemanticNode, float]] = []
         for i, node in enumerate(candidates):
-            total = (
-                self.dense_weight * norm_dense[i]
-                + self.bm25_weight * norm_bm25[i]
-                + self.llm_weight * norm_llm[i]
-            )
+            total = self.dense_weight * norm_dense[i] + self.bm25_weight * norm_bm25[i] + self.llm_weight * norm_llm[i]
             scored_nodes.append((node, total))
 
         scored_nodes.sort(key=lambda x: x[1], reverse=True)
@@ -176,9 +173,7 @@ class SemanticRetriever(BaseRetriever):
 
         # Precompute IDF
         for token, df in self._doc_freqs.items():
-            self._idf_cache[token] = math.log(
-                (self._num_docs - df + 0.5) / (df + 0.5) + 1.0
-            )
+            self._idf_cache[token] = math.log((self._num_docs - df + 0.5) / (df + 0.5) + 1.0)
 
     # ==================== BM25 ====================
 
@@ -212,16 +207,12 @@ class SemanticRetriever(BaseRetriever):
                 idf = self._idf_cache.get(qt)
                 if idf is None:
                     # For out-of-vocabulary tokens, use a smoothed IDF
-                    idf = math.log(
-                        (self._num_docs + 0.5) / (0.5 + 0.5) + 1.0
-                    )
+                    idf = math.log((self._num_docs + 0.5) / (0.5 + 0.5) + 1.0)
 
                 tf = tf_counter.get(qt, 0)
                 # BM25 core formula
                 numerator = tf * (self._k1 + 1)
-                denominator = tf + self._k1 * (
-                    1 - self._b + self._b * doc_len / max(self._avg_dl, 1e-8)
-                )
+                denominator = tf + self._k1 * (1 - self._b + self._b * doc_len / max(self._avg_dl, 1e-8))
                 score += idf * numerator / denominator
 
             scores.append(score)
@@ -230,9 +221,7 @@ class SemanticRetriever(BaseRetriever):
 
     # ==================== LLM Verification ====================
 
-    async def _compute_llm_verification(
-        self, query: str, candidates: List[SemanticNode]
-    ) -> List[float]:
+    async def _compute_llm_verification(self, query: str, candidates: List[SemanticNode]) -> List[float]:
         """Use the LLM to verify the relevance of candidate nodes.
 
         Calls BaseLLM.verify() for each candidate node to obtain a 0-1 relevance score.

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from pydantic import BaseModel, field_validator, model_validator
 from typing import List
+
+from pydantic import BaseModel, field_validator, model_validator
+
 
 class SemanticRawOutput(BaseModel):
     semantic_triples: List[List[str]]

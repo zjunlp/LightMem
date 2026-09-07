@@ -5,7 +5,7 @@ prompt_template = [
     {
         "role": "system",
         "content": """You are an expert assistant that helps filter and select relevant video captions based on a given query. "
-            "Your task is to analyze the retrieved video captions and determine which ones are most relevant to answer the question."""
+            "Your task is to analyze the retrieved video captions and determine which ones are most relevant to answer the question.""",
     },
     {
         "role": "user",
@@ -24,6 +24,6 @@ Instructions:
 5. Return the IDs in ranked order (most relevant first)
 6. Only include captions that are truly relevant
 
-Return ONLY a JSON array of caption IDs in order of relevance (most relevant first), without additional justification."""
-    }
+Return ONLY a JSON array of caption IDs in order of relevance (most relevant first), without additional justification.""",
+    },
 ]

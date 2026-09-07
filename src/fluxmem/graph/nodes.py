@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
-from typing import List, Tuple, Optional, Dict, Any
 import uuid
+from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -19,12 +19,13 @@ class BaseNode:
     content: str = ""
     embedding: Optional[np.ndarray] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: float = field(default_factory=lambda: __import__('time').time())
+    created_at: float = field(default_factory=lambda: __import__("time").time())
 
 
 @dataclass
 class SemanticNode(BaseNode):
     """Semantic knowledge node - stores fact chunks and their embeddings"""
+
     node_type: NodeType = field(default=NodeType.SEMANTIC, init=False)
     source: str = ""  # Source document identifier
     chunk_index: int = 0  # Position of the chunk within the document
@@ -33,6 +34,7 @@ class SemanticNode(BaseNode):
 @dataclass
 class EpisodicNode(BaseNode):
     """Episodic experience node - records task trajectory tau={(o_t, a_t)}"""
+
     node_type: NodeType = field(default=NodeType.EPISODIC, init=False)
     task_id: str = ""
     task_description: str = ""
@@ -43,6 +45,7 @@ class EpisodicNode(BaseNode):
 @dataclass
 class ProceduralNode(BaseNode):
     """Procedural skill node - encapsulates a distilled reasoning template"""
+
     node_type: NodeType = field(default=NodeType.PROCEDURAL, init=False)
     skill_text: str = ""  # Skill description text
     version: int = 0

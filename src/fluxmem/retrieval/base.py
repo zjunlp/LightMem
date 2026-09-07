@@ -1,4 +1,5 @@
 """Retriever abstract base class"""
+
 from abc import ABC, abstractmethod
 from typing import List
 

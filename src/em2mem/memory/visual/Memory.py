@@ -1,11 +1,12 @@
+import logging
 import os
 import pickle
-import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import Dict, List, Any, Optional, Tuple, Union
-from dataclasses import dataclass, field
 from PIL import Image
 
 from ...embedding import EmbeddingModel
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class VideoClipEntry:
     """Represents a single video clip / event-aligned visual unit."""
+
     id: str
     doc_id: str
     video_path: str
@@ -30,7 +32,7 @@ class VideoClipEntry:
 
     @property
     def timestamp_int(self) -> Tuple[int, int]:
-        day = self.date.replace('DAY', '').replace('Day', '')
+        day = self.date.replace("DAY", "").replace("Day", "")
         start_ts = int(day + self.start_time.zfill(8))
         end_ts = int(day + self.end_time.zfill(8))
         return start_ts, end_ts
@@ -43,11 +45,11 @@ class VideoClipEntry:
 @dataclass
 class FrameEntry:
     """Represents a single frame from a video or keyframe image."""
+
     video_path: str
     frame_index: int
     timestamp_sec: float
     frame: Optional[Image.Image] = None
-
 
 
 def _transform_timestamp(ts_str: str) -> str:
@@ -61,23 +63,21 @@ def _transform_timestamp(ts_str: str) -> str:
     return f"DAY{day} {hh}:{mm}:{ss}"
 
 
-
 def _load_json(file_path: str) -> Any:
     import json
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
 
+    with open(file_path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def _parse_time_range(time_range: str) -> Tuple[int, int]:
     import re
-    pattern = r'DAY\s*(\d+)\s+(\d{1,2}):(\d{2}):(\d{2})'
+
+    pattern = r"DAY\s*(\d+)\s+(\d{1,2}):(\d{2}):(\d{2})"
     matches = re.findall(pattern, time_range, re.IGNORECASE)
 
     if len(matches) < 2:
-        raise ValueError(
-            f"Invalid time range format: {time_range}. Expected 'DAY X HH:MM:SS - DAY Y HH:MM:SS'"
-        )
+        raise ValueError(f"Invalid time range format: {time_range}. Expected 'DAY X HH:MM:SS - DAY Y HH:MM:SS'")
 
     start_day, start_hh, start_mm, start_ss = matches[0]
     start_ts = int(f"{start_day}{start_hh.zfill(2)}{start_mm.zfill(2)}{start_ss.zfill(2)}00")
@@ -88,10 +88,10 @@ def _parse_time_range(time_range: str) -> Tuple[int, int]:
     return start_ts, end_ts
 
 
-
 def _is_time_range_query(query: str) -> bool:
     import re
-    pattern = r'DAY\s*\d+\s+\d{1,2}:\d{2}:\d{2}\s*-\s*DAY\s*\d+\s+\d{1,2}:\d{2}:\d{2}'
+
+    pattern = r"DAY\s*\d+\s+\d{1,2}:\d{2}:\d{2}\s*-\s*DAY\s*\d+\s+\d{1,2}:\d{2}:\d{2}"
     return bool(re.search(pattern, query, re.IGNORECASE))
 
 
@@ -130,7 +130,7 @@ class VisualMemory:
             logger.warning(f"Visual embeddings file not found or not provided: {embeddings_path}")
             return
 
-        with open(embeddings_path, 'rb') as f:
+        with open(embeddings_path, "rb") as f:
             self.video_path_to_embedding = pickle.load(f)
 
         logger.info(f"Loaded {len(self.video_path_to_embedding)} video embeddings from {embeddings_path}")
@@ -484,14 +484,15 @@ class VisualMemory:
             images = event_images.get(doc_id, [])
             if not images:
                 continue
-            packets.append({
-                "packet_type": "visual",
-                "anchor_doc_id": doc_id,
-                "images": images,
-                "num_images": len(images),
-            })
+            packets.append(
+                {
+                    "packet_type": "visual",
+                    "anchor_doc_id": doc_id,
+                    "images": images,
+                    "num_images": len(images),
+                }
+            )
         return packets
-
 
     def get_clip_by_id(self, clip_id: str) -> Optional[VideoClipEntry]:
         return self.clip_id_to_entry.get(clip_id)

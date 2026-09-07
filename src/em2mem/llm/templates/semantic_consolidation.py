@@ -44,5 +44,5 @@ prompt_template = [
     {"role": "system", "content": semantic_consolidation_system},
     {"role": "user", "content": one_shot_consolidation_input},
     {"role": "assistant", "content": one_shot_consolidation_output},
-    {"role": "user", "content": "New triple:\n${new_triple}\n\nExisting triples:\n${existing_triples}"}
+    {"role": "user", "content": "New triple:\n${new_triple}\n\nExisting triples:\n${existing_triples}"},
 ]

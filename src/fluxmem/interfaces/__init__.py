@@ -1,6 +1,7 @@
 """FluxMem abstract interface layer - exports all interface classes"""
-from fluxmem.interfaces.llm import BaseLLM, OpenAILLM
+
 from fluxmem.interfaces.embedder import BaseEmbedder, OpenAIEmbedder
+from fluxmem.interfaces.llm import BaseLLM, OpenAILLM
 from fluxmem.interfaces.vectorstore import BaseVectorStore, FAISSVectorStore
 
 __all__ = [

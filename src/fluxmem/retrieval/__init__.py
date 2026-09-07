@@ -5,10 +5,11 @@ Provides three layers of memory retrievers:
 - EpisodicRetriever: episodic retrieval based on embedding similarity
 - ProceduralRetriever: procedural skill retrieval traversing Distill edges
 """
+
 from .base import BaseRetriever
-from .semantic_retriever import SemanticRetriever
 from .episodic_retriever import EpisodicRetriever
 from .procedural_retriever import ProceduralRetriever
+from .semantic_retriever import SemanticRetriever
 
 __all__ = [
     "BaseRetriever",

@@ -1,21 +1,28 @@
 import json
 import logging
 import uuid
-from typing import Optional, List
-from datetime import datetime, date
-from databricks.sdk.service.catalog import ColumnInfo, ColumnTypeName, TableType, DataSourceFormat
-from databricks.sdk.service.catalog import TableConstraint, PrimaryKeyConstraint
+from datetime import date, datetime
+from typing import List, Optional
+
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.catalog import (
+    ColumnInfo,
+    ColumnTypeName,
+    DataSourceFormat,
+    PrimaryKeyConstraint,
+    TableConstraint,
+    TableType,
+)
 from databricks.sdk.service.vectorsearch import (
-    VectorIndexType,
     DeltaSyncVectorIndexSpecRequest,
     DirectAccessVectorIndexSpec,
     EmbeddingSourceColumn,
     EmbeddingVectorColumn,
+    VectorIndexType,
 )
-from pydantic import BaseModel
 from mem0.memory.utils import extract_json
 from mem0.vector_stores.base import VectorStoreBase
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 

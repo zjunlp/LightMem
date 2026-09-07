@@ -3,8 +3,8 @@ import logging
 from .base import NeptuneBase
 
 try:
-    from langchain_aws import NeptuneAnalyticsGraph
     from botocore.config import Config
+    from langchain_aws import NeptuneAnalyticsGraph
 except ImportError:
     raise ImportError("langchain_aws is not installed. Please install it using 'make install_all'.")
 

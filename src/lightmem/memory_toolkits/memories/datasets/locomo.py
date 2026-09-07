@@ -1,22 +1,22 @@
 from __future__ import annotations
-import os
 
 import base64
-import requests
-from io import BytesIO
-from PIL import Image
-import openai
-
 import json
+import os
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from io import BytesIO
+from typing import Any, Dict, List, Optional, Tuple
+
+import openai
+import requests
+from PIL import Image
 
 from .base import (
     MemoryDataset,
-    Trajectory,
-    Session,
-    QuestionAnswerPair,
     Message,
+    QuestionAnswerPair,
+    Session,
+    Trajectory,
 )
 
 
@@ -24,6 +24,7 @@ def _parse_session_datetime(dt_str: str) -> datetime:
     """Parse LoCoMo-style datetime string like '1:56 pm on 8 May, 2023'."""
     # Example: "1:56 pm on 8 May, 2023"
     return datetime.strptime(dt_str, "%I:%M %p on %d %B, %Y")
+
 
 def process_image_to_base64(img_url: str, target_size: tuple = (224, 224)) -> Optional[str]:
     """
@@ -48,13 +49,13 @@ def process_image_to_base64(img_url: str, target_size: tuple = (224, 224)) -> Op
         img_resized = img.resize(target_size, Image.Resampling.LANCZOS)
 
         # 4. Convert to RGB mode for consistency
-        if img_resized.mode != 'RGB':
-            img_resized = img_resized.convert('RGB')
+        if img_resized.mode != "RGB":
+            img_resized = img_resized.convert("RGB")
 
         # 5. Save to memory buffer and convert to base64
         buffered = BytesIO()
         img_resized.save(buffered, format="JPEG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
         return img_base64
 
@@ -66,7 +67,9 @@ def process_image_to_base64(img_url: str, target_size: tuple = (224, 224)) -> Op
         return None
 
 
-def analyze_image_with_gpt4o(api_key: str, base_url:str, img_base64: str, prompt: str = "Describe this image") -> Optional[str]:
+def analyze_image_with_gpt4o(
+    api_key: str, base_url: str, img_base64: str, prompt: str = "Describe this image"
+) -> Optional[str]:
     """
     Analyze base64 encoded image using GPT-4o.
 
@@ -88,28 +91,20 @@ def analyze_image_with_gpt4o(api_key: str, base_url:str, img_base64: str, prompt
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{img_base64}"
-                        }
-                    }
-                ]
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}},
+                ],
             }
         ]
 
         # Call GPT-4o API
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            max_tokens=300
-        )
+        response = client.chat.completions.create(model="gpt-4o", messages=messages, max_tokens=300)
 
         return response.choices[0].message.content
 
     except Exception as e:
         print(f"Failed to call GPT-4o API: {e}")
         return None
+
 
 CATEGORY_ID_TO_TYPE: Dict[int, str] = {
     1: "multi_hop",
@@ -118,6 +113,7 @@ CATEGORY_ID_TO_TYPE: Dict[int, str] = {
     4: "single_hop",
     5: "adversarial",
 }
+
 
 class LoCoMo(MemoryDataset):
     """Dataset wrapper for LoCoMo-style long-term multi-session dialogs."""
@@ -177,17 +173,17 @@ class LoCoMo(MemoryDataset):
                     msg_metadata: Dict[str, Any] = {
                         "name": speaker,
                     }
-                    
+
                     if speaker == speaker_a:
                         msg_metadata["speaker_tag"] = "speaker_a"
                     elif speaker == speaker_b:
                         msg_metadata["speaker_tag"] = "speaker_b"
                     else:
                         msg_metadata["speaker_tag"] = "unknown"
-                    
+
                     if "dia_id" in msg and msg["dia_id"]:
                         msg_metadata["dia_id"] = msg["dia_id"]
-                    
+
                     img_url = msg.get("img_url")
                     if img_url:
                         msg_metadata["img_url"] = img_url
@@ -195,7 +191,7 @@ class LoCoMo(MemoryDataset):
                         blip_caption = msg.get("blip_caption")
                         if blip_caption:
                             msg_metadata["blip_caption"] = blip_caption
-                        
+
                         if "query" in msg and msg["query"]:
                             msg_metadata["image_query"] = msg["query"]
 
@@ -210,7 +206,7 @@ class LoCoMo(MemoryDataset):
                                         api_key=os.getenv("OPENAI_API_KEY_FOR_IMAGE", ""),
                                         base_url=os.getenv("OPENAI_API_BASE_FOR_IMAGE", ""),
                                         img_base64=img_base64,
-                                        prompt="Please describe the content of this image in detail."
+                                        prompt="Please describe the content of this image in detail.",
                                     )
                                     if caption:
                                         image_caption_cache[img_url] = caption
@@ -218,7 +214,7 @@ class LoCoMo(MemoryDataset):
                                         caption = "No description available."
                                 else:
                                     caption = "No description available."
-                            
+
                             if caption and caption != "No description available.":
                                 msg_metadata["gpt4o_image_caption"] = caption
 
@@ -249,8 +245,8 @@ class LoCoMo(MemoryDataset):
                 sessions=sessions,
                 metadata={
                     "id": f"locomo_{sample_idx}",
-                    "speaker_a": speaker_a, 
-                    "speaker_b": speaker_b,  
+                    "speaker_a": speaker_a,
+                    "speaker_b": speaker_b,
                 },
             )
             trajectories.append(trajectory)
@@ -331,15 +327,11 @@ class LoCoMo(MemoryDataset):
         dataset_metadata["question_type_stats"] = question_type_stats
 
         if len(self) > 0 and dataset_metadata["total_sessions"] > 0:
-            dataset_metadata["avg_session_per_trajectory"] = (
-                dataset_metadata["total_sessions"] / len(self)
-            )
+            dataset_metadata["avg_session_per_trajectory"] = dataset_metadata["total_sessions"] / len(self)
             dataset_metadata["avg_message_per_session"] = (
                 dataset_metadata["total_messages"] / dataset_metadata["total_sessions"]
             )
-            dataset_metadata["avg_question_per_trajectory"] = (
-                dataset_metadata["total_questions"] / len(self)
-            )
+            dataset_metadata["avg_question_per_trajectory"] = dataset_metadata["total_questions"] / len(self)
         else:
             dataset_metadata["avg_session_per_trajectory"] = 0.0
             dataset_metadata["avg_message_per_session"] = 0.0
@@ -353,14 +345,14 @@ class LoCoMo(MemoryDataset):
         Filter out adversarial questions (category_id=5) for LoCoMo dataset.
         """
         return [qa for qa in questions if qa.metadata.get("category_id") != 5]
-    
+
     @classmethod
     def get_qa_prompt_name(cls, has_graph: bool = False) -> str:
         """Get LoCoMo-specific QA prompt based on whether graph relations exist."""
         if has_graph:
             return "locomo-question-answering-graph-memory-system"
         return "locomo-question-answering-flat-memory-system"
-    
+
     @classmethod
     def get_judge_prompt_info(cls, qa_pair: QuestionAnswerPair) -> Tuple[str, str]:
         """LoCoMo uses a unified judge prompt for all question types."""

@@ -3,10 +3,9 @@ import logging
 import re
 from typing import List, Optional
 
-from pydantic import BaseModel
-
 from mem0.memory.utils import extract_json
 from mem0.vector_stores.base import VectorStoreBase
+from pydantic import BaseModel
 
 try:
     from azure.core.credentials import AzureKeyCredential
