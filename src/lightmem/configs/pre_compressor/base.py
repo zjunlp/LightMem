@@ -10,7 +10,7 @@ class PreCompressorConfig(BaseModel):
 
     _model_configs: ClassVar[Dict[str, str]] = {
         "llmlingua-2": "lightmem.configs.pre_compressor.llmlingua_2.LlmLingua2Config",  
-        "entropy_compress": "lightmem.configs.pre_compressor.entropy_compress.EntropyCompressor"
+        "entropy_compress": "lightmem.configs.pre_compressor.entropy_compress.EntropyCompressorConfig"
     }
 
     configs: Dict[str, Any] = Field(
