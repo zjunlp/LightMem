@@ -453,7 +453,7 @@ class LightMemory:
             if offline_update_trigger:
                 self.logger.info(f"[{call_id}] Triggering offline update for all entries")
                 self.offline_update_all_entries(
-                    update_sim_threshold = 0.8
+                    score_threshold=0.8
                 )
 
     def construct_update_queue_all_entries(self, top_k: int = 20, keep_top_n: int = 10, max_workers: int = 8):
