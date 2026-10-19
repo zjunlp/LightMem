@@ -220,6 +220,11 @@ checkpoints/
 wandb/
 runs/
 
+# Private AML benchmark data, adapters, caches, and local results.
+# Keep the benchmark inventory and downloaded artifacts out of the public repo.
+/experiments/aml/
+/AML_OPTIMIZATION.md
+
 # Editors / OS
 *.swp
 *.swo

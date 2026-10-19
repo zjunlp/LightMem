@@ -1,0 +1,8 @@
+**
+!Dockerfile
+!requirements-service.txt
+!service/
+!service/**
+service/**/__pycache__/
+service/**/*.pyc
+service/**/.env*
