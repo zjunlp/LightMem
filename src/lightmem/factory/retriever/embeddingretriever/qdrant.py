@@ -7,12 +7,12 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    HasIdCondition,
     MatchValue,
     PointIdsList,
     PointStruct,
     Range,
     VectorParams,
-    MatchAny,
 )
 from lightmem.configs.retriever.embeddingretriever.qdrant import QdrantConfig
 from typing import Any, Dict, Optional
@@ -147,24 +147,11 @@ class Qdrant:
         """
         query_filter = self._create_filter(filters) if filters else None
         if exclude_ids:
-            if query_filter:
-                if not hasattr(query_filter, 'must_not'):
-                    query_filter.must_not = []
-                query_filter.must_not.append(
-                    FieldCondition(
-                        key="id",
-                        match=MatchAny(any=exclude_ids)
-                    )
-                )
-            else:
-                query_filter = Filter(
-                    must_not=[
-                        FieldCondition(
-                            key="id",
-                            match=MatchAny(any=exclude_ids)
-                        )
-                    ]
-                )
+            if query_filter is None:
+                query_filter = Filter()
+            query_filter.must_not = (query_filter.must_not or []) + [
+                HasIdCondition(has_id=exclude_ids)
+            ]
         
         hits = self.client.query_points(
             collection_name=self.collection_name,
