@@ -904,3 +904,46 @@ def test_session_anchor_runs_after_window_and_semantic_expansion():
     assert [hit.score for hit in anchored] == pytest.approx(
         [1 / 61, 1 / 62, 1 / 63]
     )
+
+
+def test_local_encoder_bounds_concurrent_inference_and_releases_on_error(monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    entered = threading.Event()
+    release = threading.Event()
+    state = {"active": 0, "peak": 0, "calls": 0}
+    lock = threading.Lock()
+
+    class Model:
+        def encode(self, texts, **kwargs):
+            assert kwargs["batch_size"] == 1
+            with lock:
+                state["active"] += 1
+                state["peak"] = max(state["peak"], state["active"])
+                state["calls"] += 1
+            try:
+                entered.set()
+                assert release.wait(5)
+                if texts == ["fail"]:
+                    raise RuntimeError("inference failed")
+                return np.array([[1.0, 0.0] for _ in texts])
+            finally:
+                with lock:
+                    state["active"] -= 1
+
+    monkeypatch.setenv("MEMORY_EMBEDDING_BATCH_SIZE", "1")
+    monkeypatch.setenv("MEMORY_EMBEDDING_MAX_CONCURRENCY", "1")
+    monkeypatch.setitem(sys.modules, "sentence_transformers",
+                        SimpleNamespace(SentenceTransformer=lambda *a, **kw: Model()))
+    embedder = main.SentenceTransformerEmbedder()
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        failed = pool.submit(embedder.embed_documents, ["fail"])
+        assert entered.wait(5)
+        futures = [pool.submit(embedder.embed_documents, ["ok"]) for _ in range(2)]
+        release.set()
+        with pytest.raises(RuntimeError, match="inference failed"):
+            failed.result(timeout=5)
+        assert all(f.result(timeout=5) == [[1.0, 0.0]] for f in futures)
+    assert state["peak"] == 1
+    assert state["calls"] == 3

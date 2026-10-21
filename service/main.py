@@ -162,6 +162,11 @@ class SentenceTransformerEmbedder:
     def __init__(self) -> None:
         from sentence_transformers import SentenceTransformer
 
+        self.batch_size = int(_env("MEMORY_EMBEDDING_BATCH_SIZE", "64"))
+        max_concurrency = int(_env("MEMORY_EMBEDDING_MAX_CONCURRENCY", "2"))
+        if self.batch_size < 1 or max_concurrency < 1:
+            raise ValueError("Embedding batch size and max concurrency must be positive")
+        self._inference_slots = threading.BoundedSemaphore(max_concurrency)
         self.model_name = (
             _env(
                 "MEMORY_LOCAL_EMBEDDING_MODEL",
@@ -197,13 +202,14 @@ class SentenceTransformerEmbedder:
         )
 
     def _embed(self, texts: list[str]) -> list[list[float]]:
-        vectors = self.model.encode(
-            texts,
-            batch_size=64,
-            convert_to_numpy=True,
-            normalize_embeddings=True,
-            show_progress_bar=False,
-        )
+        with self._inference_slots:
+            vectors = self.model.encode(
+                texts,
+                batch_size=self.batch_size,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
+                show_progress_bar=False,
+            )
         return np.asarray(vectors, dtype=np.float32).tolist()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:

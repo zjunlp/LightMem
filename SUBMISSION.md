@@ -128,6 +128,13 @@ the raw-hybrid baseline.
 
 ## Validation
 
+For CPU deployments, `MEMORY_EMBEDDING_BATCH_SIZE` controls model batching and
+`MEMORY_EMBEDDING_MAX_CONCURRENCY` bounds simultaneous local encoder calls
+(defaults: 64 and 2). Set a smaller batch for long messages and limited RAM.
+Compose limits OpenMP/MKL threads to 2 per inference call by default; tune these
+with measured throughput rather than increasing workers and duplicating models.
+These settings control execution resources and do not change retrieval policy.
+
 The repository includes contract, persistence, user-isolation, result-cap, and
 semantic-bridge tests in `tests/test_aml_contract.py`. Local retrieval-proxy
 measurements informed the defaults. They are not official leaderboard scores;
