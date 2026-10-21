@@ -5,7 +5,7 @@ import math
 import os
 import re
 import threading
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
@@ -17,6 +17,7 @@ from openai import OpenAI
 from .retrieval import CJK_PATTERN, hybrid_search, retrieval_query
 from .schemas import AddRequest, AddResponse, SearchItem, SearchRequest, SearchResponse
 from .store import ConflictingRequestError, RawMemoryStore, embedding_text
+from .background import BackgroundIndex
 
 
 def _env(name: str, fallback: str | None = None) -> str | None:
@@ -315,6 +316,17 @@ class StructMemService:
         self.store = store or RawMemoryStore(
             DATA_DIR / "raw_memory.sqlite3", embedding_identity=self.embedder.identity
         )
+        self.index = (
+            BackgroundIndex(
+                self.store,
+                idle_seconds=float(_env("MEMORY_INDEX_IDLE_SECONDS", "0.25")),
+                max_bytes=int(_env("MEMORY_INDEX_CACHE_MB", "512")) * 1024 * 1024,
+                max_users=int(_env("MEMORY_INDEX_MAX_USERS", "32")),
+                ttl_seconds=float(_env("MEMORY_INDEX_TTL_SECONDS", "300")),
+            )
+            if (_env("MEMORY_BACKGROUND_INDEX", "true") or "true").casefold()
+            in {"1", "true", "yes"} else None
+        )
         self.lexical_weight = float(_env("MEMORY_LEXICAL_WEIGHT", "0.1") or "0.1")
         self.cjk_lexical_weight = float(
             _env("MEMORY_CJK_LEXICAL_WEIGHT", "0.5") or "0.5"
@@ -391,6 +403,13 @@ class StructMemService:
             )
 
     def add(self, request: AddRequest) -> AddResponse:
+        with self.index.foreground() if self.index else nullcontext():
+            response = self._add(request)
+            if self.index:
+                self.index.schedule(request.user_id)
+            return response
+
+    def _add(self, request: AddRequest) -> AddResponse:
         # The benchmark may send human-readable timestamps; the store uses epoch ms.
         normalized_messages = [
             message.model_copy(update={"timestamp": _timestamp_millis(message.timestamp)})
@@ -489,14 +508,24 @@ class StructMemService:
         return [line.lstrip("-* ").strip() for line in raw.splitlines() if line.strip()]
 
     def search(self, request: SearchRequest) -> SearchResponse:
-        memories = self.store.list_user(request.user_id)
+        with self.index.foreground() if self.index else nullcontext():
+            return self._search(request)
+
+    def _search(self, request: SearchRequest) -> SearchResponse:
+        prepared = self.index.get(request.user_id) if self.index else None
+        memories = (
+            list(prepared.memories) if prepared is not None
+            else self.store.list_user(request.user_id)
+        )
         if _TEMPORAL_QUERY.search(retrieval_query(request.query, request.options)):
+            if any(memory.derived for memory in memories):
+                prepared = None
             memories = [memory for memory in memories if not memory.derived]
         if not memories:
             return SearchResponse(data=[])
         query_text = retrieval_query(request.query, request.options)
         query_vector = _normalized_matrix(self.embedder.embed_query(query_text), 1)[0]
-        cjk_documents = sum(
+        cjk_documents = prepared.cjk_count if prepared is not None else sum(
             bool(CJK_PATTERN.search("\n".join(
                 [memory.content, *(part.caption or "" for part in memory.media)]
             )))
@@ -519,7 +548,8 @@ class StructMemService:
             session_rank_decay=self.session_rank_decay,
             session_recency_weight=self.session_recency_weight,
             session_anchor_seed_k=self.session_anchor_seed_k,
-            session_repeat_penalty=self.session_repeat_penalty)
+            session_repeat_penalty=self.session_repeat_penalty,
+            prepared=prepared)
         return SearchResponse(data=[
             SearchItem(
                 id=hit.memory.id, content=hit.memory.render(), media=list(hit.memory.media),
@@ -558,17 +588,23 @@ def verify_api_key(
 async def lifespan(_: FastAPI):
     global service
     service = StructMemService()
-    yield
+    if service.index:
+        service.index.start()
+    try:
+        yield
+    finally:
+        if service.index:
+            service.index.close()
 
 
 app = FastAPI(
-    title="StructMem Raw Hybrid AML Adapter", version="0.3.0", lifespan=lifespan
+    title="StructMem Raw Hybrid AML Adapter", version="0.3.2", lifespan=lifespan
 )
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "version": "0.3.0"}
+    return {"status": "ok", "version": "0.3.2"}
 
 
 @app.post("/add", response_model=AddResponse, dependencies=[Depends(verify_api_key)])

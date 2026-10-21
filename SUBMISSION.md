@@ -41,10 +41,10 @@ docker compose up --build -d
 The equivalent manual commands are:
 
 ```bash
-docker build -t structmem-raw-hybrid:0.3.0 .
+docker build -t structmem-raw-hybrid:0.3.2 .
 docker run --rm -p 8000:8000 \
   -v structmem-bgem3-data:/data \
-  structmem-raw-hybrid:0.3.0
+  structmem-raw-hybrid:0.3.2
 ```
 
 The image installs the CPU-only PyTorch wheel and downloads `BAAI/bge-m3`
@@ -125,6 +125,36 @@ Runtime tuning variables are `MEMORY_LEXICAL_WEIGHT`, `MEMORY_EMBED_SPEAKERS`,
 `MEMORY_SEMANTIC_BRIDGE_SEED_K`, and
 `MEMORY_SEMANTIC_BRIDGE_MIN_SIMILARITY`. Set the semantic seed count to `0` for
 the raw-hybrid baseline.
+
+## Idle-time index preparation
+
+Add still waits for raw-message encoding and durable storage before returning.
+An idle-time worker then prepares an immutable per-user vector matrix and BM25
+statistics for both ordinary and CJK tokenization. Appended messages reuse the
+previous snapshot's token counts; the full-corpus document frequencies and
+length statistics are updated before the new snapshot is published.
+
+Search never waits for this worker. It uses a snapshot only when the database's
+indexed-message count and maximum sequence match; otherwise it immediately uses
+the original full-corpus retrieval path, including newly added messages. A
+snapshot is published only after rechecking that database state. Deletions
+invalidate snapshots, and restart requires no background recovery before Search
+can serve persisted messages. No model-generated summaries or query-driven
+policy changes run in this worker.
+
+`MEMORY_BACKGROUND_INDEX=false` disables this optimization. The worker waits for
+all online Add/Search calls to finish and an idle grace period (default 0.25s),
+then yields between documents if online work arrives. Its Linux thread has lower
+scheduling priority. This is cooperative scheduling, not instantaneous preemption
+of database reads or NumPy copies. It does not call the embedding model.
+
+The cache has configurable estimated memory, user-count and inactivity limits:
+`MEMORY_INDEX_CACHE_MB=512`, `MEMORY_INDEX_MAX_USERS=32`, and
+`MEMORY_INDEX_TTL_SECONDS=300`. Oversized users and failed builds retain the
+synchronous fallback. Cached and baseline retrieval use the same BM25 formula,
+fusion, context policy and original evidence. Expiry clears cached copies but
+does not delete the durable database; evaluation data still requires operational
+deletion within the platform's retention deadline.
 
 ## Validation
 

@@ -4,6 +4,7 @@ import math
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 
@@ -202,6 +203,102 @@ def bm25_scores(
     return scores
 
 
+@dataclass(frozen=True)
+class LexicalIndex:
+    frequencies: tuple[Counter, ...]
+    lengths: tuple[int, ...]
+    document_frequency: Counter
+    total_length: int
+
+    def scores(self, query: str, *, cjk_ngrams: bool) -> np.ndarray:
+        scores = np.zeros(len(self.frequencies), dtype=np.float32)
+        terms = set(lexical_tokens(query, cjk_ngrams=cjk_ngrams))
+        if not self.total_length or not terms:
+            return scores
+        count = len(self.frequencies)
+        average_length = self.total_length / count
+        for index, counts in enumerate(self.frequencies):
+            for term in terms:
+                frequency = counts.get(term, 0)
+                if frequency:
+                    inverse = math.log(
+                        (count - self.document_frequency[term] + 0.5)
+                        / (self.document_frequency[term] + 0.5) + 1.0
+                    )
+                    scores[index] += (
+                        inverse * frequency * 2.2
+                        / (frequency + 1.2 * (0.25 + 0.75 * self.lengths[index] / average_length))
+                    )
+        return scores
+
+
+@dataclass(frozen=True)
+class PreparedCorpus:
+    memories: tuple[StoredMemory, ...]
+    state: tuple[int, int]
+    matrix: np.ndarray
+    lexical: LexicalIndex
+    cjk_lexical: LexicalIndex
+    cjk_count: int
+    estimated_bytes: int
+
+
+def prepare_corpus(
+    memories: list[StoredMemory], *, state: tuple[int, int],
+    prefix: PreparedCorpus | None = None,
+    checkpoint: Callable[[], None] = lambda: None,
+    max_bytes: int | None = None,
+) -> PreparedCorpus:
+    """Build an immutable snapshot; reuse an unchanged append-only prefix."""
+    prefix_count = len(prefix.memories) if prefix else 0
+    matrix_bytes = len(memories) * memories[0].embedding.size * 4
+    if max_bytes is not None and 2 * matrix_bytes > max_bytes:
+        raise BufferError("Corpus exceeds index memory budget")
+    checkpoint()
+    matrix = np.empty((len(memories), memories[0].embedding.size), dtype=np.float32)
+    if prefix:
+        matrix[:prefix_count] = prefix.matrix
+    counts = list(prefix.lexical.frequencies) if prefix else []
+    cjk_counts = list(prefix.cjk_lexical.frequencies) if prefix else []
+    lengths = list(prefix.lexical.lengths) if prefix else []
+    cjk_lengths = list(prefix.cjk_lexical.lengths) if prefix else []
+    df = prefix.lexical.document_frequency.copy() if prefix else Counter()
+    cjk_df = prefix.cjk_lexical.document_frequency.copy() if prefix else Counter()
+    cjk_count = prefix.cjk_count if prefix else 0
+    estimated_bytes = 2 * matrix.nbytes
+    if prefix:
+        estimated_bytes += prefix.estimated_bytes - 2 * prefix.matrix.nbytes
+    for index in range(prefix_count, len(memories)):
+        checkpoint()
+        memory = memories[index]
+        matrix[index] = memory.embedding
+        document = "\n".join(
+            [memory.content, *(part.caption or "" for part in memory.media)]
+        ).strip()
+        has_cjk = bool(CJK_PATTERN.search(document))
+        base = Counter(lexical_tokens(document))
+        cjk = Counter(lexical_tokens(document, cjk_ngrams=True)) if has_cjk else base
+        counts.append(base)
+        cjk_counts.append(cjk)
+        lengths.append(sum(base.values()))
+        cjk_lengths.append(sum(cjk.values()))
+        df.update(base.keys())
+        cjk_df.update(cjk.keys())
+        cjk_count += has_cjk
+        estimated_bytes += len(document) * 4 + (len(base) + len(cjk)) * 192 + 512
+        estimated_bytes += sum(len(part.image_url) * 4 for part in memory.media)
+        estimated_bytes += sum(chunk.nbytes for chunk in memory.embedding_chunks)
+        if max_bytes is not None and estimated_bytes > max_bytes:
+            raise BufferError("Corpus exceeds index memory budget")
+    matrix.flags.writeable = False
+    return PreparedCorpus(
+        tuple(memories), state, matrix,
+        LexicalIndex(tuple(counts), tuple(lengths), df, sum(lengths)),
+        LexicalIndex(tuple(cjk_counts), tuple(cjk_lengths), cjk_df, sum(cjk_lengths)),
+        cjk_count, estimated_bytes,
+    )
+
+
 def _expanded_positions(
     ranked: np.ndarray,
     memories: list[StoredMemory],
@@ -351,6 +448,7 @@ def hybrid_search(
     session_recency_weight: float = 0.0,
     session_anchor_seed_k: int = 0,
     session_repeat_penalty: float = 0.0,
+    prepared: PreparedCorpus | None = None,
 ) -> list[RetrievalHit]:
     if not memories:
         return []
@@ -360,7 +458,9 @@ def hybrid_search(
     if any(memory.embedding.shape != (dimension,) for memory in memories):
         raise ValueError("Stored memories contain inconsistent embedding dimensions")
 
-    matrix = np.vstack([memory.embedding for memory in memories])
+    matrix = prepared.matrix if prepared is not None else np.vstack(
+        [memory.embedding for memory in memories]
+    )
     dense_scores = matrix @ query_vector
     for index, memory in enumerate(memories):
         if memory.embedding_chunks:
@@ -401,13 +501,18 @@ def hybrid_search(
         dense_scores = zscore(dense_scores) + session_recency_weight * zscore(recency)
     # Captions are part of the indexed embedding text and must also participate
     # in lexical fusion; otherwise caption-only questions lose exact terms.
-    lexical_documents = [
-        "\n".join(
-            [memory.content, *(part.caption or "" for part in memory.media)]
-        ).strip()
-        for memory in memories
-    ]
-    lexical = bm25_scores(lexical_documents, query_text, cjk_ngrams=cjk_ngrams)
+    if prepared is not None:
+        use_cjk = bool(CJK_PATTERN.search(query_text)) if cjk_ngrams is None else cjk_ngrams
+        index = prepared.cjk_lexical if use_cjk else prepared.lexical
+        lexical = index.scores(query_text, cjk_ngrams=use_cjk)
+    else:
+        lexical_documents = [
+            "\n".join(
+                [memory.content, *(part.caption or "" for part in memory.media)]
+            ).strip()
+            for memory in memories
+        ]
+        lexical = bm25_scores(lexical_documents, query_text, cjk_ngrams=cjk_ngrams)
     if fusion == "minmax":
         def normalize(scores: np.ndarray) -> np.ndarray:
             minimum, maximum = float(scores.min()), float(scores.max())

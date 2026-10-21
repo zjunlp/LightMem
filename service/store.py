@@ -131,6 +131,7 @@ class RawMemoryStore:
                     FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
                 );
                 CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id, sequence);
+                CREATE INDEX IF NOT EXISTS idx_messages_indexed_user ON messages(user_id, indexed, sequence);
                 CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(user_id, session_id, sequence);
                 """
             )
@@ -309,26 +310,39 @@ class RawMemoryStore:
                 ],
             )
 
-    def list_user(self, user_id: str, *, include_unindexed: bool = False) -> list[StoredMemory]:
+    def user_state(self, user_id: str) -> tuple[int, int]:
+        """Version of the append-only indexed corpus, including deletions."""
+        with self.lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*), COALESCE(MAX(sequence), 0) FROM messages "
+                "WHERE user_id = ? AND indexed = 1", (user_id,),
+            ).fetchone()
+        return int(row[0]), int(row[1])
+
+    def list_user(
+        self, user_id: str, *, include_unindexed: bool = False,
+        after_sequence: int = 0,
+    ) -> list[StoredMemory]:
         with self.lock, self._connect() as connection:
             filter_clause = "" if include_unindexed else "AND indexed = 1"
             rows = connection.execute(
                 f"""
                 SELECT sequence, id, request_id, user_id, session_id, message_index,
                        role, content, source_timestamp, created_at, embedding, dimension, derived, media_json
-                FROM messages WHERE user_id = ? {filter_clause} ORDER BY sequence, message_index
+                FROM messages WHERE user_id = ? AND sequence > ? {filter_clause}
+                ORDER BY sequence, message_index
                 """,
-                (user_id,),
+                (user_id, after_sequence),
             ).fetchall()
             chunk_rows = connection.execute(
                 """
                 SELECT c.message_id, c.chunk_index, c.embedding, c.dimension
                 FROM message_chunks AS c
                 JOIN messages AS m ON m.id = c.message_id
-                WHERE m.user_id = ? AND (m.indexed = 1 OR ?)
+                WHERE m.user_id = ? AND m.sequence > ? AND (m.indexed = 1 OR ?)
                 ORDER BY c.message_id, c.chunk_index
                 """,
-                (user_id, int(include_unindexed)),
+                (user_id, after_sequence, int(include_unindexed)),
             ).fetchall()
         chunks_by_id: dict[str, list[np.ndarray]] = {}
         for row in chunk_rows:

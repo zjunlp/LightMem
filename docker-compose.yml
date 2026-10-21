@@ -7,7 +7,7 @@ services:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
         PYTORCH_WHEEL_URL: ${PYTORCH_WHEEL_URL:-https://download.pytorch.org/whl/cpu/torch-2.5.1%2Bcpu-cp311-cp311-linux_x86_64.whl}
         HF_ENDPOINT: ${HF_ENDPOINT:-https://huggingface.co}
-    image: structmem-raw-hybrid:0.3.0
+    image: structmem-raw-hybrid:0.3.2
     ports:
       - "8000:8000"
     environment:
@@ -26,6 +26,11 @@ services:
       MKL_NUM_THREADS: ${MKL_NUM_THREADS:-2}
       OPENBLAS_NUM_THREADS: ${OPENBLAS_NUM_THREADS:-1}
       TOKENIZERS_PARALLELISM: "false"
+      MEMORY_BACKGROUND_INDEX: ${MEMORY_BACKGROUND_INDEX:-true}
+      MEMORY_INDEX_IDLE_SECONDS: ${MEMORY_INDEX_IDLE_SECONDS:-0.25}
+      MEMORY_INDEX_CACHE_MB: ${MEMORY_INDEX_CACHE_MB:-512}
+      MEMORY_INDEX_MAX_USERS: ${MEMORY_INDEX_MAX_USERS:-32}
+      MEMORY_INDEX_TTL_SECONDS: ${MEMORY_INDEX_TTL_SECONDS:-300}
       MEMORY_LEXICAL_WEIGHT: ${MEMORY_LEXICAL_WEIGHT:-0.1}
       MEMORY_EMBED_SPEAKERS: ${MEMORY_EMBED_SPEAKERS:-true}
       MEMORY_MULTI_WINDOW: ${MEMORY_MULTI_WINDOW:-false}
