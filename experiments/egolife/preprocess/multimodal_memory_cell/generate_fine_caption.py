@@ -3,10 +3,11 @@ import glob
 import json
 import os
 import re
-from typing import Dict, List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Tuple
 
 from tqdm import tqdm
+
 from em2mem.llm import LLMModel
 
 model = LLMModel(model_name=os.getenv("OPENAI_MODEL", "gpt-5-mini"))
@@ -215,8 +216,7 @@ def process_sync_files(sync_dir: str, output_file: str) -> None:
             results = []
             with ThreadPoolExecutor() as executor:
                 future_to_idx = {
-                    executor.submit(generate_caption, entries): idx
-                    for idx, entries in enumerate(segment_entries_list)
+                    executor.submit(generate_caption, entries): idx for idx, entries in enumerate(segment_entries_list)
                 }
                 progress = tqdm(
                     as_completed(future_to_idx),

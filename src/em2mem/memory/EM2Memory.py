@@ -19,11 +19,53 @@ logger = logging.getLogger(__name__)
 
 
 STOPWORDS = {
-    "the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "and", "or",
-    "is", "are", "was", "were", "be", "been", "being", "do", "did", "does",
-    "what", "which", "who", "whom", "when", "where", "why", "how",
-    "i", "me", "my", "we", "our", "you", "your", "he", "she", "they", "them",
-    "this", "that", "these", "those", "it", "its"
+    "the",
+    "a",
+    "an",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "for",
+    "with",
+    "and",
+    "or",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "do",
+    "did",
+    "does",
+    "what",
+    "which",
+    "who",
+    "whom",
+    "when",
+    "where",
+    "why",
+    "how",
+    "i",
+    "me",
+    "my",
+    "we",
+    "our",
+    "you",
+    "your",
+    "he",
+    "she",
+    "they",
+    "them",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
 }
 
 
@@ -281,7 +323,8 @@ class EM2Memory:
             base = float(score) * rank_bonus * self._episodic_weight_for_granularity(entry.granularity)
             target_doc_ids = self.episodic_memory.expand_entry_to_30sec_doc_ids(entry)
             target_doc_ids = [
-                doc_id for doc_id in target_doc_ids
+                doc_id
+                for doc_id in target_doc_ids
                 if self.episodic_memory.get_caption_by_doc_id(doc_id, "30sec") is not None
             ]
             if not target_doc_ids:
@@ -324,7 +367,8 @@ class EM2Memory:
                     valid_doc_ids.extend(self.episodic_memory.expand_entry_to_30sec_doc_ids(root_entry))
 
             valid_doc_ids = [
-                doc_id for doc_id in dict.fromkeys(valid_doc_ids)
+                doc_id
+                for doc_id in dict.fromkeys(valid_doc_ids)
                 if self.episodic_memory.get_caption_by_doc_id(doc_id, "30sec") is not None
             ]
             if not valid_doc_ids:
@@ -419,16 +463,17 @@ class EM2Memory:
         top_doc_ids: List[str],
         semantic_entries: List[SemanticTripleEntry],
     ) -> List[Dict[str, Any]]:
-        return [{
-            "round_num": 1,
-            "decision": "search",
-            "memory_type": "episodic+semantic",
-            "search_query": query,
-            "retrieved_content": (
-                f"Top events: {top_doc_ids}\n"
-                f"Top semantic facts: {[e.id for e in semantic_entries[:5]]}"
-            ),
-        }]
+        return [
+            {
+                "round_num": 1,
+                "decision": "search",
+                "memory_type": "episodic+semantic",
+                "search_query": query,
+                "retrieved_content": (
+                    f"Top events: {top_doc_ids}\nTop semantic facts: {[e.id for e in semantic_entries[:5]]}"
+                ),
+            }
+        ]
 
     def _render_retrieved_items_for_qa(self, retrieved_items: List[RetrievedItem]) -> List[Dict[str, Any]]:
         messages = []
@@ -548,10 +593,23 @@ class EM2Memory:
         if not role_scores:
             return []
 
-        global_sorted = [doc_id for doc_id, _ in sorted(episodic_norm.items(), key=lambda x: -x[1])[: self.selector_global_top_n]]
-        trigger_sorted = [doc_id for doc_id, _ in sorted(role_scores.items(), key=lambda x: -x[1]["trigger"])[: self.selector_trigger_top_n]]
-        antecedent_sorted = [doc_id for doc_id, _ in sorted(role_scores.items(), key=lambda x: -x[1]["antecedent"])[: self.selector_antecedent_top_n]]
-        broader_sorted = [doc_id for doc_id, _ in sorted(role_scores.items(), key=lambda x: -x[1]["broader"])[: self.selector_broader_top_n]]
+        global_sorted = [
+            doc_id for doc_id, _ in sorted(episodic_norm.items(), key=lambda x: -x[1])[: self.selector_global_top_n]
+        ]
+        trigger_sorted = [
+            doc_id
+            for doc_id, _ in sorted(role_scores.items(), key=lambda x: -x[1]["trigger"])[: self.selector_trigger_top_n]
+        ]
+        antecedent_sorted = [
+            doc_id
+            for doc_id, _ in sorted(role_scores.items(), key=lambda x: -x[1]["antecedent"])[
+                : self.selector_antecedent_top_n
+            ]
+        ]
+        broader_sorted = [
+            doc_id
+            for doc_id, _ in sorted(role_scores.items(), key=lambda x: -x[1]["broader"])[: self.selector_broader_top_n]
+        ]
 
         ordered_doc_ids: List[str] = []
         for group in [global_sorted, trigger_sorted, antecedent_sorted, broader_sorted]:
@@ -587,28 +645,34 @@ class EM2Memory:
             )
 
             visual_entry = self.visual_memory.get_clip_by_doc_id(doc_id)
-            candidates.append({
-                "index": idx,
-                "doc_id": doc_id,
-                "start_time": transform_timestamp(str(entry.timestamp_int[0])),
-                "end_time": transform_timestamp(str(entry.timestamp_int[1])),
-                "caption": entry.text,
-                "visual_summary": entry.visual_summary,
-                "critical_speech_lines": list(entry.metadata.get("critical_speech_lines", []) or [])[:4],
-                "episodic_score": round(float(episodic_norm.get(doc_id, 0.0)), 4),
-                "semantic_score": round(float(semantic_norm.get(doc_id, 0.0)), 4),
-                "trigger_score": round(float(role_scores[doc_id].get("trigger", 0.0)), 4),
-                "antecedent_score": round(float(role_scores[doc_id].get("antecedent", 0.0)), 4),
-                "broader_score": round(float(role_scores[doc_id].get("broader", 0.0)), 4),
-                "primary_role": primary_role,
-                "triplets": triplets,
-                "keyframe_caption": getattr(visual_entry, "keyframe_caption", "") if visual_entry is not None else "",
-                "parent_3min_doc_id": parent.doc_id if parent is not None else None,
-                "parent_3min_caption": parent.text if parent is not None else "",
-                "parent_3min_visual_summary": parent.visual_summary if parent is not None else "",
-                "parent_3min_critical_speech": list(parent.metadata.get("critical_speech_lines", []) or [])[:4] if parent is not None else [],
-                "semantic_support": [fact.to_display_str() for fact in support_facts],
-            })
+            candidates.append(
+                {
+                    "index": idx,
+                    "doc_id": doc_id,
+                    "start_time": transform_timestamp(str(entry.timestamp_int[0])),
+                    "end_time": transform_timestamp(str(entry.timestamp_int[1])),
+                    "caption": entry.text,
+                    "visual_summary": entry.visual_summary,
+                    "critical_speech_lines": list(entry.metadata.get("critical_speech_lines", []) or [])[:4],
+                    "episodic_score": round(float(episodic_norm.get(doc_id, 0.0)), 4),
+                    "semantic_score": round(float(semantic_norm.get(doc_id, 0.0)), 4),
+                    "trigger_score": round(float(role_scores[doc_id].get("trigger", 0.0)), 4),
+                    "antecedent_score": round(float(role_scores[doc_id].get("antecedent", 0.0)), 4),
+                    "broader_score": round(float(role_scores[doc_id].get("broader", 0.0)), 4),
+                    "primary_role": primary_role,
+                    "triplets": triplets,
+                    "keyframe_caption": getattr(visual_entry, "keyframe_caption", "")
+                    if visual_entry is not None
+                    else "",
+                    "parent_3min_doc_id": parent.doc_id if parent is not None else None,
+                    "parent_3min_caption": parent.text if parent is not None else "",
+                    "parent_3min_visual_summary": parent.visual_summary if parent is not None else "",
+                    "parent_3min_critical_speech": list(parent.metadata.get("critical_speech_lines", []) or [])[:4]
+                    if parent is not None
+                    else [],
+                    "semantic_support": [fact.to_display_str() for fact in support_facts],
+                }
+            )
 
         return candidates
 
@@ -733,11 +797,9 @@ class EM2Memory:
                     "You are selecting event packets for a long-video QA system.\n"
                     "Your job is NOT to choose events that are merely topically related. "
                     "Your job is to choose events whose evidence matches the exact predicate asked by the question.\n\n"
-
                     "You must do two things:\n"
                     "Step 1: infer the question family from the question.\n"
                     "Step 2: choose a small, complementary set of event packets that best supports the answer.\n\n"
-
                     "Use one of these question families:\n"
                     "1) action-owner\n"
                     "2) source-trace\n"
@@ -746,13 +808,11 @@ class EM2Memory:
                     "5) temporal-recall\n"
                     "6) habit-preference\n"
                     "7) attribute-content-purpose\n\n"
-
                     "Core principle:\n"
                     "- Prefer explicit evidence over weak implication.\n"
                     "- Prefer predicate-aligned evidence over broad contextual relevance.\n"
                     "- Do not over-select near-duplicate local events.\n"
                     "- Always return valid candidate indices and/or valid doc_ids from the provided list only.\n\n"
-
                     "[action-owner]\n"
                     "Question intent: identify who performed an action, who assisted, or who acted first.\n"
                     "Strong evidence:\n"
@@ -766,7 +826,6 @@ class EM2Memory:
                     "Do NOT:\n"
                     "- infer the actor only from scene participation\n"
                     "- replace explicit action evidence with general topic-related context\n\n"
-
                     "[source-trace]\n"
                     "Question intent: identify where an object was before, where it came from, or how it was transferred.\n"
                     "Strong evidence:\n"
@@ -782,7 +841,6 @@ class EM2Memory:
                     "- treat holding, using, or interacting with an object as sufficient evidence of prior location\n"
                     "- answer a previous-location question using only current-scene context\n"
                     "- omit a source-establishing event if one exists\n\n"
-
                     "[participant-membership]\n"
                     "Question intent: identify who joined, who helped, who was part of the activity, or who was absent.\n"
                     "Strong evidence:\n"
@@ -795,7 +853,6 @@ class EM2Memory:
                     "Do NOT:\n"
                     "- infer participation only from later appearance\n"
                     "- confuse bystanders with core participants\n\n"
-
                     "[plan-intention-decision]\n"
                     "Question intent: identify a plan, intention, decision, next step, proposal, or commitment.\n"
                     "Strong evidence:\n"
@@ -812,7 +869,6 @@ class EM2Memory:
                     "- infer intention from discussion alone\n"
                     "- infer a personal plan from explanation or recommendation alone\n"
                     "- confuse proposal, observation, ownership, or topic relevance with intention\n\n"
-
                     "[temporal-recall]\n"
                     "Question intent: identify the last time, first time, previous occurrence, or temporally constrained event.\n"
                     "Strong evidence:\n"
@@ -824,7 +880,6 @@ class EM2Memory:
                     "Do NOT:\n"
                     "- ignore first/last/before/after constraints\n"
                     "- choose a more relevant-looking event if its time is wrong\n\n"
-
                     "[habit-preference]\n"
                     "Question intent: identify a repeated behavior, usual pattern, stable preference, or dislike.\n"
                     "Strong evidence:\n"
@@ -837,7 +892,6 @@ class EM2Memory:
                     "Do NOT:\n"
                     "- infer a habit from only one weak event if stronger repeated evidence exists\n"
                     "- confuse temporary behavior with stable preference\n\n"
-
                     "[attribute-content-purpose]\n"
                     "Question intent: identify ownership, contents, identity, purpose, attribute, or category.\n"
                     "Strong evidence:\n"
@@ -849,7 +903,6 @@ class EM2Memory:
                     "Do NOT:\n"
                     "- replace a direct attribute question with surrounding activity\n"
                     "- infer ownership, content, purpose, or identity from loose association alone\n\n"
-
                     "Global anti-error rules:\n"
                     "- Do not infer agent ownership from scene participation alone.\n"
                     "- Do not infer intention from topic discussion alone.\n"
@@ -868,7 +921,6 @@ class EM2Memory:
                     f"{query_with_time}\n\n"
                     f"Candidate Event Packets:\n{json.dumps(selector_candidates, ensure_ascii=False, indent=2)}\n\n"
                     f"Select the best {final_top_k} candidates.\n\n"
-
                     "Selection goals:\n"
                     "- Choose complementary evidence, not repetitive evidence.\n"
                     "- Retain at least one event that directly grounds the core predicate of the question.\n"
@@ -878,18 +930,16 @@ class EM2Memory:
                     "- If the question requires temporal comparison, enforce the temporal constraint strictly.\n"
                     "- If the question requires a stable habit or preference, prefer repeated or aggregate evidence over one-off evidence.\n"
                     "- If the question requires ownership, contents, identity, purpose, or attribute, prefer direct grounding over surrounding context.\n\n"
-
                     "Output requirements:\n"
                     "- Infer the correct question_family first.\n"
                     "- Then select the best candidates.\n"
                     "- The reason must explain why the selected events satisfy the core predicate better than merely related events.\n\n"
-
                     "Return ONLY JSON in this format:\n"
                     "{"
-                    "\"question_family\": \"...\", "
-                    "\"selected_indices\": [..], "
-                    "\"selected_doc_ids\": [..], "
-                    "\"reason\": \"...\""
+                    '"question_family": "...", '
+                    '"selected_indices": [..], '
+                    '"selected_doc_ids": [..], '
+                    '"reason": "..."'
                     "}"
                 ),
             },
@@ -912,7 +962,6 @@ class EM2Memory:
         logger.info("LLM event selector question_family: %s", meta.get("question_family", ""))
         selector_reason = self._extract_selector_reason(response)
         return selected[:final_top_k], selector_reason
-
 
     def answer(
         self,
@@ -1007,9 +1056,7 @@ class EM2Memory:
             {doc_id: semantic_projected.get(doc_id, 0.0) for doc_id in candidate_doc_ids}
         )
 
-        anchor_scores: Dict[str, float] = {
-            doc_id: episodic_norm.get(doc_id, 0.0) for doc_id in candidate_doc_ids
-        }
+        anchor_scores: Dict[str, float] = {doc_id: episodic_norm.get(doc_id, 0.0) for doc_id in candidate_doc_ids}
         ranked_doc_ids = [doc_id for doc_id, _ in sorted(anchor_scores.items(), key=lambda x: -x[1])]
 
         logger.info(
@@ -1173,17 +1220,19 @@ class EM2Memory:
             raise
 
         qa_content = [{"type": "text", "text": full_query + "\n\nContext:\n"}]
-        qa_content.append({
-            "type": "text",
-            "text": (
-                "Selector summary:\n"
-                f"Chosen event anchors: {top_doc_ids}\n"
-                f"Selector reason: {selector_reason}\n"
-                "The selected event anchors were chosen because they form the strongest evidence chain for this question.\n"
-                "Use these selected events as the primary basis for answering.\n"
-                "Do not override a clearly supported conclusion from the selected evidence with a weaker alternative."
-            )
-        })
+        qa_content.append(
+            {
+                "type": "text",
+                "text": (
+                    "Selector summary:\n"
+                    f"Chosen event anchors: {top_doc_ids}\n"
+                    f"Selector reason: {selector_reason}\n"
+                    "The selected event anchors were chosen because they form the strongest evidence chain for this question.\n"
+                    "Use these selected events as the primary basis for answering.\n"
+                    "Do not override a clearly supported conclusion from the selected evidence with a weaker alternative."
+                ),
+            }
+        )
         qa_content.extend(self._render_retrieved_items_for_qa(retrieved_items))
 
         if choices:
@@ -1208,9 +1257,7 @@ class EM2Memory:
             grounding_lines.append(
                 "If the selector reason and selected events clearly support a specific option, do not override it with a weaker alternative."
             )
-            grounding_lines.append(
-                "Please provide only the final answer from the choices given (e.g., A, B, C, or D)."
-            )
+            grounding_lines.append("Please provide only the final answer from the choices given (e.g., A, B, C, or D).")
 
             qa_content.append({"type": "text", "text": "\n" + "\n".join(grounding_lines)})
 

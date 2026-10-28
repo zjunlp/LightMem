@@ -1,10 +1,11 @@
-from typing import Dict, Optional, Union, List, Any
+from typing import Any, Dict, List, Optional, Union
 
 
 class BaseMemoryManagerConfig:
     """
     Config for LLMs.
     """
+
     def __init__(
         self,
         # General parameters
@@ -21,15 +22,15 @@ class BaseMemoryManagerConfig:
         vision_details: Optional[str] = "auto",
         # Local model specific parameters
         host: Optional[str] = "http://localhost:11434",
-        num_gpu: Optional[int] = -1, # number of GPUs to use, -1 means all available GPUs, 0 means CPU only
+        num_gpu: Optional[int] = -1,  # number of GPUs to use, -1 means all available GPUs, 0 means CPU only
         main_gpu: Optional[int] = 0,
         gpu_memory_utilization: Optional[float] = 0.9,  # fraction of GPU memory to use
         trust_remote_code: bool = True,
         # API model specific parameters
         api_key: Optional[str] = None,
-        openai_base_url: Optional[str] = None, # OpenAI specific
-        deepseek_base_url: Optional[str] = None, # DeepSeek specific
-        vllm_base_url: Optional[str] = None, # vLLM specific
+        openai_base_url: Optional[str] = None,  # OpenAI specific
+        deepseek_base_url: Optional[str] = None,  # DeepSeek specific
+        vllm_base_url: Optional[str] = None,  # vLLM specific
         site_url: Optional[str] = None,
         app_name: Optional[str] = None,
         reasoning_effort: Optional[str] = None,
@@ -37,7 +38,6 @@ class BaseMemoryManagerConfig:
         thinking: Optional[Union[bool, str, Dict[str, Any]]] = None,
         **kwargs: Any,
     ):
-
         # General parameters
         self.model = model
         self.seed = seed

@@ -1,16 +1,13 @@
 import os
+
 from lightmem.memory.lightmem import LightMemory
+
 
 def load_lightmem(collection_name):
     config = {
         "memory_manager": {
             "model_name": "openai",
-            "configs": {
-                "model": "gpt-4o-mini",
-                "api_key": "",
-                "max_tokens": 16000,
-                "openai_base_url": ""
-            }
+            "configs": {"model": "gpt-4o-mini", "api_key": "", "max_tokens": 16000, "openai_base_url": ""},
         },
         "retrieve_strategy": "embedding",
         "embedding_retriever": {
@@ -19,19 +16,20 @@ def load_lightmem(collection_name):
                 "collection_name": collection_name,
                 "embedding_model_dims": 384,
                 "path": f"/{collection_name}",
-            }
+            },
         },
         "update": "offline",
     }
     lightmem = LightMemory.from_config(config)
     return lightmem
 
+
 base_dir = ""
 
 for collection_name in os.listdir(base_dir):
     collection_path = os.path.join(base_dir, collection_name)
     if not os.path.isdir(collection_path):
-        continue  
+        continue
 
     print(f"Processing collection: {collection_name}")
 

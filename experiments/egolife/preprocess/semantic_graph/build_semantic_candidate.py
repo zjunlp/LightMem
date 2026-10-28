@@ -114,8 +114,7 @@ def build_grouped_payload_batch(
 
     if expected_scale and file_scale != expected_scale:
         logger.warning(
-            "Input file scale is %s, expected %s. "
-            "For exact back-projection to 30sec, you should use the 30sec file.",
+            "Input file scale is %s, expected %s. For exact back-projection to 30sec, you should use the 30sec file.",
             file_scale,
             expected_scale,
         )
@@ -123,7 +122,7 @@ def build_grouped_payload_batch(
     payload_batch: Dict[str, Dict[str, Any]] = {}
 
     for i in range(0, len(units), period):
-        group_units = units[i:i + period]
+        group_units = units[i : i + period]
         if not group_units:
             continue
 
@@ -236,12 +235,10 @@ def project_group_evidence_to_root_refs(results: Dict[str, Any]) -> Dict[str, An
         item["evidence_root_ids"] = evidence_root_ids
 
     results["episodic_evidence_refs"] = {
-        item["chunk_id"]: item.get("episodic_evidence_refs", [])
-        for item in results.get("items", [])
+        item["chunk_id"]: item.get("episodic_evidence_refs", []) for item in results.get("items", [])
     }
     results["evidence_root_ids"] = {
-        item["chunk_id"]: item.get("evidence_root_ids", [])
-        for item in results.get("items", [])
+        item["chunk_id"]: item.get("evidence_root_ids", []) for item in results.get("items", [])
     }
     return results
 
@@ -290,9 +287,7 @@ def run_semantic_extraction_from_grouped_30sec(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Paper-style semantic extraction from grouped 30sec episodic units."
-    )
+    parser = argparse.ArgumentParser(description="Paper-style semantic extraction from grouped 30sec episodic units.")
     parser.add_argument("--episodic-file", type=str, required=True, help="Path to 30sec episodic_triplets JSON.")
     parser.add_argument("--output-dir", type=str, required=True)
     parser.add_argument("--model", type=str, default="gpt-5-mini")
@@ -318,5 +313,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

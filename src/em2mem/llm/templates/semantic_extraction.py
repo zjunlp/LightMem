@@ -68,5 +68,5 @@ prompt_template = [
     {"role": "system", "content": semantic_extraction_system},
     {"role": "user", "content": one_shot_semantic_input},
     {"role": "assistant", "content": one_shot_semantic_output},
-    {"role": "user", "content": "Episodic triples:\n${episodic_triples}"}
+    {"role": "user", "content": "Episodic triples:\n${episodic_triples}"},
 ]

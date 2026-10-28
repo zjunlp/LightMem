@@ -1,26 +1,27 @@
-from memories.datasets.base import QuestionAnswerPair, MemoryDataset
-from inference_utils.operators import (
-    QuestionAnsweringOperator,
-    LLMExactMatch,
-)
-from memories import DATASET_MAPPING
-import numpy as np
 import argparse
-import json 
-import os 
+import json
+import os
 from typing import (
-    List,
-    Dict,
     Any,
+    Dict,
+    List,
     Optional,
     Tuple,
 )
+
+import numpy as np
+from inference_utils.operators import (
+    LLMExactMatch,
+    QuestionAnsweringOperator,
+)
+from memories import DATASET_MAPPING
+from memories.datasets.base import QuestionAnswerPair
 
 
 def _build_context_text(retrieved_memories: List[Dict[str, Any]]) -> str:
     contents = []
     for i, mem in enumerate(retrieved_memories):
-        content = mem.get("used_content", '')
+        content = mem.get("used_content", "")
         if not isinstance(content, str):
             raise AssertionError("The used_content is not a string for the current memory unit.")
         if not content:
@@ -34,7 +35,7 @@ def answer_questions(
     qa_model: str,
     qa_batch_size: int = 4,
     add_question_timestamp: bool = False,
-    dataset_type: Optional[str] = None, 
+    dataset_type: Optional[str] = None,
     interface_kwargs: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     interface_kwargs = interface_kwargs or {}
@@ -49,8 +50,7 @@ def answer_questions(
         questions.append(question_text)
         base_ctx = _build_context_text(item["retrieved_memories"])
         contexts.append(base_ctx)
-    
-    
+
     has_graph = any(
         mem.get("metadata", {}).get("has_graph_relations", False)
         for item in retrievals
@@ -58,12 +58,12 @@ def answer_questions(
     )
     if dataset_type is not None:
         dataset_cls = DATASET_MAPPING[dataset_type]
-        prompt_name = dataset_cls.get_qa_prompt_name(has_graph) 
+        prompt_name = dataset_cls.get_qa_prompt_name(has_graph)
     else:
         prompt_name = "question-answering"
 
     print(f"Using prompt: {prompt_name} for question answering.")
-    
+
     qa_operator = QuestionAnsweringOperator(
         prompt_name=prompt_name,
         model_name=qa_model,
@@ -79,12 +79,13 @@ def answer_questions(
     )
     return responses
 
+
 def evaluate_answers(
     retrievals: List[Dict[str, Any]],
     predictions: List[Dict[str, Any]],
     judge_model: str,
     judge_batch_size: int = 4,
-    dataset_type: Optional[str] = None, 
+    dataset_type: Optional[str] = None,
     interface_kwargs: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     interface_kwargs = interface_kwargs or {}
@@ -92,12 +93,12 @@ def evaluate_answers(
     golden_answers_list: List[List[str]] = []
     prediction_list: List[str] = []
     prompt_name_per_index: List[Tuple[str, str]] = []
-    category_per_index: List[Any] = []  
+    category_per_index: List[Any] = []
     for i, item in enumerate(retrievals):
         qa_pair: QuestionAnswerPair = item["qa_pair"]
         question_list.append(qa_pair.question)
         golden_answers_list.append([ans for ans in qa_pair.answer_list])
-        pred = predictions[i].get("processed_content") 
+        pred = predictions[i].get("processed_content")
         # LLMs are not robust to the empty string.
         if pred is None:
             raise ValueError(f"The prediction is None for the question {qa_pair.question}.")
@@ -112,7 +113,7 @@ def evaluate_answers(
         else:
             qtype = qa_pair.metadata.get("question_type", "normal")
             prompt_name = "exact-match"
-    
+
         prompt_name_per_index.append((prompt_name, qtype))
 
     print(f"Using prompt: {prompt_name} for judgment.")
@@ -125,7 +126,7 @@ def evaluate_answers(
     groups: Dict[Tuple[str, str], List[int]] = {}
     for idx, p in enumerate(prompt_name_per_index):
         if p not in groups:
-            groups[p] = [] 
+            groups[p] = []
         groups[p].append(idx)
 
     judge_outputs: List[Optional[Dict[str, Any]]] = [None] * len(retrievals)
@@ -142,7 +143,7 @@ def evaluate_answers(
             batched_predictions,
             batch_size=judge_batch_size,
             aggregate=False,
-            temperature=0.0, 
+            temperature=0.0,
         )
         for local_pos, global_idx in enumerate(idx_list):
             out = results[local_pos]
@@ -153,16 +154,14 @@ def evaluate_answers(
             is_correct = "yes" in content.lower() or "correct" in content.lower()
             correctness_flags[global_idx] = is_correct
         # Aggregate each group's results and print the average accuracy
-        accuracy = np.mean(
-            [correctness_flags[global_idx] for global_idx in idx_list]
-        ).item()
+        accuracy = np.mean([correctness_flags[global_idx] for global_idx in idx_list]).item()
         print(f"The accuracy for {qtype} (prompt name: {prompt_name}) is {accuracy:.4f}.")
-    
+
     # Print the overall accuracy
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     accuracy = np.mean(correctness_flags).item()
     print(f"Overall Accuracy: {accuracy:.4f}")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     finalized = []
     for i in range(len(retrievals)):
@@ -170,71 +169,39 @@ def evaluate_answers(
             {
                 "judge_response": judge_outputs[i],
                 "is_correct": correctness_flags[i],
-                "category": category_per_index[i],  
+                "category": category_per_index[i],
             }
         )
     return finalized
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="A script to evaluate the answers of the search results."
-    )
+    parser = argparse.ArgumentParser(description="A script to evaluate the answers of the search results.")
+    parser.add_argument("--search-results-path", type=str, required=True, help="Path to the search results.")
+    parser.add_argument("--qa-model", type=str, default="gpt-4o-mini", help="Model name/path for question answering.")
     parser.add_argument(
-        "--search-results-path",
-        type=str,
-        required=True,
-        help="Path to the search results."
+        "--judge-model", type=str, default="gpt-4o-mini", help="Model name/path for judgment (exact match)."
     )
+    parser.add_argument("--qa-batch-size", type=int, default=4, help="Batch size for QA generation.")
+    parser.add_argument("--judge-batch-size", type=int, default=4, help="Batch size for judge model.")
+    parser.add_argument("--api-config-path", type=str, default=None, help="Path to the API config file.")
     parser.add_argument(
-        "--qa-model",
-        type=str,
-        default="gpt-4o-mini",
-        help="Model name/path for question answering."
-    )
-    parser.add_argument(
-        "--judge-model",
-        type=str,
-        default="gpt-4o-mini",
-        help="Model name/path for judgment (exact match)."
-    )
-    parser.add_argument(
-        "--qa-batch-size",
-        type=int,
-        default=4,
-        help="Batch size for QA generation."
-    )
-    parser.add_argument(
-        "--judge-batch-size",
-        type=int,
-        default=4,
-        help="Batch size for judge model."
-    )
-    parser.add_argument(
-        "--api-config-path", 
-        type=str, 
-        default=None,
-        help="Path to the API config file."
-    )
-    parser.add_argument(
-        "--dataset-type",
-        type=str,
-        required=True,
-        help="The type of dataset (e.g., LoCoMo, LongMemEval)."
+        "--dataset-type", type=str, required=True, help="The type of dataset (e.g., LoCoMo, LongMemEval)."
     )
     args = parser.parse_args()
 
     # Prepare interface kwargs
     interface_kwargs: Dict[str, Any] = {}
     if args.api_config_path is not None:
-        with open(args.api_config_path, 'r') as f:
+        with open(args.api_config_path, "r") as f:
             api_config = json.load(f)
         interface_kwargs["api_keys"] = api_config["api_keys"]
         interface_kwargs["base_urls"] = api_config["base_urls"]
     elif os.environ.get("OPENAI_API_KEY") is not None:
         interface_kwargs["api_keys"] = [os.environ.get("OPENAI_API_KEY")]
         interface_kwargs["base_urls"] = [os.environ.get("OPENAI_API_BASE")]
-    
-    with open(args.search_results_path, 'r') as f:
+
+    with open(args.search_results_path, "r") as f:
         retrievals = json.load(f)
     for item in retrievals:
         item["qa_pair"] = QuestionAnswerPair(**item["qa_pair"])
@@ -246,7 +213,7 @@ if __name__ == "__main__":
         retrievals,
         qa_model=args.qa_model,
         qa_batch_size=args.qa_batch_size,
-        dataset_type=args.dataset_type, 
+        dataset_type=args.dataset_type,
         interface_kwargs=interface_kwargs,
     )
 
@@ -257,7 +224,7 @@ if __name__ == "__main__":
         qa_responses,
         judge_model=args.judge_model,
         judge_batch_size=args.judge_batch_size,
-        dataset_type=args.dataset_type, 
+        dataset_type=args.dataset_type,
         interface_kwargs=interface_kwargs,
     )
 
@@ -278,16 +245,12 @@ if __name__ == "__main__":
             }
         )
 
-    output_path = args.search_results_path.rsplit('.', 1)[0] + "_evaluation.json"
-    with open(
-        output_path, 
-        'w', 
-        encoding="utf-8"
-    ) as f:
+    output_path = args.search_results_path.rsplit(".", 1)[0] + "_evaluation.json"
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(
-            final_results, 
-            f, 
-            ensure_ascii=False, 
-            indent=4, 
+            final_results,
+            f,
+            ensure_ascii=False,
+            indent=4,
         )
     print(f"Saved {len(final_results)} results to {output_path}.")

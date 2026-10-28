@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, model_validator
 from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class BM25Config(BaseModel):
@@ -17,9 +18,9 @@ class BM25Config(BaseModel):
     def check_params(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         k1, b = values.get("k1"), values.get("b")
         if b is not None and not (0 < b <= 1):
-          raise ValueError("Parameter 'b' must be between 0 and 1.")
+            raise ValueError("Parameter 'b' must be between 0 and 1.")
         if k1 is not None and not (0 < k1):
-          raise ValueError("Parameter 'k1' must be greater than 0.")
+            raise ValueError("Parameter 'k1' must be greater than 0.")
 
         return values
 

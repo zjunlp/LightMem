@@ -1,13 +1,14 @@
 import json
-import os
 import logging
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Tuple
 
-from .utils import SemanticRawOutput, SemanticOutput
-from ...llm import LLMModel, PromptTemplateManager
 from tqdm import tqdm
+
+from ...llm import LLMModel, PromptTemplateManager
+from .utils import SemanticOutput, SemanticRawOutput
 
 logger = logging.getLogger(__name__)
 
@@ -111,12 +112,10 @@ class SemanticExtraction:
         )
 
     def batch_semantic_extraction(
-        self,
-        episodic_triples_batch: Dict[str, List[List[str]]]
+        self, episodic_triples_batch: Dict[str, List[List[str]]]
     ) -> Tuple[Dict[str, List[List[str]]], Dict[str, List[List[int]]]]:
         payload_batch = {
-            chunk_key: {"triples": triples, "metadata": {}}
-            for chunk_key, triples in episodic_triples_batch.items()
+            chunk_key: {"triples": triples, "metadata": {}} for chunk_key, triples in episodic_triples_batch.items()
         }
         combined_results = self.batch_semantic_extraction_with_metadata(payload_batch)
         return combined_results["semantic_triples"], combined_results["episodic_evidence"]
@@ -165,12 +164,8 @@ class SemanticExtraction:
 
         combined_results: Dict[str, Any] = {
             "items": items,
-            "semantic_triples": {
-                item["chunk_id"]: item["semantic_triples"] for item in items
-            },
-            "episodic_evidence": {
-                item["chunk_id"]: item["episodic_evidence"] for item in items
-            },
+            "semantic_triples": {item["chunk_id"]: item["semantic_triples"] for item in items},
+            "episodic_evidence": {item["chunk_id"]: item["episodic_evidence"] for item in items},
             "metadata": {
                 item["chunk_id"]: {
                     k: v
@@ -206,9 +201,7 @@ class SemanticExtraction:
         if last_error is not None:
             retry_instruction += f"\nPrevious validation error:\n{str(last_error)}\n"
 
-        return list(base_messages) + [
-            {"role": "user", "content": retry_instruction}
-        ]
+        return list(base_messages) + [{"role": "user", "content": retry_instruction}]
 
     # -------------------------------------------------------------------------
     # Raw fallback
@@ -275,7 +268,7 @@ class SemanticExtraction:
         start = cleaned.find("{")
         end = cleaned.rfind("}")
         if start != -1 and end != -1 and end > start:
-            candidate = cleaned[start:end + 1]
+            candidate = cleaned[start : end + 1]
             parsed = json.loads(candidate)
             if isinstance(parsed, dict):
                 return parsed
@@ -371,7 +364,6 @@ class SemanticExtraction:
 
     def _clean_text(self, text: str) -> str:
         return " ".join(text.strip().split())
-
 
     def save_results(self, results: Dict[str, Any], output_path: str) -> None:
         os.makedirs(os.path.dirname(output_path), exist_ok=True)

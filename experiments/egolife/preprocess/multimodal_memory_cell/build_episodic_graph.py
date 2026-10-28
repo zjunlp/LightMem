@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -208,8 +208,22 @@ class HighLevelTripletRawOutput(BaseModel):
 # =========================================================
 
 PRONOUNS_TO_SKIP = {
-    "it", "its", "they", "them", "their", "this", "that", "these", "those",
-    "there", "here", "something", "someone", "somebody", "anything", "everything",
+    "it",
+    "its",
+    "they",
+    "them",
+    "their",
+    "this",
+    "that",
+    "these",
+    "those",
+    "there",
+    "here",
+    "something",
+    "someone",
+    "somebody",
+    "anything",
+    "everything",
 }
 FIRST_PERSON = {"i", "me", "my", "myself"}
 GROUP_ALIASES = {
@@ -221,15 +235,35 @@ GROUP_ALIASES = {
 }
 RELATION_STOPLIST = {"be", "is", "are", "was", "were", "have", "has", "had", "do", "does", "did"}
 BAD_RELATIONS = {
-    "at", "with",
-    "observe", "observes", "observed",
-    "hear", "heard",
-    "witness", "witnesses", "witnessed",
-    "notice", "noticed",
-    "refer_to", "refers_to",
-    "face", "faces", "facing",
-    "stand_by", "sit_by", "look_toward", "turn_to", "wave_to",
-    "point_at", "place_hand_on", "rub", "contain", "contains", "involve", "involves",
+    "at",
+    "with",
+    "observe",
+    "observes",
+    "observed",
+    "hear",
+    "heard",
+    "witness",
+    "witnesses",
+    "witnessed",
+    "notice",
+    "noticed",
+    "refer_to",
+    "refers_to",
+    "face",
+    "faces",
+    "facing",
+    "stand_by",
+    "sit_by",
+    "look_toward",
+    "turn_to",
+    "wave_to",
+    "point_at",
+    "place_hand_on",
+    "rub",
+    "contain",
+    "contains",
+    "involve",
+    "involves",
 }
 ALLOWED_RELATIONS = {
     "hand_to",
@@ -253,20 +287,65 @@ ALLOWED_RELATIONS = {
     "offer",
 }
 INFERRED_NAME_STOPWORDS = {
-    "I", "We", "He", "She", "They", "It",
-    "Okay", "Yes", "No", "The", "A", "An",
-    "Then", "Later", "After", "Before", "Meanwhile",
-    "Stage", "Primary", "Finally", "Overall",
-    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+    "I",
+    "We",
+    "He",
+    "She",
+    "They",
+    "It",
+    "Okay",
+    "Yes",
+    "No",
+    "The",
+    "A",
+    "An",
+    "Then",
+    "Later",
+    "After",
+    "Before",
+    "Meanwhile",
+    "Stage",
+    "Primary",
+    "Finally",
+    "Overall",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
 }
 LOW_VALUE_TOPICS_EXACT = {
-    "awkwardness", "left", "right", "up", "down", "here", "there",
-    "place_visibility", "open_item_first", "continue_left", "move_left", "move_right",
-    "everyone", "group", "plastic_bag", "lining", "this_thing", "question", "questions",
+    "awkwardness",
+    "left",
+    "right",
+    "up",
+    "down",
+    "here",
+    "there",
+    "place_visibility",
+    "open_item_first",
+    "continue_left",
+    "move_left",
+    "move_right",
+    "everyone",
+    "group",
+    "plastic_bag",
+    "lining",
+    "this_thing",
+    "question",
+    "questions",
 }
 LOW_VALUE_TOPIC_PATTERNS = [
-    r"\bawkward", r"\bvisibility\b", r"\bleft\b", r"\bright\b", r"\bthis thing\b",
-    r"\bplastic bag\b", r"\blining\b", r"\bstage \d+\b",
+    r"\bawkward",
+    r"\bvisibility\b",
+    r"\bleft\b",
+    r"\bright\b",
+    r"\bthis thing\b",
+    r"\bplastic bag\b",
+    r"\blining\b",
+    r"\bstage \d+\b",
 ]
 LOW_VALUE_ENTITY_EXACT = {"left", "right", "up", "down", "here", "there"}
 TIME_SPAN_PATTERNS = [
@@ -276,12 +355,21 @@ TIME_SPAN_PATTERNS = [
     r"^\d{1,2}\s+\d{2}\s+\d{1,2}\s+\d{2}$",
 ]
 LOW_VALUE_HEAD_PATTERNS = [
-    r"^stage\s*\d+", r"^primary view", r"^overall flow", r"^planning and invite methods",
-    r"^major visual transitions", r"^scene context",
+    r"^stage\s*\d+",
+    r"^primary view",
+    r"^overall flow",
+    r"^planning and invite methods",
+    r"^major visual transitions",
+    r"^scene context",
 ]
 LONG_RELATION_BAD_PATTERNS = [
-    r"\bin presence of\b", r"\bwhile\b", r"\bduring\b", r"\bso that\b", r"\bwhich\b",
-    r"\bthat\b", r"\bbecause\b",
+    r"\bin presence of\b",
+    r"\bwhile\b",
+    r"\bduring\b",
+    r"\bso that\b",
+    r"\bwhich\b",
+    r"\bthat\b",
+    r"\bbecause\b",
 ]
 
 RELATION_MAP: List[Tuple[str, str]] = [
@@ -899,10 +987,25 @@ def normalize_entity(raw: str, meta_idx: Dict[str, Any]) -> str:
         return s.capitalize()
 
     obj = canonicalize_object(s)
-    if obj and (obj in meta_idx["object_set"] or obj in {
-        "container", "tripod", "phone", "hard drive", "cable", "bag", "marker",
-        "power bank", "screw", "stopwatch", "glasses", "board", "clapperboard",
-    }):
+    if obj and (
+        obj in meta_idx["object_set"]
+        or obj
+        in {
+            "container",
+            "tripod",
+            "phone",
+            "hard drive",
+            "cable",
+            "bag",
+            "marker",
+            "power bank",
+            "screw",
+            "stopwatch",
+            "glasses",
+            "board",
+            "clapperboard",
+        }
+    ):
         return obj
 
     place = canonicalize_scene(s)
@@ -925,8 +1028,19 @@ def entity_type(entity: str, meta_idx: Dict[str, Any]) -> str:
     if entity in meta_idx["place_set"]:
         return "Place"
     if entity in meta_idx["object_set"] or entity in {
-        "container", "tripod", "phone", "hard drive", "cable", "bag", "marker",
-        "power bank", "screw", "stopwatch", "glasses", "board", "clapperboard",
+        "container",
+        "tripod",
+        "phone",
+        "hard drive",
+        "cable",
+        "bag",
+        "marker",
+        "power bank",
+        "screw",
+        "stopwatch",
+        "glasses",
+        "board",
+        "clapperboard",
     }:
         return "Object"
     if entity in meta_idx["topic_set"] or canonicalize_topic(entity):
@@ -940,7 +1054,18 @@ def normalize_tail_by_relation(raw_t: str, current_t: str, relation: str, meta_i
     raw_t = str(raw_t).strip()
     cur = str(current_t).strip()
 
-    if relation in {"move", "hold", "use", "inspect", "organize", "place_on", "take_from", "assemble", "fit_into", "write_on"}:
+    if relation in {
+        "move",
+        "hold",
+        "use",
+        "inspect",
+        "organize",
+        "place_on",
+        "take_from",
+        "assemble",
+        "fit_into",
+        "write_on",
+    }:
         place = canonicalize_scene(raw_t)
         if place and place in meta_idx["place_set"]:
             return place
@@ -1016,7 +1141,8 @@ def build_highlevel_triplet_payload(unit: Dict[str, Any], person_name: str, scal
         "action_threads": thread_canonical_values(unit.get("action_threads", []), ["action"]),
         "object_threads": thread_canonical_values(unit.get("object_threads", []), ["object"]),
         "topic_threads": thread_canonical_values(unit.get("topic_threads", []), ["topic"]),
-        "speaker_names": speaker_names_from_stats(unit.get("speaker_stats", [])) or unique_keep_order(ensure_list(unit.get("speakers", []))),
+        "speaker_names": speaker_names_from_stats(unit.get("speaker_stats", []))
+        or unique_keep_order(ensure_list(unit.get("speakers", []))),
         "scene_summary": scene_summary,
         "visual_summary": visual_summary,
     }
@@ -1059,7 +1185,9 @@ def dedup_entities(entities: List[str]) -> List[str]:
     return out
 
 
-def run_direct_30sec_triplet_extraction(llm_model: LLMModel, unit: Dict[str, Any], person_name: str) -> Tuple[List[str], List[List[str]]]:
+def run_direct_30sec_triplet_extraction(
+    llm_model: LLMModel, unit: Dict[str, Any], person_name: str
+) -> Tuple[List[str], List[List[str]]]:
     payload = build_30sec_triplet_payload(unit, person_name)
     messages = [
         {"role": "system", "content": DIRECT_30SEC_TRIPLET_SYSTEM_PROMPT},
@@ -1070,7 +1198,9 @@ def run_direct_30sec_triplet_extraction(llm_model: LLMModel, unit: Dict[str, Any
     return entities, dedup_triples(response.triplets)
 
 
-def run_highlevel_triplet_extraction(llm_model: LLMModel, unit: Dict[str, Any], person_name: str, scale: str) -> Tuple[List[str], List[List[str]]]:
+def run_highlevel_triplet_extraction(
+    llm_model: LLMModel, unit: Dict[str, Any], person_name: str, scale: str
+) -> Tuple[List[str], List[List[str]]]:
     payload = build_highlevel_triplet_payload(unit, person_name, scale)
     messages = [
         {"role": "system", "content": HIGH_LEVEL_TRIPLET_SYSTEM_PROMPT},
@@ -1121,7 +1251,9 @@ def run_structured_batch(
     return ner_results, triple_results
 
 
-def save_openie_like_results(output_dir: str, model_name: str, ner_results: Dict[str, List[str]], triple_results: Dict[str, List[List[str]]]):
+def save_openie_like_results(
+    output_dir: str, model_name: str, ner_results: Dict[str, List[str]], triple_results: Dict[str, List[List[str]]]
+):
     data = {"ner_results": ner_results, "triple_results": triple_results}
     path = os.path.join(output_dir, f"openie_results_{model_name}.json")
     save_json(path, data)
@@ -1156,14 +1288,42 @@ def should_keep_triplet(h: str, r: str, t: str, meta_idx: Dict[str, Any], raw_re
         return False
     if not valid_relation_type(h, r, t, meta_idx):
         return False
-    if r in {"hand_to", "ask_about", "confirm", "say_about", "hold", "use", "inspect", "explain", "offer", "write_on", "assemble", "fit_into", "invite"}:
+    if r in {
+        "hand_to",
+        "ask_about",
+        "confirm",
+        "say_about",
+        "hold",
+        "use",
+        "inspect",
+        "explain",
+        "offer",
+        "write_on",
+        "assemble",
+        "fit_into",
+        "invite",
+    }:
         return True
-    head_known = h in meta_idx["person_set"] or h in meta_idx["object_set"] or h in meta_idx["topic_set"] or h in meta_idx["place_set"] or h == "group"
-    tail_known = t in meta_idx["person_set"] or t in meta_idx["object_set"] or t in meta_idx["topic_set"] or t in meta_idx["place_set"] or t == "group"
+    head_known = (
+        h in meta_idx["person_set"]
+        or h in meta_idx["object_set"]
+        or h in meta_idx["topic_set"]
+        or h in meta_idx["place_set"]
+        or h == "group"
+    )
+    tail_known = (
+        t in meta_idx["person_set"]
+        or t in meta_idx["object_set"]
+        or t in meta_idx["topic_set"]
+        or t in meta_idx["place_set"]
+        or t == "group"
+    )
     return head_known or tail_known
 
 
-def normalize_and_filter_triplets(raw_triplets: List[List[str]], unit: Dict[str, Any], person_name: str) -> List[List[str]]:
+def normalize_and_filter_triplets(
+    raw_triplets: List[List[str]], unit: Dict[str, Any], person_name: str
+) -> List[List[str]]:
     meta_idx = collect_metadata_index(unit, person_name)
     kept: List[List[str]] = []
     seen = set()
@@ -1192,7 +1352,11 @@ def normalize_and_filter_triplets(raw_triplets: List[List[str]], unit: Dict[str,
         if r in {"ask_about", "confirm", "say_about", "discuss", "explain", "offer", "invite"}:
             if not t:
                 continue
-            if r in {"say_about", "discuss", "explain", "offer", "invite"} and entity_type(t, meta_idx) not in {"Topic", "Object", "Entity"}:
+            if r in {"say_about", "discuss", "explain", "offer", "invite"} and entity_type(t, meta_idx) not in {
+                "Topic",
+                "Object",
+                "Entity",
+            }:
                 continue
             if entity_type(t, meta_idx) == "Topic" and is_low_value_topic(t):
                 continue
@@ -1224,7 +1388,14 @@ def add_node(nodes: Dict[str, Dict[str, Any]], node_id: str, node_type: str, lab
         nodes[node_id] = {"id": node_id, "type": node_type, "label": label, **attrs}
 
 
-def add_edge(edges: Dict[Tuple[str, str, str, str], Dict[str, Any]], source: str, target: str, edge_type: str, event_id: str, **attrs):
+def add_edge(
+    edges: Dict[Tuple[str, str, str, str], Dict[str, Any]],
+    source: str,
+    target: str,
+    edge_type: str,
+    event_id: str,
+    **attrs,
+):
     key = (source, target, edge_type, event_id)
     if key not in edges:
         edges[key] = {"source": source, "target": target, "type": edge_type, "event_id": event_id, **attrs}
@@ -1302,7 +1473,16 @@ def build_event_centric_graph(
                 attach_type = "about"
             elif ent_type == "Object":
                 attach_type = "mentions_object"
-            add_edge(edges, event_node_id, ent_id, attach_type, event_node_id, doc_id=doc_id, scale=scale, edge_source="attachment")
+            add_edge(
+                edges,
+                event_node_id,
+                ent_id,
+                attach_type,
+                event_node_id,
+                doc_id=doc_id,
+                scale=scale,
+                edge_source="attachment",
+            )
 
         scene_summary = get_scene_summary(unit)
         dominant_scene = ""
@@ -1311,10 +1491,27 @@ def build_event_centric_graph(
         if dominant_scene:
             place_id = make_node_id("Place", dominant_scene)
             add_node(nodes, place_id, "Place", dominant_scene)
-            add_edge(edges, event_node_id, place_id, "occurs_in", event_node_id, doc_id=doc_id, scale=scale, edge_source="metadata")
+            add_edge(
+                edges,
+                event_node_id,
+                place_id,
+                "occurs_in",
+                event_node_id,
+                doc_id=doc_id,
+                scale=scale,
+                edge_source="metadata",
+            )
 
     for i in range(len(ordered_event_ids) - 1):
-        add_edge(edges, ordered_event_ids[i], ordered_event_ids[i + 1], "before", ordered_event_ids[i], edge_source="temporal", scale=scale)
+        add_edge(
+            edges,
+            ordered_event_ids[i],
+            ordered_event_ids[i + 1],
+            "before",
+            ordered_event_ids[i],
+            edge_source="temporal",
+            scale=scale,
+        )
 
     graph = {
         "graph_type": "event_centric_episodic_graph",

@@ -1,6 +1,6 @@
+import argparse
 import json
 import os
-import argparse
 from typing import Dict, List, Optional
 
 import pandas as pd
@@ -178,9 +178,7 @@ def match_with_video(info: tuple, all_df: pd.DataFrame):
     if not os.path.isdir(root_dir):
         return []
 
-    all_video_files = sorted(
-        [f for f in os.listdir(root_dir) if os.path.isfile(os.path.join(root_dir, f))]
-    )
+    all_video_files = sorted([f for f in os.listdir(root_dir) if os.path.isfile(os.path.join(root_dir, f))])
 
     start_time = time
     end_time = start_time + 3000
@@ -189,10 +187,7 @@ def match_with_video(info: tuple, all_df: pd.DataFrame):
     while start_time < time + 1000000:
         video_file = find_video(all_video_files, start_time, end_time)
         if video_file is not None:
-            cur_df = all_df[
-                (all_df["start"] >= (start_time // 100)) &
-                (all_df["end"] <= (end_time // 100))
-            ]
+            cur_df = all_df[(all_df["start"] >= (start_time // 100)) & (all_df["end"] <= (end_time // 100))]
 
             if len(cur_df) > 0:
                 data = []
@@ -240,9 +235,7 @@ def main():
 
     # Check if the caption directory is valid and contains jsonl files
     if is_valid_dir(DENSE_CAPTION_DIR) and is_valid_dir(TRANSLATED_DIR):
-        translated_files = sorted(
-            [f for f in os.listdir(TRANSLATED_DIR) if f.endswith(".jsonl")]
-        )
+        translated_files = sorted([f for f in os.listdir(TRANSLATED_DIR) if f.endswith(".jsonl")])
         if translated_files:
             caption_mode = True
 
@@ -278,7 +271,9 @@ def main():
                 json.dump(results, f, indent=4, ensure_ascii=False)
 
     else:
-        print(f"If DenseCaption / translated is empty or invalid, perform sync for transcripts only (only {TARGET_NAME}).")
+        print(
+            f"If DenseCaption / translated is empty or invalid, perform sync for transcripts only (only {TARGET_NAME})."
+        )
         transcript_items = get_available_transcript_files(target_name=TARGET_NAME)
 
         for item in tqdm(transcript_items, desc=f"Syncing transcripts only: {TARGET_NAME}"):

@@ -1,9 +1,10 @@
 """LLM abstract interface and default OpenAI implementation"""
+
+import json
+import os
+import re
 from abc import ABC, abstractmethod
 from typing import List, Optional
-import os
-import json
-import re
 
 
 class BaseLLM(ABC):
@@ -40,9 +41,7 @@ class BaseLLM(ABC):
         pass
 
     @abstractmethod
-    async def reshape_content(
-        self, node_content: str, target_granularity: str, context: str
-    ) -> str:
+    async def reshape_content(self, node_content: str, target_granularity: str, context: str) -> str:
         """Reshape the granularity of node content"""
         pass
 
@@ -55,16 +54,14 @@ class OpenAILLM(BaseLLM):
             from openai import AsyncOpenAI
         except ImportError as exc:
             raise ImportError(
-                "openai package is required for OpenAILLM. "
-                "Please install it with: pip install openai"
+                "openai package is required for OpenAILLM. Please install it with: pip install openai"
             ) from exc
 
         self.model = model
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError(
-                "OpenAI API key is required. Set OPENAI_API_KEY environment variable "
-                "or pass api_key parameter."
+                "OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass api_key parameter."
             )
         self._client = AsyncOpenAI(api_key=self.api_key)
 
@@ -95,10 +92,7 @@ class OpenAILLM(BaseLLM):
             "between 0.0 and 1.0, where 0.0 means completely unrelated and 1.0 "
             "means the evidence fully supports the claim."
         )
-        user_prompt = (
-            f"Claim: {claim}\n\nEvidence: {evidence}\n\n"
-            "Relevance score (0.0-1.0):"
-        )
+        user_prompt = f"Claim: {claim}\n\nEvidence: {evidence}\n\nRelevance score (0.0-1.0):"
         raw = await self.generate(
             prompt=user_prompt,
             system_prompt=system_prompt,
@@ -120,12 +114,9 @@ class OpenAILLM(BaseLLM):
             "that are shared across them. Present the extracted skills in a "
             "structured format."
         )
-        traj_text = "\n\n---\n\n".join(
-            f"Trajectory {i+1}:\n{t}" for i, t in enumerate(trajectories)
-        )
+        traj_text = "\n\n---\n\n".join(f"Trajectory {i + 1}:\n{t}" for i, t in enumerate(trajectories))
         user_prompt = (
-            f"Please analyze the following trajectories and extract the shared "
-            f"skills/patterns:\n\n{traj_text}"
+            f"Please analyze the following trajectories and extract the shared skills/patterns:\n\n{traj_text}"
         )
         return await self.generate(
             prompt=user_prompt,
@@ -159,7 +150,7 @@ class OpenAILLM(BaseLLM):
             "feedback, determine the type of failure and recommended action. "
             "You MUST respond with a valid JSON object with these keys:\n"
             '- "type": either "connection" (failure due to missing/wrong link '
-            "between nodes) or \"unit\" (failure within a single node's content)\n"
+            'between nodes) or "unit" (failure within a single node\'s content)\n'
             '- "action": either "expand" (add more content/connections), '
             '"prune" (remove irrelevant content), or "reshape" (change granularity)\n'
             '- "details": a string explaining the reasoning\n\n'
@@ -168,8 +159,7 @@ class OpenAILLM(BaseLLM):
             '"details": "Missing link between concept A and concept B"}'
         )
         user_prompt = (
-            f"Context:\n{context}\n\nFailure feedback:\n{feedback}\n\n"
-            "Analyze the failure and respond with JSON:"
+            f"Context:\n{context}\n\nFailure feedback:\n{feedback}\n\nAnalyze the failure and respond with JSON:"
         )
         raw = await self.generate(
             prompt=user_prompt,
@@ -205,9 +195,7 @@ class OpenAILLM(BaseLLM):
                 "details": f"Failed to parse failure attribution response. Raw: {raw}",
             }
 
-    async def reshape_content(
-        self, node_content: str, target_granularity: str, context: str
-    ) -> str:
+    async def reshape_content(self, node_content: str, target_granularity: str, context: str) -> str:
         """Reshape the granularity of node content"""
         system_prompt = (
             "You are a content reshaping assistant. You will be given node "

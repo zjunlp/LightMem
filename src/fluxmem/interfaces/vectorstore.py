@@ -1,6 +1,8 @@
 """Vector store abstract interface and default FAISS implementation"""
+
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional, Dict
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 
 
@@ -36,8 +38,7 @@ class FAISSVectorStore(BaseVectorStore):
             import faiss
         except ImportError as exc:
             raise ImportError(
-                "faiss-cpu package is required for FAISSVectorStore. "
-                "Please install it with: pip install faiss-cpu"
+                "faiss-cpu package is required for FAISSVectorStore. Please install it with: pip install faiss-cpu"
             ) from exc
 
         self.dimension = dimension
@@ -57,15 +58,9 @@ class FAISSVectorStore(BaseVectorStore):
         if vectors.ndim == 1:
             vectors = vectors.reshape(1, -1)
         if vectors.shape[1] != self.dimension:
-            raise ValueError(
-                f"Vector dimension mismatch: expected {self.dimension}, "
-                f"got {vectors.shape[1]}"
-            )
+            raise ValueError(f"Vector dimension mismatch: expected {self.dimension}, got {vectors.shape[1]}")
         if len(ids) != vectors.shape[0]:
-            raise ValueError(
-                f"Number of ids ({len(ids)}) does not match "
-                f"number of vectors ({vectors.shape[0]})"
-            )
+            raise ValueError(f"Number of ids ({len(ids)}) does not match number of vectors ({vectors.shape[0]})")
 
         # Normalize vectors so that inner product equals cosine similarity
         norms = np.linalg.norm(vectors, axis=1, keepdims=True)
@@ -85,16 +80,11 @@ class FAISSVectorStore(BaseVectorStore):
 
         self._index.add(normalized)
 
-    def search(
-        self, query_vector: np.ndarray, top_k: int = 5
-    ) -> List[Tuple[str, float]]:
+    def search(self, query_vector: np.ndarray, top_k: int = 5) -> List[Tuple[str, float]]:
         """Search nearest neighbors; return a list of (id, score)"""
         query_vector = np.asarray(query_vector, dtype=np.float32).reshape(1, -1)
         if query_vector.shape[1] != self.dimension:
-            raise ValueError(
-                f"Query dimension mismatch: expected {self.dimension}, "
-                f"got {query_vector.shape[1]}"
-            )
+            raise ValueError(f"Query dimension mismatch: expected {self.dimension}, got {query_vector.shape[1]}")
 
         # Normalize the query vector
         norm = np.linalg.norm(query_vector)
@@ -136,9 +126,7 @@ class FAISSVectorStore(BaseVectorStore):
         # Rebuild the index: keep vectors that were not deleted
         if self._vectors:
             remaining_ids = list(self._vectors.keys())
-            remaining_vectors = np.array(
-                [self._vectors[vid] for vid in remaining_ids], dtype=np.float32
-            )
+            remaining_vectors = np.array([self._vectors[vid] for vid in remaining_ids], dtype=np.float32)
             # Normalize
             norms = np.linalg.norm(remaining_vectors, axis=1, keepdims=True)
             norms = np.where(norms == 0, 1, norms)

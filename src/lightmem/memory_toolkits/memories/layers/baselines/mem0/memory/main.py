@@ -12,8 +12,6 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 import pytz
-from pydantic import ValidationError
-
 from mem0.configs.base import MemoryConfig, MemoryItem
 from mem0.configs.enums import MemoryType
 from mem0.configs.prompts import (
@@ -38,6 +36,7 @@ from mem0.utils.factory import (
     LlmFactory,
     VectorStoreFactory,
 )
+from pydantic import ValidationError
 
 # Suppress SWIG deprecation warnings globally
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPy.*")

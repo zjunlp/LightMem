@@ -1,22 +1,19 @@
-from openai import OpenAI
-from typing import Optional, List, Union
-import os
+from typing import List, Optional, Union
+
 import httpx
+from openai import OpenAI
+
 from lightmem.configs.text_embedder.base_config import BaseTextEmbedderConfig
 
 
 class TextEmbedderOpenAI:
     def __init__(self, config: Optional[BaseTextEmbedderConfig] = None):
         self.config = config
-        self.model = getattr(config, "model", None) or "text-embedding-3-small"        
+        self.model = getattr(config, "model", None) or "text-embedding-3-small"
         http_client = httpx.Client(verify=False)
-        api_key = self.config.api_key 
+        api_key = self.config.api_key
         base_url = self.config.openai_base_url
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            http_client=http_client
-        )
+        self.client = OpenAI(api_key=api_key, base_url=base_url, http_client=http_client)
         self.total_calls = 0
         self.total_tokens = 0
 
@@ -45,7 +42,7 @@ class TextEmbedderOpenAI:
             self.total_calls += 1
             self.total_tokens += resp.usage.total_tokens
             return resp.data[0].embedding
-        
+
     def get_stats(self):
         return {
             "total_calls": self.total_calls,

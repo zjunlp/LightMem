@@ -1,9 +1,10 @@
 import argparse
 import json
+import re
 from collections import defaultdict
-import re   
+
 import numpy as np
-from openai import OpenAI
+
 
 def extract_json(text):
     """

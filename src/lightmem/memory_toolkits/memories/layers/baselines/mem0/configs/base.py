@@ -1,12 +1,11 @@
 import os
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field
-
 from mem0.embeddings.configs import EmbedderConfig
 from mem0.graphs.configs import GraphStoreConfig
 from mem0.llms.configs import LlmConfig
 from mem0.vector_stores.configs import VectorStoreConfig
+from pydantic import BaseModel, Field
 
 # Set up the directory path
 home_dir = os.path.expanduser("~")

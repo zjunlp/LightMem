@@ -1,8 +1,8 @@
 # Derived from an external implementation; see LICENSE for attribution and upstream license terms.
 # Changes made by anonymous authors
 
-from .ner import one_shot_ner_paragraph, one_shot_ner_output
 from ...llm.prompt_template_manager import convert_format_to_template
+from .ner import one_shot_ner_output, one_shot_ner_paragraph
 
 ner_conditioned_re_system = """Your task is to construct an RDF (Resource Description Framework) graph from the given passages and named entity lists. 
 Respond with a JSON list of triples, with each triple representing a relationship in the RDF graph. 
@@ -22,7 +22,9 @@ Paragraph:
 {named_entity_json}
 """
 
-ner_conditioned_re_input = ner_conditioned_re_frame.format(passage=one_shot_ner_paragraph, named_entity_json=one_shot_ner_output)
+ner_conditioned_re_input = ner_conditioned_re_frame.format(
+    passage=one_shot_ner_paragraph, named_entity_json=one_shot_ner_output
+)
 
 ner_conditioned_re_output = """{"triples": [
             ["Radio City", "located in", "India"],
@@ -45,5 +47,10 @@ prompt_template = [
     {"role": "system", "content": ner_conditioned_re_system},
     {"role": "user", "content": ner_conditioned_re_input},
     {"role": "assistant", "content": ner_conditioned_re_output},
-    {"role": "user", "content": convert_format_to_template(original_string=ner_conditioned_re_frame, placeholder_mapping=None, static_values=None)}
+    {
+        "role": "user",
+        "content": convert_format_to_template(
+            original_string=ner_conditioned_re_frame, placeholder_mapping=None, static_values=None
+        ),
+    },
 ]

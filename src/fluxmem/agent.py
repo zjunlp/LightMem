@@ -5,26 +5,27 @@ Orchestrates the three-stage memory evolution pipeline:
 - Stage II: Feedback-Driven Connectivity Refinement (online, executed each step)
 - Stage III: Long-Term Connection Consolidation (offline, executed periodically)
 """
+
 import logging
 import uuid
-from typing import Optional, List, Callable, Awaitable, Dict, Any, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
 from .config import FluxMemConfig
-from .graph.memory_graph import MemoryGraph, Subgraph
-from .graph.nodes import SemanticNode, EpisodicNode, ProceduralNode, NodeType
 from .graph.edges import GroundEdge
-from .interfaces.llm import BaseLLM
+from .graph.memory_graph import MemoryGraph
+from .graph.nodes import EpisodicNode, SemanticNode
 from .interfaces.embedder import BaseEmbedder
+from .interfaces.llm import BaseLLM
 from .interfaces.vectorstore import BaseVectorStore, FAISSVectorStore
-from .retrieval.semantic_retriever import SemanticRetriever
+from .metrics.pems import PEMSCalculator
 from .retrieval.episodic_retriever import EpisodicRetriever
 from .retrieval.procedural_retriever import ProceduralRetriever
+from .retrieval.semantic_retriever import SemanticRetriever
 from .stages.stage1_formation import StageI
 from .stages.stage2_refinement import StageII
 from .stages.stage3_consolidation import StageIII
-from .metrics.pems import PEMSCalculator
 
 logger = logging.getLogger(__name__)
 
@@ -64,21 +65,15 @@ class FluxMemAgent:
         if semantic_vectorstore is not None:
             self.semantic_vs = semantic_vectorstore
         else:
-            self.semantic_vs = FAISSVectorStore(
-                dimension=self.config.embedding_dimension
-            )
+            self.semantic_vs = FAISSVectorStore(dimension=self.config.embedding_dimension)
 
         if episodic_vectorstore is not None:
             self.episodic_vs = episodic_vectorstore
         else:
-            self.episodic_vs = FAISSVectorStore(
-                dimension=self.config.embedding_dimension
-            )
+            self.episodic_vs = FAISSVectorStore(dimension=self.config.embedding_dimension)
 
         # Initialize the PEMS calculator
-        self.pems_calculator = PEMSCalculator(
-            convergence_threshold=self.config.pems_threshold
-        )
+        self.pems_calculator = PEMSCalculator(convergence_threshold=self.config.pems_threshold)
 
         # Initialize the three retrievers
         self.semantic_retriever = SemanticRetriever(
@@ -136,9 +131,7 @@ class FluxMemAgent:
 
     # === Knowledge management API ===
 
-    async def add_knowledge(
-        self, text: str, source: str = "", chunk_size: int = 512
-    ) -> List[str]:
+    async def add_knowledge(self, text: str, source: str = "", chunk_size: int = 512) -> List[str]:
         """Add semantic knowledge into the memory graph (auto-chunking and embedding).
 
         Splits long text by chunk_size, computes an embedding for each chunk,
@@ -165,9 +158,7 @@ class FluxMemAgent:
 
         # 3. Create SemanticNode instances and add them to the graph
         node_ids: List[str] = []
-        for idx, (chunk_content, chunk_embedding) in enumerate(
-            zip(chunks, embeddings)
-        ):
+        for idx, (chunk_content, chunk_embedding) in enumerate(zip(chunks, embeddings)):
             node = SemanticNode(
                 content=chunk_content,
                 source=source,
@@ -191,9 +182,7 @@ class FluxMemAgent:
         )
         return node_ids
 
-    async def add_knowledge_nodes(
-        self, nodes: List[SemanticNode]
-    ) -> List[str]:
+    async def add_knowledge_nodes(self, nodes: List[SemanticNode]) -> List[str]:
         """Add already-built semantic nodes directly.
 
         For nodes lacking an embedding, compute the embedding automatically and
@@ -318,7 +307,7 @@ class FluxMemAgent:
             trajectory=trajectory,
             success=overall_success,
             content=f"Task: {task_query}. Steps: {len(trajectory)}. "
-                    f"Outcome: {'success' if overall_success else 'failure'}",
+            f"Outcome: {'success' if overall_success else 'failure'}",
         )
 
         # Compute the embedding for the episodic node
@@ -427,9 +416,7 @@ class FluxMemAgent:
 
         # After the refinement loop ends, execute again to obtain the final result
         try:
-            final_result, final_feedback, final_success = await execute_fn(
-                refined_context
-            )
+            final_result, final_feedback, final_success = await execute_fn(refined_context)
         except Exception as e:
             logger.warning("Final execution after refinement failed: %s", e)
             final_result = ""
@@ -445,9 +432,7 @@ class FluxMemAgent:
 
     # === Offline consolidation API ===
 
-    async def consolidate(
-        self, replay_fn: Optional[Callable] = None
-    ) -> Dict:
+    async def consolidate(self, replay_fn: Optional[Callable] = None) -> Dict:
         """Run Stage III offline consolidation.
 
         Args:
@@ -482,9 +467,7 @@ class FluxMemAgent:
         semantic and episodic vector store indices, as well as the BM25 index.
         """
         # Rebuild the semantic vector index
-        self.semantic_vs = FAISSVectorStore(
-            dimension=self.config.embedding_dimension
-        )
+        self.semantic_vs = FAISSVectorStore(dimension=self.config.embedding_dimension)
         ids, embeddings = self.graph.get_all_semantic_embeddings()
         if ids and embeddings.size > 0:
             self.semantic_vs.add(ids, embeddings)
@@ -493,9 +476,7 @@ class FluxMemAgent:
         self.semantic_retriever.vectorstore = self.semantic_vs
 
         # Rebuild the episodic vector index
-        self.episodic_vs = FAISSVectorStore(
-            dimension=self.config.embedding_dimension
-        )
+        self.episodic_vs = FAISSVectorStore(dimension=self.config.embedding_dimension)
         ids, embeddings = self.graph.get_all_episodic_embeddings()
         if ids and embeddings.size > 0:
             self.episodic_vs.add(ids, embeddings)

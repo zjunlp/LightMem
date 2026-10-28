@@ -27,7 +27,8 @@ except ImportError:
 _lightmem_instance: Optional[LightMemory] = None
 
 # the default config path is `example.json` in the same directory as this script
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'example.json')
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "example.json")
+
 
 def get_lightmem_instance() -> LightMemory:
     """
@@ -39,7 +40,7 @@ def get_lightmem_instance() -> LightMemory:
         if not os.path.exists(CONFIG_PATH):
             raise FileNotFoundError(f"Configuration file does not exist: {CONFIG_PATH}")
 
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             config = json.load(f)
         _lightmem_instance = LightMemory.from_config(config)
 
@@ -54,6 +55,7 @@ STATUS_SUCCESS = "success"
 STATUS_ERROR = "error"
 
 mcp = FastMCP("LightMem")
+
 
 @mcp.tool()
 def get_timestamp() -> Dict[str, Any]:
@@ -75,8 +77,15 @@ def get_timestamp() -> Dict[str, Any]:
             "message": "Failed to get the current timestamp.",
         }
 
+
 @mcp.tool()
-def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] = None, force_segment: bool = False, force_extract: bool = False) -> Dict[str, Any]:
+def add_memory(
+    user_input: str,
+    assistant_reply: str,
+    timestamp: Optional[str] = None,
+    force_segment: bool = False,
+    force_extract: bool = False,
+) -> Dict[str, Any]:
     """
     Add new memory (user input and assistant reply pair) to the LightMem.
 
@@ -93,43 +102,24 @@ def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] =
     lightmem_instance = get_lightmem_instance()
 
     if lightmem_instance is None:
-        return {
-            "status": STATUS_ERROR,
-            "message": "LightMem is not initialized. Please check the configuration file."
-        }
+        return {"status": STATUS_ERROR, "message": "LightMem is not initialized. Please check the configuration file."}
 
     try:
         if not user_input or not assistant_reply:
-            return {
-                "status": STATUS_ERROR,
-                "message": "Both `user_input` and `assistant_reply` are required."
-            }
+            return {"status": STATUS_ERROR, "message": "Both `user_input` and `assistant_reply` are required."}
 
         timestamp = timestamp or datetime.now().isoformat(timespec="milliseconds")
 
         full_message = [
-            {
-                "role": "user",
-                "content": user_input,
-                "time_stamp": timestamp
-            },
-            {
-                "role": "assistant",
-                "content": assistant_reply,
-                "time_stamp": timestamp
-            }
+            {"role": "user", "content": user_input, "time_stamp": timestamp},
+            {"role": "assistant", "content": assistant_reply, "time_stamp": timestamp},
         ]
 
         added_result = lightmem_instance.add_memory(
-            messages=full_message,
-            force_segment=force_segment,
-            force_extract=force_extract
+            messages=full_message, force_segment=force_segment, force_extract=force_extract
         )
 
-        if (
-            "triggered" in added_result and 
-            "emitted_messages" in added_result
-        ):
+        if "triggered" in added_result and "emitted_messages" in added_result:
             return {
                 "status": STATUS_SUCCESS,
                 "message": "Topic segmentation is disabled; memory pipeline returned early.",
@@ -139,13 +129,10 @@ def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] =
                     "boundaries": added_result.get("boundaries"),
                     "emitted_messages": added_result.get("emitted_messages"),
                     "carryover_size": added_result.get("carryover_size"),
-                }
+                },
             }
 
-        if (
-            "add_input_prompt" in added_result and 
-            "add_output_prompt" in added_result
-        ):
+        if "add_input_prompt" in added_result and "add_output_prompt" in added_result:
             return {
                 "status": STATUS_SUCCESS,
                 "message": "Memory has been successfully added to LightMem.",
@@ -153,22 +140,18 @@ def add_memory(user_input: str, assistant_reply: str, timestamp: Optional[str] =
                     "add_input_prompt": added_result.get("add_input_prompt", []),
                     "add_output_prompt": added_result.get("add_output_prompt", []),
                     "api_call_nums": added_result.get("api_call_nums", 0),
-                }
+                },
             }
 
         return {
             "status": STATUS_ERROR,
             "message": "LightMem `add_memory` returned an unexpected structure.",
-            "details": {
-                "raw_return": added_result
-            }
+            "details": {"raw_return": added_result},
         }
 
     except Exception as e:
-        return {
-            "status": STATUS_ERROR,
-            "message": f"Error adding memory: {str(e)}"
-        }
+        return {"status": STATUS_ERROR, "message": f"Error adding memory: {str(e)}"}
+
 
 @mcp.tool()
 def offline_update(top_k: int = 20, keep_top_n: int = 10, score_threshold: float = 0.8) -> Dict[str, Any]:
@@ -186,30 +169,17 @@ def offline_update(top_k: int = 20, keep_top_n: int = 10, score_threshold: float
     lightmem_instance = get_lightmem_instance()
 
     if lightmem_instance is None:
-        return {
-            "status": STATUS_ERROR,
-            "message": "LightMem is not initialized. Please check the configuration file."
-        }
+        return {"status": STATUS_ERROR, "message": "LightMem is not initialized. Please check the configuration file."}
 
     try:
-        lightmem_instance.construct_update_queue_all_entries(
-            top_k=top_k,
-            keep_top_n=keep_top_n
-        )
-        lightmem_instance.offline_update_all_entries(
-            score_threshold=score_threshold
-        )
+        lightmem_instance.construct_update_queue_all_entries(top_k=top_k, keep_top_n=keep_top_n)
+        lightmem_instance.offline_update_all_entries(score_threshold=score_threshold)
 
-        return {
-            "status": STATUS_SUCCESS,
-            "message": "Offline update completed successfully."
-        }
+        return {"status": STATUS_SUCCESS, "message": "Offline update completed successfully."}
 
     except Exception as e:
-        return {
-            "status": STATUS_ERROR,
-            "message": f"Error during offline update: {str(e)}"
-        }
+        return {"status": STATUS_ERROR, "message": f"Error during offline update: {str(e)}"}
+
 
 @mcp.tool()
 def retrieve_memory(query: str, limit: int = 10, filters: Optional[Any] = {}) -> Dict[str, Any]:
@@ -225,41 +195,29 @@ def retrieve_memory(query: str, limit: int = 10, filters: Optional[Any] = {}) ->
         A dictionary containing the operation result
     """
     lightmem_instance = get_lightmem_instance()
-    
+
     if lightmem_instance is None:
-        return {
-            "status": STATUS_ERROR,
-            "message": "LightMem is not initialized. Please check the configuration file."
-        }
+        return {"status": STATUS_ERROR, "message": "LightMem is not initialized. Please check the configuration file."}
 
     if filters == {}:
         filters = None
 
     if not query:
-        return {
-            "status": STATUS_ERROR,
-            "message": "query parameter is required"
-        }
+        return {"status": STATUS_ERROR, "message": "query parameter is required"}
 
     try:
-        related_memories = lightmem_instance.retrieve(
-            query=query,
-            limit=limit,
-            filters=filters
-        )
+        related_memories = lightmem_instance.retrieve(query=query, limit=limit, filters=filters)
         related_memories_list = related_memories
 
         return {
             "status": STATUS_SUCCESS,
             "message": f"LightMem has retrieved {len(related_memories_list)} relevant memories.",
-            "details": related_memories_list
+            "details": related_memories_list,
         }
 
     except Exception as e:
-        return {
-            "status": STATUS_ERROR,
-            "message": f"Error retrieving memory: {str(e)}"
-        }
+        return {"status": STATUS_ERROR, "message": f"Error retrieving memory: {str(e)}"}
+
 
 @mcp.tool()
 def show_lightmem_instance() -> Dict[str, Any]:
@@ -272,10 +230,7 @@ def show_lightmem_instance() -> Dict[str, Any]:
     lightmem_instance = get_lightmem_instance()
 
     if lightmem_instance is None:
-        return {
-            "status": STATUS_ERROR,
-            "message": "LightMem is not initialized. Please check the configuration file."
-        }
+        return {"status": STATUS_ERROR, "message": "LightMem is not initialized. Please check the configuration file."}
 
     try:
         show = {}
@@ -297,19 +252,17 @@ def show_lightmem_instance() -> Dict[str, Any]:
         return {
             "status": STATUS_SUCCESS,
             "message": "LightMem instance details retrieved successfully.",
-            "details": readable_show
+            "details": readable_show,
         }
 
     except Exception as e:
-        return {
-            "status": STATUS_ERROR,
-            "message": f"Error retrieving configuration: {str(e)}"
-        }
+        return {"status": STATUS_ERROR, "message": f"Error retrieving configuration: {str(e)}"}
 
 
 # -----------------------------
 # Main Function
 # -----------------------------
+
 
 def main():
     global CONFIG_PATH
@@ -327,13 +280,14 @@ def main():
     try:
         print("Using config:", CONFIG_PATH)
         print("Starting MCP server...")
-        mcp.run(single_thread=True) # Single thread
+        mcp.run(single_thread=True)  # Single thread
 
     except KeyboardInterrupt:
         print("Server interrupted by user", file=sys.stderr)
     except Exception as e:
         print(f"Error starting server: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

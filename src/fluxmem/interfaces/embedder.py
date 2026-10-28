@@ -1,7 +1,9 @@
 """Embedding abstract interface and default OpenAI implementation"""
+
+import os
 from abc import ABC, abstractmethod
 from typing import List, Optional
-import os
+
 import numpy as np
 
 
@@ -37,16 +39,14 @@ class OpenAIEmbedder(BaseEmbedder):
             from openai import AsyncOpenAI
         except ImportError as exc:
             raise ImportError(
-                "openai package is required for OpenAIEmbedder. "
-                "Please install it with: pip install openai"
+                "openai package is required for OpenAIEmbedder. Please install it with: pip install openai"
             ) from exc
 
         self.model = model
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError(
-                "OpenAI API key is required. Set OPENAI_API_KEY environment variable "
-                "or pass api_key parameter."
+                "OpenAI API key is required. Set OPENAI_API_KEY environment variable or pass api_key parameter."
             )
         self._client = AsyncOpenAI(api_key=self.api_key)
         # text-embedding-3-small outputs 1536 dimensions by default

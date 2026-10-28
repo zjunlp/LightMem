@@ -5,6 +5,7 @@ Implements the procedural retrieval formula from the paper:
 
 Given the retrieved episodic nodes, collects related procedural skill nodes via DistillEdge.
 """
+
 from typing import List
 
 from ..graph.memory_graph import MemoryGraph
@@ -25,9 +26,7 @@ class ProceduralRetriever:
     def __init__(self, graph: MemoryGraph):
         self.graph = graph
 
-    def retrieve_for_episodes(
-        self, episode_ids: List[str]
-    ) -> List[ProceduralNode]:
+    def retrieve_for_episodes(self, episode_ids: List[str]) -> List[ProceduralNode]:
         """Get related skill nodes from the retrieved episodic nodes via distill edges.
 
         Iterates over all DistillEdges; if the source_id is in episode_ids,

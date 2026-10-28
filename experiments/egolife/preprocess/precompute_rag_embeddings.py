@@ -12,7 +12,6 @@ from em2mem.embedding import EmbeddingModel
 from em2mem.memory.multimodal_memory_cell import MemoryCell
 from em2mem.memory.semantic_graph import SemanticMemory
 
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -50,9 +49,13 @@ def resolve_device(gpu: str) -> Tuple[str, str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Precompute EgoLife RAG text embedding caches.")
     parser.add_argument("--person", default="A1_JAKE", help="Subject ID")
-    parser.add_argument("--memory-cell-dir", required=True, help="Directory containing EgoLife multimodal memory cell files")
+    parser.add_argument(
+        "--memory-cell-dir", required=True, help="Directory containing EgoLife multimodal memory cell files"
+    )
     parser.add_argument("--semantic-file", default=None, help="Semantic graph JSON file for semantic RAG cache")
-    parser.add_argument("--text-embedding-model", default="Qwen/Qwen3-Embedding-4B", help="Text embedding model id or local path")
+    parser.add_argument(
+        "--text-embedding-model", default="Qwen/Qwen3-Embedding-4B", help="Text embedding model id or local path"
+    )
     parser.add_argument("--cache-tag", default=None, help="Dense cache tag. Defaults to basename(memory-cell-dir).")
     parser.add_argument("--gpu", default="0", help='GPU id for precompute, or "cpu"')
     parser.add_argument("--batch-size", type=int, default=None, help="Override EPISODIC_DENSE_BATCH_SIZE")

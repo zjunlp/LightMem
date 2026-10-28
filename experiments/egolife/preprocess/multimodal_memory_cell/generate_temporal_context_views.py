@@ -2,26 +2,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import sys
 import logging
+import os
 import re
-import time
 import warnings
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
-from pathlib import Path
+
 from tqdm import tqdm
 
 from em2mem.llm import LLMModel
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(name)s - %(message)s'
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s")
 
 
 # =========================================================
@@ -282,17 +277,79 @@ Return valid JSON only:
 # =========================================================
 
 STOPWORDS = {
-    "the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "and", "or",
-    "is", "are", "was", "were", "be", "been", "being", "do", "did", "does",
-    "what", "which", "who", "whom", "when", "where", "why", "how",
-    "i", "me", "my", "we", "our", "you", "your", "he", "she", "they", "them",
-    "this", "that", "these", "those", "it", "its", "can", "will", "would",
-    "should", "could", "there", "their", "some", "any", "just", "then", "than",
-    "into", "onto", "from", "up", "down", "out", "over", "under", "again"
+    "the",
+    "a",
+    "an",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "for",
+    "with",
+    "and",
+    "or",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "do",
+    "did",
+    "does",
+    "what",
+    "which",
+    "who",
+    "whom",
+    "when",
+    "where",
+    "why",
+    "how",
+    "i",
+    "me",
+    "my",
+    "we",
+    "our",
+    "you",
+    "your",
+    "he",
+    "she",
+    "they",
+    "them",
+    "this",
+    "that",
+    "these",
+    "those",
+    "it",
+    "its",
+    "can",
+    "will",
+    "would",
+    "should",
+    "could",
+    "there",
+    "their",
+    "some",
+    "any",
+    "just",
+    "then",
+    "than",
+    "into",
+    "onto",
+    "from",
+    "up",
+    "down",
+    "out",
+    "over",
+    "under",
+    "again",
 }
 
 
 model = LLMModel(model_name="gpt-5-mini")
+
 
 def call_gpt(
     prompt: str,
@@ -301,14 +358,11 @@ def call_gpt(
     temperature=0.9,
     top_p=0.95,
 ) -> Optional[str]:
-    try: 
+    try:
         openai_key = os.getenv("OPENAI_API_KEY")
         response = model.generate(
-            [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": prompt}
-            ],
-            max_output_tokens=max_tokens*2
+            [{"role": "system", "content": system_message}, {"role": "user", "content": prompt}],
+            max_output_tokens=max_tokens * 2,
         )
         return response
     except Exception as e:
@@ -427,15 +481,43 @@ CRITICAL_SPEECH_PATTERNS = [
 
 
 GENERIC_LOW_INFO_NOUNS = {
-    "thing", "things", "stuff", "item", "items", "object", "objects",
-    "people", "person", "guy", "guys", "someone", "something",
-    "table", "chair", "room", "area", "place", "side", "part"
+    "thing",
+    "things",
+    "stuff",
+    "item",
+    "items",
+    "object",
+    "objects",
+    "people",
+    "person",
+    "guy",
+    "guys",
+    "someone",
+    "something",
+    "table",
+    "chair",
+    "room",
+    "area",
+    "place",
+    "side",
+    "part",
 }
 
 PROTECTED_OBJECT_ALLOWLIST = {
-    "phone", "hard drive", "tripod", "cable", "container", "whiteboard",
-    "laptop", "tablet", "charger", "bag", "cart", "refrigerator",
-    "marker", "pen"
+    "phone",
+    "hard drive",
+    "tripod",
+    "cable",
+    "container",
+    "whiteboard",
+    "laptop",
+    "tablet",
+    "charger",
+    "bag",
+    "cart",
+    "refrigerator",
+    "marker",
+    "pen",
 }
 
 PROTECTED_VERBISH_PATTERNS = [
@@ -444,33 +526,53 @@ PROTECTED_VERBISH_PATTERNS = [
 ]
 
 PROTECTED_BAD_SUBSTRINGS = {
-    "take one from", "take these away", "can install", "just going", "you can throw",
-    "we can", "i will", "i'll", "used for", "purpose of"
+    "take one from",
+    "take these away",
+    "can install",
+    "just going",
+    "you can throw",
+    "we can",
+    "i will",
+    "i'll",
+    "used for",
+    "purpose of",
 }
 
 
 CRITICAL_PREDICATE_PATTERNS = {
     "proposal": [
-        r"\bwe can\b", r"\blet'?s\b", r"\bhow about\b", r"\bi was thinking\b",
-        r"\bsuggest\b", r"\bproposal\b", r"\bidea\b"
+        r"\bwe can\b",
+        r"\blet'?s\b",
+        r"\bhow about\b",
+        r"\bi was thinking\b",
+        r"\bsuggest\b",
+        r"\bproposal\b",
+        r"\bidea\b",
     ],
     "plan": [
-        r"\bi will\b", r"\bi'll\b", r"\bgoing to\b", r"\bplan to\b",
-        r"\bi can buy\b", r"\bwe will\b", r"\bwe'll\b"
+        r"\bi will\b",
+        r"\bi'll\b",
+        r"\bgoing to\b",
+        r"\bplan to\b",
+        r"\bi can buy\b",
+        r"\bwe will\b",
+        r"\bwe'll\b",
     ],
     "source": [
-        r"\btake\b", r"\bbring\b", r"\bcarry\b", r"\bplace\b", r"\bput\b",
-        r"\bfrom\b", r"\bupstairs\b", r"\bdownstairs\b", r"\bup there\b", r"\bdown there\b"
+        r"\btake\b",
+        r"\bbring\b",
+        r"\bcarry\b",
+        r"\bplace\b",
+        r"\bput\b",
+        r"\bfrom\b",
+        r"\bupstairs\b",
+        r"\bdownstairs\b",
+        r"\bup there\b",
+        r"\bdown there\b",
     ],
-    "discard": [
-        r"\bkeep\b", r"\bthrow away\b", r"\bdiscard\b"
-    ],
-    "attribute": [
-        r"\bthis is\b", r"\bit is\b", r"\bused for\b", r"\bpurpose\b"
-    ],
-    "confirm": [
-        r"\bwhat is\b", r"\bidentify\b", r"\bconfirm\b"
-    ],
+    "discard": [r"\bkeep\b", r"\bthrow away\b", r"\bdiscard\b"],
+    "attribute": [r"\bthis is\b", r"\bit is\b", r"\bused for\b", r"\bpurpose\b"],
+    "confirm": [r"\bwhat is\b", r"\bidentify\b", r"\bconfirm\b"],
 }
 
 
@@ -723,16 +825,27 @@ def canonicalize_object(obj: str) -> str:
 
 ACTION_CANONICAL_MAP: List[Tuple[str, str]] = [
     # explicit speech-act / QA-critical predicates
-    (r"\bsuggest\b|\bproposal\b|\bpropose\b|\bi was thinking\b|\bwe can\b|\blet'?s\b|\bhow about\b", "proposal/suggestion"),
-    (r"\bi can buy\b|\bi'll buy\b|\bi will buy\b|\bi'll go\b|\bi will go\b|\bplan to\b|\bgoing to\b", "plan/commitment"),
+    (
+        r"\bsuggest\b|\bproposal\b|\bpropose\b|\bi was thinking\b|\bwe can\b|\blet'?s\b|\bhow about\b",
+        "proposal/suggestion",
+    ),
+    (
+        r"\bi can buy\b|\bi'll buy\b|\bi will buy\b|\bi'll go\b|\bi will go\b|\bplan to\b|\bgoing to\b",
+        "plan/commitment",
+    ),
     (r"\bexplain\b|\bintroduce\b|\bdescribe\b|\bshow\b", "explain/introduce"),
     (r"\bask\b.*\bwhat\b|\bidentify\b|\bconfirm\b|\bwhat is this\b", "confirm/identify"),
     (r"\bkeep\b|\bthrow away\b|\bdiscard\b|\bclean up\b", "keep/discard"),
-    (r"\btake\b.*\bfrom\b|\bbring\b|\bcarry\b.*\bto\b|\bplace\b.*\bon\b|\bput\b.*\bon\b|\bmove\b.*\bupstairs\b|\bmove\b.*\bdownstairs\b", "source transfer"),
+    (
+        r"\btake\b.*\bfrom\b|\bbring\b|\bcarry\b.*\bto\b|\bplace\b.*\bon\b|\bput\b.*\bon\b|\bmove\b.*\bupstairs\b|\bmove\b.*\bdownstairs\b",
+        "source transfer",
+    ),
     (r"\bwrite\b|\bmark\b|\blabel\b|\btimestamp\b", "write/mark"),
-
     # broader buckets
-    (r"\bscroll\b|\bturn off phone\b|\bput away phone\b|\bhold phone\b|\bput phone\b|\buse phone\b|\bcheck phone\b", "phone handling"),
+    (
+        r"\bscroll\b|\bturn off phone\b|\bput away phone\b|\bhold phone\b|\bput phone\b|\buse phone\b|\bcheck phone\b",
+        "phone handling",
+    ),
     (r"\bhand\b.*\bphone\b|\bpass\b.*\bphone\b|\bgive\b.*\bphone\b", "phone handoff"),
     (r"\bhold meeting\b|\bcontinue meeting\b|\bmeeting\b|\bdiscuss\b", "meeting/discussion"),
     (r"\bwalk\b|\bmove\b|\bgo to\b|\bapproach\b", "move between places"),
@@ -742,7 +855,10 @@ ACTION_CANONICAL_MAP: List[Tuple[str, str]] = [
     (r"\beat\b|\bdrink\b|\bserve\b", "eat/drink"),
     (r"\bshop\b|\bpush cart\b|\bcheckout\b|\bbuy\b", "shopping"),
     (r"\bcook\b|\bprepare food\b|\bheat\b|\bmicrowave\b", "food preparation"),
-    (r"\bnod\b|\blaugh\b|\bsmile\b|\btilt head\b|\bturn head\b|\blean back\b|\blean forward\b|\bsway body\b|\bcover face\b|\blower head\b|\bbow head\b|\bshake head\b", "micro gesture"),
+    (
+        r"\bnod\b|\blaugh\b|\bsmile\b|\btilt head\b|\bturn head\b|\blean back\b|\blean forward\b|\bsway body\b|\bcover face\b|\blower head\b|\bbow head\b|\bshake head\b",
+        "micro gesture",
+    ),
 ]
 
 
@@ -933,7 +1049,7 @@ def filter_threads_by_level(
             -x.get("support_units", 0),
             -x.get("child_coverage", 0),
             -min(1, int(x.get("protected", False))),
-            x.get(label_key, "")
+            x.get(label_key, ""),
         )
     )
     return results[: cfg["top_k"]]
@@ -976,6 +1092,7 @@ def filter_scene_summary_by_level(scene_summary: Dict[str, Any], level_name: str
 # Input normalization
 # =========================================================
 
+
 def normalize_doc(raw: Dict[str, Any]) -> Dict[str, Any]:
     metadata = raw.get("Metadata", {}) if isinstance(raw.get("Metadata"), dict) else {}
 
@@ -1001,12 +1118,7 @@ def normalize_doc(raw: Dict[str, Any]) -> Dict[str, Any]:
     if not visual_backbone_text:
         visual_backbone_text = raw.get("keyframe_caption", "")
 
-    transcript_text = (
-        raw.get("transcript_text")
-        or raw.get("transcript")
-        or metadata.get("transcript_text")
-        or ""
-    )
+    transcript_text = raw.get("transcript_text") or raw.get("transcript") or metadata.get("transcript_text") or ""
     critical_speech_lines = extract_critical_speech_lines(transcript_text)
     protected_mentions = extract_protected_mentions(transcript_text)
 
@@ -1015,48 +1127,39 @@ def normalize_doc(raw: Dict[str, Any]) -> Dict[str, Any]:
         "date": date,
         "start_time": start_time,
         "end_time": end_time,
-
         "fine_caption": fine_caption,
         "text": summary_text,
         "transcript_text": transcript_text,
         "critical_speech_lines": critical_speech_lines,
         "protected_mentions": protected_mentions,
-
         "main_actions": ensure_list(raw.get("main_actions", [])),
         "salient_objects": ensure_list(raw.get("salient_objects", [])),
         "conversation_focus": ensure_list(raw.get("conversation_focus", [])),
         "speakers": ensure_list(raw.get("speakers", [])),
-
         "scene": raw.get("scene", ""),
         "visual_objects": ensure_list(raw.get("visual_objects", [])),
         "keyframe_caption": raw.get("keyframe_caption", ""),
-
         "visual_summary": raw.get("visual_summary", ""),
         "visual_backbone_text": visual_backbone_text,
-
         "action_threads": ensure_list(raw.get("action_threads", [])),
         "object_threads": ensure_list(raw.get("object_threads", [])),
         "topic_threads": ensure_list(raw.get("topic_threads", [])),
         "speaker_stats": ensure_list(raw.get("speaker_stats", [])),
-
         "scene_summary": raw.get("scene_summary", {}),
         "visual_object_threads": ensure_list(raw.get("visual_object_threads", [])),
-
         "child_ids": ensure_list(raw.get("child_ids", [])),
         "source_doc_ids": ensure_list(raw.get("source_doc_ids", [doc_id])),
     }
 
 
 def sort_docs(docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return sorted(
-        docs,
-        key=lambda x: (normalize_day(x["date"]) or 0, time_to_seconds(x["start_time"]))
-    )
+    return sorted(docs, key=lambda x: (normalize_day(x["date"]) or 0, time_to_seconds(x["start_time"])))
 
 
 # =========================================================
 # Canonicalized aggregation
 # =========================================================
+
 
 def aggregate_canonical_threads(
     items: List[Dict[str, Any]],
@@ -1228,17 +1331,19 @@ def merge_protected_mentions(
         if m_norm not in PROTECTED_OBJECT_ALLOWLIST:
             continue
 
-        threads.append({
-            out_key: m_norm,
-            "canonical_label": m_norm,
-            "aliases": [m_norm],
-            "support_units": 1,
-            "first_seen": "99999999",
-            "last_seen": "99999999",
-            "child_ids": [],
-            "protected": True,
-            "child_coverage": 0.0,
-        })
+        threads.append(
+            {
+                out_key: m_norm,
+                "canonical_label": m_norm,
+                "aliases": [m_norm],
+                "support_units": 1,
+                "first_seen": "99999999",
+                "last_seen": "99999999",
+                "child_ids": [],
+                "protected": True,
+                "child_coverage": 0.0,
+            }
+        )
         existing.add(m_norm)
         added += 1
         if added >= max_additional:
@@ -1327,6 +1432,7 @@ def aggregate_visual_metadata(items: List[Dict[str, Any]], level_name: str) -> D
 # Prompt payloads
 # =========================================================
 
+
 def build_text_prompt_payload(items: List[Dict[str, Any]], aggregated_text: Dict[str, Any]) -> Dict[str, Any]:
     ordered_event_units = []
     for item in items:
@@ -1378,6 +1484,7 @@ def build_visual_prompt_payload(items: List[Dict[str, Any]], aggregated_visual: 
 # Summarization
 # =========================================================
 
+
 def fallback_text_summary(items: List[Dict[str, Any]]) -> Dict[str, str]:
     texts = []
     for item in items:
@@ -1401,10 +1508,7 @@ def fallback_visual_summary(items: List[Dict[str, Any]], aggregated_visual: Dict
         return {"visual_summary": " ".join(visual_parts[:4]).strip()}
 
     dominant_scene = aggregated_visual.get("scene_summary", {}).get("dominant_scene", "")
-    top_objects = [
-        x["object"] for x in aggregated_visual.get("visual_object_threads", [])[:4]
-        if x.get("object")
-    ]
+    top_objects = [x["object"] for x in aggregated_visual.get("visual_object_threads", [])[:4] if x.get("object")]
 
     if dominant_scene and top_objects:
         return {
@@ -1471,6 +1575,7 @@ def summarize_visual_batch(
 # Aggregate node
 # =========================================================
 
+
 def build_aggregate_node(items: List[Dict[str, Any]], level_name: str) -> Dict[str, Any]:
     items = sort_docs(items)
 
@@ -1481,11 +1586,7 @@ def build_aggregate_node(items: List[Dict[str, Any]], level_name: str) -> Dict[s
     visual_summary = summarize_visual_batch(items, aggregated_visual, level_name)
 
     source_doc_ids = sorted(
-        {
-            sid
-            for item in items
-            for sid in ensure_list(item.get("source_doc_ids", [item["doc_id"]]))
-        }
+        {sid for item in items for sid in ensure_list(item.get("source_doc_ids", [item["doc_id"]]))}
     )
 
     node = {
@@ -1494,21 +1595,16 @@ def build_aggregate_node(items: List[Dict[str, Any]], level_name: str) -> Dict[s
         "date": items[0]["date"],
         "start_time": items[0]["start_time"],
         "end_time": items[-1]["end_time"],
-
         "text": text_summary["summary_text"],
         "visual_summary": visual_summary["visual_summary"],
-
         "action_threads": aggregated_text["action_threads"],
         "object_threads": aggregated_text["object_threads"],
         "topic_threads": aggregated_text["topic_threads"],
         "speaker_stats": aggregated_text["speaker_stats"],
-
         "critical_speech_lines": aggregate_critical_speech(items, max_lines=10 if level_name == "3min" else 8),
         "protected_mentions": aggregate_protected_mentions(items, max_mentions=10),
-
         "scene_summary": aggregated_visual["scene_summary"],
         "visual_object_threads": aggregated_visual["visual_object_threads"],
-
         "child_ids": [item["doc_id"] for item in items],
         "source_doc_ids": source_doc_ids,
     }
@@ -1519,18 +1615,20 @@ def build_aggregate_node_safe(items: List[Dict[str, Any]], level_name: str) -> D
     try:
         return build_aggregate_node(items, level_name)
     except Exception as e:
-        logger.exception("Failed to build aggregate node for level=%s batch=%s-%s: %s", level_name, items[0].get("start_time"), items[-1].get("end_time"), e)
+        logger.exception(
+            "Failed to build aggregate node for level=%s batch=%s-%s: %s",
+            level_name,
+            items[0].get("start_time"),
+            items[-1].get("end_time"),
+            e,
+        )
         items = sort_docs(items)
         aggregated_text = aggregate_text_metadata(items, level_name)
         aggregated_visual = aggregate_visual_metadata(items, level_name)
         text_summary = fallback_text_summary(items)
         visual_summary = fallback_visual_summary(items, aggregated_visual)
         source_doc_ids = sorted(
-            {
-                sid
-                for item in items
-                for sid in ensure_list(item.get("source_doc_ids", [item["doc_id"]]))
-            }
+            {sid for item in items for sid in ensure_list(item.get("source_doc_ids", [item["doc_id"]]))}
         )
         return {
             "doc_id": f"{items[0]['date']}_{items[0]['start_time']}_{items[-1]['end_time']}_{level_name}",
@@ -1556,6 +1654,7 @@ def build_aggregate_node_safe(items: List[Dict[str, Any]], level_name: str) -> D
 # =========================================================
 # Windowing / generation
 # =========================================================
+
 
 def bucket_by_window(items: List[Dict[str, Any]], window_seconds: int):
     buckets = defaultdict(list)
@@ -1584,7 +1683,10 @@ def generate_level(
 
     logger.info(
         "[gen_event] start level=%s input_items=%d windows=%d max_workers=%d",
-        level_name, len(input_items), len(ordered_keys), worker_count
+        level_name,
+        len(input_items),
+        len(ordered_keys),
+        worker_count,
     )
     print(
         f"[gen_event] start level={level_name} input_items={len(input_items)} windows={len(ordered_keys)} max_workers={worker_count}",
@@ -1636,6 +1738,7 @@ def generate_level(
 # Public entry
 # =========================================================
 
+
 def load_source_docs(input_json: str) -> List[Dict[str, Any]]:
     raw = load_json(input_json)
     if not isinstance(raw, list):
@@ -1657,7 +1760,7 @@ def gen_temporal_context_views(person_name, save_path, input_json, max_workers: 
         input_items=base_docs,
         window_seconds=180,
         level_name="3min",
-        merged_output_path=os.path.join(save_path, f"temporal_context_views_3min.json"),
+        merged_output_path=os.path.join(save_path, "temporal_context_views_3min.json"),
         max_workers=worker_count,
     )
 
@@ -1665,7 +1768,7 @@ def gen_temporal_context_views(person_name, save_path, input_json, max_workers: 
         input_items=level1,
         window_seconds=600,
         level_name="10min",
-        merged_output_path=os.path.join(save_path, f"temporal_context_views_10min.json"),
+        merged_output_path=os.path.join(save_path, "temporal_context_views_10min.json"),
         max_workers=worker_count,
     )
 
@@ -1673,7 +1776,7 @@ def gen_temporal_context_views(person_name, save_path, input_json, max_workers: 
         input_items=level2,
         window_seconds=3600,
         level_name="1h",
-        merged_output_path=os.path.join(save_path, f"temporal_context_views_1h.json"),
+        merged_output_path=os.path.join(save_path, "temporal_context_views_1h.json"),
         max_workers=worker_count,
     )
 

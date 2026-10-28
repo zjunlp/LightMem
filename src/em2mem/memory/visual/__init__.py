@@ -1,1 +1,1 @@
-from .Memory import VisualMemory, VideoClipEntry, FrameEntry
+from .Memory import FrameEntry, VideoClipEntry, VisualMemory

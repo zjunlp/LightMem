@@ -11,24 +11,23 @@ import asyncio
 import base64
 import copy
 import functools
+import hashlib
 import io
 import json
 import logging
 import os
 import sqlite3
-import hashlib
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
-from pydantic_core import PydanticUndefined
-
-from filelock import FileLock
 
 import cv2
 from decord import VideoReader, cpu
+from filelock import FileLock
 from openai import AsyncOpenAI, OpenAI
 from PIL import Image
+from pydantic_core import PydanticUndefined
 from tqdm.asyncio import tqdm as tqdm_asyncio
 
 from .utils import dynamic_retry_decorator
@@ -46,7 +45,7 @@ MODEL_DICT = {
     "gpt-5": "gpt-5-2025-08-07",
     "gpt-5-mini": "gpt-5-mini-2025-08-07",
     "gpt-5-nano": "gpt-5-nano-2025-08-07",
-    "gpt-4o-mini":"gpt-4o-mini",
+    "gpt-4o-mini": "gpt-4o-mini",
 }
 
 # Global cache configuration
@@ -57,7 +56,7 @@ _MAX_CACHE_SIZE = 500
 def class_str(cls):
     fields = []
     for name, field in cls.model_fields.items():
-        annotation = str(field.annotation).replace('typing.', '')
+        annotation = str(field.annotation).replace("typing.", "")
         if field.default is not PydanticUndefined:
             fields.append(f"{name}: {annotation} = {field.default}")
         else:
@@ -130,9 +129,8 @@ def cache_response(func):
                     message TEXT
                 )
             """)
-            message_str = json.dumps(message, default=lambda o: o.model_dump() if hasattr(o, 'model_dump') else str(o))
-            c.execute("INSERT OR REPLACE INTO cache (key, message) VALUES (?, ?)",
-                      (key_hash, message_str))
+            message_str = json.dumps(message, default=lambda o: o.model_dump() if hasattr(o, "model_dump") else str(o))
+            c.execute("INSERT OR REPLACE INTO cache (key, message) VALUES (?, ?)", (key_hash, message_str))
             conn.commit()
             conn.close()
 
@@ -206,9 +204,8 @@ def async_cache_response(func):
                     message TEXT
                 )
             """)
-            message_str = json.dumps(message, default=lambda o: o.model_dump() if hasattr(o, 'model_dump') else str(o))
-            c.execute("INSERT OR REPLACE INTO cache (key, message) VALUES (?, ?)",
-                      (key_hash, message_str))
+            message_str = json.dumps(message, default=lambda o: o.model_dump() if hasattr(o, "model_dump") else str(o))
+            c.execute("INSERT OR REPLACE INTO cache (key, message) VALUES (?, ?)", (key_hash, message_str))
             conn.commit()
             conn.close()
 
@@ -219,6 +216,7 @@ def async_cache_response(func):
 
 class OpenAIModelError(Exception):
     """Custom exception for OpenAI model operations."""
+
     pass
 
 
@@ -242,7 +240,7 @@ class OpenAIModel:
     ) -> None:
         """
         Initialize OpenAI model wrapper.
-        
+
         Args:
             model_name: Name of the OpenAI model to use
             max_retries: Maximum number of retry attempts
@@ -254,7 +252,7 @@ class OpenAIModel:
             api_key: OpenAI API key (uses env var if not provided)
             cache_dir: Directory to store cache file (defaults to current directory)
             **kwargs: Additional arguments passed to OpenAI API
-            
+
         Raises:
             OpenAIModelError: If model initialization fails
             ValueError: If both fps and nframes are provided
@@ -262,20 +260,18 @@ class OpenAIModel:
         # Validate parameters
         if fps is not None and nframes is not None:
             raise ValueError("Cannot provide both 'fps' and 'nframes'. Please choose one for video sampling.")
-            
+
         if model_name not in MODEL_DICT:
             raise ValueError(f"Unsupported model: {model_name}. Available: {list(MODEL_DICT.keys())}")
 
         # Initialize API key
         api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise OpenAIModelError("OpenAI API key not found. Set OPENAI_API_KEY environment variable or pass api_key parameter.")
+            raise OpenAIModelError(
+                "OpenAI API key not found. Set OPENAI_API_KEY environment variable or pass api_key parameter."
+            )
 
-        base_url = (
-            os.getenv("OPENAI_BASE_URL")
-            or os.getenv("OPENAI_API_BASE")
-            or os.getenv("OPENAI_API_URL")
-        )
+        base_url = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_API_URL")
 
         print(f"Using OpenAI base URL: {base_url}")
         # Initialize OpenAI clients
@@ -295,7 +291,7 @@ class OpenAIModel:
         self.fps = fps
         self.nframes = nframes
         self.kwargs = kwargs
-        
+
         # Initialize cache file path in current directory
         self.cache_file_name = os.path.join(cache_dir or ".cache", f"openai_cache_{model_name.replace('-', '_')}.db")
 
@@ -333,7 +329,7 @@ class OpenAIModel:
         """Manage cache with LRU eviction policy."""
         _CACHE[key] = value
         _CACHE.move_to_end(key)
-        
+
         if len(_CACHE) > _MAX_CACHE_SIZE:
             _CACHE.popitem(last=False)
             logger.debug(f"Cache evicted oldest entry. Current size: {len(_CACHE)}")
@@ -341,37 +337,34 @@ class OpenAIModel:
     def _preprocess_prompt(self, prompt: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Preprocess prompt by handling images and videos in parallel."""
         prompt_copy = copy.deepcopy(prompt)
-        
+
         # Collect items with content to process in parallel
         content_items = [(i, item) for i, item in enumerate(prompt_copy)]
-            
+
         # Process content items in parallel using ThreadPoolExecutor
         max_workers = min(len(content_items), (os.cpu_count() or 1) + 4)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_index = {
-                executor.submit(self._process_content, item["content"]): i 
-                for i, item in content_items
-            }
-            
+            future_to_index = {executor.submit(self._process_content, item["content"]): i for i, item in content_items}
+
             # Wait for all content processing to complete
             for future in as_completed(future_to_index):
                 try:
                     future.result()  # This will raise any exceptions that occurred
                 except Exception as e:
                     logger.error(f"Failed to process content item: {e}")
-                    
+
         return prompt_copy
-    
+
     def encode_image(self, image: Union[str, Path, Image.Image]) -> str:
         """
         Encode image to base64 with caching and optimization.
-        
+
         Args:
             image: Path to the image file or a PIL Image object
 
         Returns:
             Base64 encoded image string
-            
+
         Raises:
             FileNotFoundError: If image file doesn't exist
             OpenAIModelError: If image processing fails
@@ -417,9 +410,9 @@ class OpenAIModel:
                     img.close()
                 except Exception:
                     pass
-            
+
             return encoded
-            
+
         except Exception as e:
             logger.error(f"Failed to encode image {image}: {e}")
             raise OpenAIModelError(f"Failed to encode image: {e}") from e
@@ -427,20 +420,20 @@ class OpenAIModel:
     def encode_video(self, video_path: Union[str, Path]) -> List[str]:
         """
         Encode video frames to base64 with intelligent sampling and caching.
-        
+
         Args:
             video_path: Path to the video file
-            
+
         Returns:
             List of base64 encoded frame strings
-            
+
         Raises:
             FileNotFoundError: If video file doesn't exist
             OpenAIModelError: If video processing fails
         """
         video_path = self._validate_file_path(video_path)
         cache_key = (str(video_path), self.max_size_video, self.quality, self.fps, self.nframes)
-        
+
         # Check cache first
         if cache_key in _CACHE:
             _CACHE.move_to_end(cache_key)
@@ -450,36 +443,36 @@ class OpenAIModel:
         try:
             vr = VideoReader(str(video_path), ctx=cpu(0))
             total_frames = len(vr)
-            
+
             if total_frames == 0:
                 raise OpenAIModelError(f"Video file appears to be empty or corrupted: {video_path}")
 
             # Determine sampling strategy
             sample_indices = self._calculate_sample_indices(vr, total_frames)
-            
+
             # Extract and encode frames
             base64_frames = []
             for idx in sample_indices:
                 try:
                     frame = vr[idx].asnumpy()  # RGB format from decord
-                    
+
                     # Convert to BGR for OpenCV
                     frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                    
+
                     # Resize frame
                     frame_resized = cv2.resize(frame_bgr, self.max_size_video, interpolation=cv2.INTER_LANCZOS4)
-                    
+
                     # Encode to JPEG
                     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), self.quality]
                     success, buffer = cv2.imencode(".jpg", frame_resized, encode_param)
-                    
+
                     if not success:
                         logger.warning(f"Failed to encode frame {idx} from {video_path}")
                         continue
-                        
+
                     base64_frame = base64.b64encode(buffer).decode("utf-8")
                     base64_frames.append(base64_frame)
-                    
+
                 except Exception as e:
                     logger.warning(f"Failed to process frame {idx} from {video_path}: {e}")
                     continue
@@ -491,7 +484,7 @@ class OpenAIModel:
             self._manage_cache(cache_key, base64_frames)
             logger.info(f"Encoded {len(base64_frames)} frames from video: {video_path}")
             return base64_frames
-            
+
         except Exception as e:
             logger.error(f"Failed to encode video {video_path}: {e}")
             raise OpenAIModelError(f"Failed to encode video: {e}") from e
@@ -499,28 +492,28 @@ class OpenAIModel:
     def _calculate_sample_indices(self, vr: VideoReader, total_frames: int) -> List[int]:
         """Calculate which frames to sample from the video."""
         sample_indices = []
-        
+
         if self.fps is not None:
             # Sample at specified FPS
             video_fps = vr.get_avg_fps()
             if video_fps <= 0:
                 raise OpenAIModelError("Cannot determine video FPS")
-                
+
             frame_interval = max(1, int(video_fps / self.fps))
             sample_indices = list(range(0, total_frames, frame_interval))
-            
+
         elif self.nframes is not None:
             # Sample fixed number of frames
             if self.nframes <= 0:
                 raise ValueError("nframes must be a positive integer")
-                
+
             if self.nframes >= total_frames:
                 sample_indices = list(range(total_frames))
             else:
                 # Evenly distribute frames across video duration
                 indices = [int(i * (total_frames - 1) / (self.nframes - 1)) for i in range(self.nframes)]
                 sample_indices = sorted(list(set(indices)))
-                
+
         else:
             # Default: sample at 1 FPS
             logger.warning("No fps or nframes specified, defaulting to 1 FPS sampling")
@@ -533,10 +526,10 @@ class OpenAIModel:
             sample_indices.insert(0, 0)
         if sample_indices and sample_indices[-1] != total_frames - 1:
             sample_indices.append(total_frames - 1)
-            
+
         # Remove duplicates and sort
         sample_indices = sorted(list(set(sample_indices)))
-        
+
         logger.debug(f"Sampling {len(sample_indices)} frames from {total_frames} total frames")
         return sample_indices
 
@@ -610,9 +603,10 @@ class OpenAIModel:
                 elif media_type == "image":
                     content[i + shift] = {"type": "input_image", "image_url": f"data:image/jpeg;base64,{result}"}
                 elif media_type == "video":
-                    image_items = [{"type": "input_image", "image_url": f"data:image/jpeg;base64,{frame}"}
-                                   for frame in result]
-                    content[i + shift:i + shift + 1] = image_items
+                    image_items = [
+                        {"type": "input_image", "image_url": f"data:image/jpeg;base64,{frame}"} for frame in result
+                    ]
+                    content[i + shift : i + shift + 1] = image_items
                     shift += len(image_items) - 1
 
     def _normalize_prompt(self, prompt: Union[str, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
@@ -626,7 +620,7 @@ class OpenAIModel:
     def generate(self, prompt: Union[str, List[Dict[str, Any]]], text_format: Optional[type] = None, **kwargs) -> Any:
         """
         Generate completion for a single prompt.
-        
+
         Args:
             prompt: Conversation prompt (list of role/content dicts or raw string)
             text_format (optional): Pydantic model or other structure for parsing the response
@@ -636,17 +630,12 @@ class OpenAIModel:
         """
         prompt_copy = copy.deepcopy(self._normalize_prompt(prompt))
         processed_prompt = self._preprocess_prompt(prompt_copy)
-        
-        try:
 
+        try:
             # If text_format is provided (e.g. a Pydantic model), use the parse endpoint
             if text_format is not None:
                 response = self.sync_client.responses.parse(
-                    model=self.model_name,
-                    input=processed_prompt,
-                    text_format=text_format,
-                    **self.kwargs,
-                    **kwargs
+                    model=self.model_name, input=processed_prompt, text_format=text_format, **self.kwargs, **kwargs
                 )
 
                 # responses.parse should expose the parsed output on `output_parsed`
@@ -654,23 +643,22 @@ class OpenAIModel:
 
             # Default unstructured behavior
             response = self.sync_client.responses.create(
-                model=self.model_name,
-                input=processed_prompt,
-                **self.kwargs,
-                **kwargs
+                model=self.model_name, input=processed_prompt, **self.kwargs, **kwargs
             )
-            
+
             # return response.output_text.strip()
             return self._extract_text_from_response(response)
-            
+
         except Exception as e:
             logger.error(f"OpenAI API error: {e}")
             raise OpenAIModelError(f"Failed to get completion: {e}") from e
 
-    def generate_batch(self, batch_prompts: List[Union[str, List[Dict[str, Any]]]], text_format: Optional[type] = None) -> List[Any]:
+    def generate_batch(
+        self, batch_prompts: List[Union[str, List[Dict[str, Any]]]], text_format: Optional[type] = None
+    ) -> List[Any]:
         """
         Process multiple prompts in batch with async generation and preprocessing.
-        
+
         Args:
             batch_prompts: List of conversation prompts
             text_format (optional): Pydantic model or other structure for parsing the response
@@ -683,12 +671,12 @@ class OpenAIModel:
 
         if not batch_prompts_copy:
             return []
-        
+
         # Process prompts in parallel using ThreadPoolExecutor
         max_workers = min(len(batch_prompts_copy), (os.cpu_count() or 1) + 4)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             processed_prompts = list(executor.map(self._preprocess_prompt, batch_prompts_copy))
-        
+
         # Use async generation for batch processing
         try:
             return asyncio.run(self.async_generation(processed_prompts, text_format=text_format))
@@ -731,7 +719,6 @@ class OpenAIModel:
                 return content["content"].strip()
 
         return str(content).strip()
-
 
     def _extract_text_from_response(self, response: Any) -> str:
         """Support multiple proxy / SDK response formats."""
@@ -797,9 +784,12 @@ class OpenAIModel:
                     return text
 
         raise OpenAIModelError(f"Unsupported response type: {type(response)}")
+
     @async_cache_response
     @dynamic_retry_decorator
-    async def _generate_single_prompt(self, prompt: Union[str, List[Dict[str, Any]]], text_format: Optional[type] = None) -> Any:
+    async def _generate_single_prompt(
+        self, prompt: Union[str, List[Dict[str, Any]]], text_format: Optional[type] = None
+    ) -> Any:
         """Generate completion for a single prompt asynchronously. Supports optional structured parsing via `text_format`."""
         try:
             prompt = self._normalize_prompt(prompt)
@@ -823,10 +813,15 @@ class OpenAIModel:
             logger.error(f"Async OpenAI API error: {e}")
             raise OpenAIModelError(f"Failed to get async completion: {e}") from e
 
-    async def async_generation(self, batch_prompts: List[Union[str, List[Dict[str, Any]]]], chunk_size: int = 50, text_format: Optional[type] = None) -> List[Any]:
+    async def async_generation(
+        self,
+        batch_prompts: List[Union[str, List[Dict[str, Any]]]],
+        chunk_size: int = 50,
+        text_format: Optional[type] = None,
+    ) -> List[Any]:
         """
         Generate completions for multiple prompts asynchronously with chunking.
-        
+
         Args:
             batch_prompts: List of conversation prompts
             chunk_size: Number of concurrent requests per chunk
@@ -837,13 +832,13 @@ class OpenAIModel:
         """
         responses = []
         total_chunks = (len(batch_prompts) + chunk_size - 1) // chunk_size
-        
+
         for i in range(0, len(batch_prompts), chunk_size):
             chunk_num = (i // chunk_size) + 1
-            batch = batch_prompts[i:i + chunk_size]
-            
+            batch = batch_prompts[i : i + chunk_size]
+
             logger.info(f"Processing chunk {chunk_num}/{total_chunks} ({len(batch)} prompts)")
-            
+
             tasks = [self._generate_single_prompt(prompt, text_format) for prompt in batch]
             try:
                 batch_responses = await tqdm_asyncio.gather(*tasks, desc=f"Chunk {chunk_num}")
@@ -859,7 +854,7 @@ class OpenAIModel:
         return {
             "cache_size": len(_CACHE),
             "max_cache_size": _MAX_CACHE_SIZE,
-            "cache_hit_rate": getattr(self, '_cache_hits', 0) / max(getattr(self, '_cache_requests', 1), 1)
+            "cache_hit_rate": getattr(self, "_cache_hits", 0) / max(getattr(self, "_cache_requests", 1), 1),
         }
 
     def clear_cache(self) -> None:
@@ -869,8 +864,7 @@ class OpenAIModel:
 
     def __repr__(self) -> str:
         """String representation of the model instance."""
-        return (f"OpenAIModel(model_name='{self.model_name}', "
-                f"kwargs={self.kwargs})")
+        return f"OpenAIModel(model_name='{self.model_name}', kwargs={self.kwargs})"
 
 
 # Convenience function for backward compatibility
