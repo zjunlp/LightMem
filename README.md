@@ -48,7 +48,7 @@
 - **[2026-04-24]**: 🚀 LightMem now supports the latest [**DeepSeek**](./src/lightmem/configs/memory_manager/base_config.py) models, including `deepseek-v4-flash` and `deepseek-v4-pro`, with `reasoning_effort` and thinking-mode configuration!
 - **[2026-04-24]**: 🎉🎉🎉 [**StructMem: Structured Memory for Long-Horizon Behavior in LLMs**](https://arxiv.org/abs/2604.21748) has been accepted by **ACL 2026**!
 - **[2026-03-21]**: 🚀 We provide a more comprehensive [baseline evaluation framework](https://github.com/zjunlp/MemBase), supporting the benchmarking of memory layers such as Mem0, A-MEM, EverMemOS, LangMem on multiple datasets like LoCoMo and LongMemEval.
-- **[2026-02-15]**: 🚀 **[StructMem](https://github.com/zjunlp/StructMem)** is released: A hierarchical memory framework that preserves event-level memory bindings and cross-event memory connections. 
+- **[2026-02-15]**: 🚀 **[StructMem](./StructMem.md)** is released: A hierarchical memory framework that preserves event-level memory bindings and cross-event memory connections. 
 - **[2026-01-26]**: 🎉🎉🎉 [**LightMem: Lightweight and Efficient Memory-Augmented Generation**](https://arxiv.org/abs/2510.18866) has been accepted by **ICLR 2026**!
 - **[2026-01-17]**: 🚀 We provide a comprehensive [baseline evaluation framework](https://github.com/zjunlp/LightMem/blob/main/src/lightmem/memory_toolkits/readme.md), supporting the benchmarking of memory layers such as Mem0, A-MEM, and LangMem on multiple datasets like LoCoMo and LongMemEval.
 - **[2025-12-09]**: 🎬 Released a **[Demo Video](#demo)** showcasing long-context handling, along with comprehensive **[Tutorial Notebooks](./tutorial-notebooks/)** for various scenarios!
@@ -68,7 +68,7 @@ This repository hosts multiple memory methods. The table below provides an overv
 | **LightMem** | Lightweight and efficient memory-augmented generation framework | [ICLR 2026](https://arxiv.org/abs/2510.18866) | [README.md](./README.md) |
 | **FluxMem** | Connectivity-evolving memory framework modeling memory as a heterogeneous graph | [arXiv](https://arxiv.org/abs/2605.28773) (under review at EMNLP 2026) | [FluxMem.md](./FluxMem.md) |
 | **EM²Mem** | Event-centric multimodal memory for long-video question answering | [EMNLP 2026](https://arxiv.org/abs/2609.00551v1) | [EM2Mem.md](https://github.com/zjunlp/LightMem-Ego/blob/main/README.md) |
-| **StructMem** | Structured hierarchical memory preserving event-level bindings and cross-event connections | [ACL 2026](https://arxiv.org/abs/2604.21748) | [StructMem.md](https://github.com/zjunlp/StructMem/blob/main/README.md) |
+| **StructMem** | Structured hierarchical memory preserving event-level bindings and cross-event connections | [ACL 2026](https://arxiv.org/abs/2604.21748) | [StructMem.md](./StructMem.md) |
 
 <span id='reproduction'/>
 
@@ -623,7 +623,7 @@ This repository belongs to ZJUNLP LightMem series, focusing on solving context b
 - [LightRSI](https://github.com/zjunlp/LightRSI) — A lightweight modular framework for recursive self-improvement for LLM agents
 - [LightMem-Ego](https://github.com/zjunlp/LightMem-Ego) — A lightweight streaming multimodal memory system for everyday-life assistance
 - [EM²Mem](https://github.com/zjunlp/LightMem-Ego) — An event-centric multimodal memory for MLLM agents
-- [StructMem](https://github.com/zjunlp/StructMem) — A lightweight and structure-enriched hierarchical memory framework for LLM agents
+- [StructMem](./StructMem.md) — A lightweight and structure-enriched hierarchical memory framework for LLM agents
 
 
 ### Other Related Projects
