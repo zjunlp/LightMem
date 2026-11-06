@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "structmem-multimodal"
+version = "0.2.1"
+description = "A standalone multimodal memory and evidence retrieval service"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = [
+    "fastapi>=0.116,<1",
+    "uvicorn>=0.35,<1",
+    "pydantic>=2.12,<3",
+    "numpy>=1.26,<3",
+    "httpx>=0.28,<1",
+    "Pillow>=11.3,<13",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+clip = ["torch>=2.5,<3", "transformers>=4.45,<5"]
+reranker = ["torch>=2.8,<3", "transformers>=4.57,<6", "qwen-vl-utils>=0.0.14,<0.1"]
+
+[project.urls]
+Homepage = "https://github.com/zjunlp/StructMem"
+Repository = "https://github.com/zjunlp/StructMem"
+Documentation = "https://github.com/zjunlp/StructMem/blob/main/multimodal/SERVICE.md"
+
+[tool.setuptools.packages.find]
+include = ["service", "service.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
