@@ -5,7 +5,7 @@ from lightmem.configs.pre_compressor.base import PreCompressorConfig
 class PreCompressorFactory:
     _MODEL_MAPPING: Dict[str, str] = {
         "llmlingua-2": "lightmem.factory.pre_compressor.llmlingua_2.LlmLingua2Compressor",
-        "entropy_compress": "lightmem.factory.pre_compressor.entropy_compress.",
+        "entropy_compress": "lightmem.factory.pre_compressor.entropy_compress.EntropyCompressor",
     }
 
     @classmethod
