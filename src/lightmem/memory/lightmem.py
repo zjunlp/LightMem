@@ -161,6 +161,7 @@ class LightMemory:
         self.logger.info("Token statistics tracking initialized")
         
         self.config = config
+        self.compressor = None
         if self.config.pre_compress:
             self.logger.info("Initializing pre-compressor")
             self.compressor = PreCompressorFactory.from_config(self.config.pre_compressor)
