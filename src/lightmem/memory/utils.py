@@ -20,6 +20,8 @@ class MemoryEntry:
     subcategory: str = ""
     memory_class: str = ""
     memory: str = ""
+    entry_type: str = ""
+    anchor_dia_id: Optional[str] = None
     original_memory: str = ""
     compressed_memory: str = ""
     topic_id: Optional[int] = None
@@ -117,7 +119,8 @@ def assign_sequence_numbers_with_timestamps(extract_list, offset_ms: int = 500, 
                 weekday_list.append(message["weekday"])
                 speaker_info = {
                     'speaker_id': message.get('speaker_id', 'unknown'),
-                    'speaker_name': message.get('speaker_name', 'Unknown')
+                    'speaker_name': message.get('speaker_name', 'Unknown'),
+                    'dia_id': message.get('dia_id')
                 }
                 speaker_list.append(speaker_info)
                 current_index += 1
@@ -210,7 +213,8 @@ def convert_extraction_results_to_memory_entries(
     speaker_list: List = None,
     topic_id_map: Dict[int, int] = None,
     max_source_ids: List[int] = None, 
-    logger = None
+    logger = None,
+    valid_source_ids: Optional[List[set]] = None,
 ) -> List[MemoryEntry]:
     """
     Convert extraction results to MemoryEntry objects.
@@ -228,15 +232,10 @@ def convert_extraction_results_to_memory_entries(
     """
     memory_entries = []
 
-    extracted_memory_entry = [
-        item["cleaned_result"]
-        for item in extracted_results
-        if item and item.get("cleaned_result")
-    ]
-
-    for batch_idx, topic_memory in enumerate(extracted_memory_entry):
-        if not topic_memory:
+    for batch_idx, item in enumerate(extracted_results):
+        if not item or not item.get("cleaned_result"):
             continue
+        topic_memory = item["cleaned_result"]
         
         max_valid_sid = max_source_ids[batch_idx] if max_source_ids and batch_idx < len(max_source_ids) else None
         
@@ -271,13 +270,20 @@ def convert_extraction_results_to_memory_entries(
                 resolved_topic_id = topic_id_map[seq_candidate]
                 
                 mem_obj = _create_memory_entry_from_fact(
-                    fact_entry,
+                    {**fact_entry, "source_id": sid},
                     timestamps_list,
                     weekday_list,
                     speaker_list,
                     topic_id=resolved_topic_id,
                     topic_summary="",
                     logger=logger,
+                    anchor_valid=(
+                        "source_id" in fact_entry and (
+                            valid_source_ids is None or
+                            (batch_idx < len(valid_source_ids) and
+                             original_sid == sid and sid in valid_source_ids[batch_idx])
+                        )
+                    ),
                 )
 
                 if mem_obj:
@@ -293,7 +299,8 @@ def _create_memory_entry_from_fact(
     speaker_list: List = None,
     topic_id: int = None,  
     topic_summary: str = "",
-    logger = None
+    logger = None,
+    anchor_valid: bool = True,
 ) -> Optional[MemoryEntry]:
     """
     Helper function to create a MemoryEntry from a fact entry.
@@ -326,6 +333,7 @@ def _create_memory_entry_from_fact(
         speaker_info = speaker_list[sequence_n]
         speaker_id = speaker_info.get('speaker_id', 'unknown')
         speaker_name = speaker_info.get('speaker_name', 'Unknown')
+        anchor_dia_id = speaker_info.get('dia_id') if anchor_valid else None
         
     except (IndexError, TypeError, ValueError) as e:
         if logger:
@@ -337,12 +345,15 @@ def _create_memory_entry_from_fact(
         weekday = None
         speaker_id = 'unknown'
         speaker_name = 'Unknown'
+        anchor_dia_id = None
     
     mem_obj = MemoryEntry(
         time_stamp=time_stamp,
         float_time_stamp=float_time_stamp,
         weekday=weekday,
         memory=fact_entry.get("fact") or fact_entry.get("relation", ""),
+        entry_type="factual" if fact_entry.get("fact") else "relational" if fact_entry.get("relation") else "",
+        anchor_dia_id=anchor_dia_id,
         speaker_id=speaker_id,
         speaker_name=speaker_name,
         topic_id=topic_id,

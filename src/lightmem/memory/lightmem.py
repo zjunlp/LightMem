@@ -340,7 +340,11 @@ class LightMemory:
         self.logger.info(f"[{call_id}] Extraction triggered {extract_trigger_num} times, extract_list length: {len(extract_list)}")
         extract_list, timestamps_list, weekday_list, speaker_list, topic_id_map = assign_sequence_numbers_with_timestamps(extract_list, offset_ms=500, topic_id_mapping=topic_id_mapping)
         self.logger.debug(f"[{call_id}] Extract list sample: {json.dumps(extract_list)}")
-        max_source_ids = [sum(1 for seg in batch for msg in seg if msg.get("role") == "user") - 1 for batch in extract_list]
+        valid_source_ids = [
+            {msg["sequence_number"] // 2 for seg in batch for msg in seg if msg.get("role") == "user"}
+            for batch in extract_list
+        ]
+        max_source_ids = [max(ids, default=-1) for ids in valid_source_ids]
         self.logger.info(f"[{call_id}] Batch max_source_ids: {max_source_ids}")
         extracted_results = []
         if self.config.metadata_generate and self.config.text_summary:
@@ -369,7 +373,8 @@ class LightMemory:
             speaker_list=speaker_list,
             topic_id_map=topic_id_map,
             max_source_ids=max_source_ids,
-            logger=self.logger
+            logger=self.logger,
+            valid_source_ids=valid_source_ids,
         )
         self.logger.info(f"[{call_id}] Created {len(memory_entries)} MemoryEntry objects")
         if boundmem_tags is not None:
@@ -427,6 +432,8 @@ class LightMemory:
                     "subcategory": mem_obj.subcategory,
                     "memory_class": mem_obj.memory_class,
                     "memory": mem_obj.memory,
+                    "entry_type": mem_obj.entry_type,
+                    "anchor_dia_id": mem_obj.anchor_dia_id,
                     "original_memory": mem_obj.original_memory,
                     "compressed_memory": mem_obj.compressed_memory,
                     "speaker_id": mem_obj.speaker_id,

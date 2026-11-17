@@ -140,6 +140,7 @@ def extract_locomo_sessions(conversation_dict):
                 "content": content,
                 "speaker_id": speaker_id,
                 "speaker_name": speaker_name,
+                "dia_id": turn.get("dia_id"),
             })
             messages.append({
                 "role": "assistant",
