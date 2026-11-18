@@ -75,9 +75,12 @@ class BaseMemoryConfigs(BaseModel):
         default=os.path.join(lightmem_dir, "history.db"),
     )
     retrieve_strategy: Optional[Literal["context", "embedding", "hybrid"]] = Field(
-        default="embedding",
+        default=None,
         description="Retrieving strategy to use. Choices: "
-                "embedding|context|hybrid"
+        "embedding|context|hybrid. When omitted, the strategy is inferred "
+        "from whichever retriever configs are supplied; 'hybrid' is never "
+        "inferred and must be requested explicitly. Passing None explicitly "
+        "is honoured as 'no retrieval' rather than inferred."
     )
     context_retriever: Optional[ContextRetrieverConfig] = Field(
         description="Configuration for the context-based retriever (active only if retrieve_strategy is 'context' or 'hybrid')",
@@ -122,3 +125,33 @@ class BaseMemoryConfigs(BaseModel):
                     "- 'event': Extract event-level structure (factual + relational, temporally bound)"
     )
 
+    @model_validator(mode="after")
+    def infer_and_validate_retrieval_strategy(self):
+        """Infer a retrieval strategy and validate explicit configuration."""
+        if "retrieve_strategy" not in self.model_fields_set:
+            # Only an omitted field is inferred. An explicit
+            # retrieve_strategy=None keeps meaning "no retrieval", exactly as
+            # it did before this field became optional.
+            #
+            # An omitted strategy never resolves to "hybrid": a configuration
+            # that supplies both retrievers resolved to "embedding" before this
+            # change, and keeps resolving to it. Hybrid retrieval stays opt-in
+            # through an explicit retrieve_strategy="hybrid".
+            if self.embedding_retriever:
+                self.retrieve_strategy = "embedding"
+            elif self.context_retriever:
+                self.retrieve_strategy = "context"
+            return self
+        if self.retrieve_strategy is None:
+            return self
+        needs_context = self.retrieve_strategy in {"context", "hybrid"}
+        needs_embedding = self.retrieve_strategy in {"embedding", "hybrid"}
+        if needs_context and not self.context_retriever:
+            raise ValueError(
+                "context_retriever is required for context or hybrid retrieval"
+            )
+        if needs_embedding and not self.embedding_retriever:
+            raise ValueError(
+                "embedding_retriever is required for embedding or hybrid retrieval"
+            )
+        return self
