@@ -19,6 +19,13 @@ class LlmLingua2Segmenter:
             self.model = compressor.inner_compressor.model
             self.tokenizer = compressor.inner_compressor.tokenizer
             self.buffer_len = getattr(self.model.config, "max_position_embeddings", 512)
+        else:
+            raise ValueError(
+                "precomp_topic_shared=True requires a pre-compressor to share weights with, "
+                "but none was provided. Either set pre_compress=True and configure "
+                "pre_compressor, or set precomp_topic_shared=False to let the segmenter "
+                "load its own model."
+            )
 
         self.layers = self.config.get("layers", [8, 9, 10, 11])
 
